@@ -23,7 +23,7 @@ export default function DocumentUploader() {
     setStatusText('Menginisialisasi AI...')
 
     try {
-      let result;
+      let result: any;
       // Convert to object URL for image preview or processing if it's an image
       const fileUrl = URL.createObjectURL(file)
 
