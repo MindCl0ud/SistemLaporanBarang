@@ -1,4 +1,5 @@
 import { FileText } from "lucide-react"
+export const dynamic = 'force-dynamic'
 import DocumentUploader from "./DocumentUploader"
 import DocumentList from "./DocumentList"
 import { getDocuments } from "@/app/actions/documentActions"

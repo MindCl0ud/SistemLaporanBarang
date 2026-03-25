@@ -1,4 +1,5 @@
 import { FileText, CheckCircle2, AlertTriangle, Activity, RefreshCw } from "lucide-react"
+export const dynamic = 'force-dynamic'
 import { getDashboardStats } from "@/app/actions/matchActions"
 import MatchRunner from "@/components/MatchRunner"
 import Link from "next/link"

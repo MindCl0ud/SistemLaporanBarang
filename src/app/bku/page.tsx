@@ -1,4 +1,5 @@
 import { getBkuRecords } from "@/app/actions/bkuActions"
+export const dynamic = 'force-dynamic'
 import { BookOpen, Plus, FileSpreadsheet } from "lucide-react"
 import BkuForm from "./BkuForm"
 import BkuList from "./BkuList"
