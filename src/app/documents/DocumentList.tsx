@@ -1,11 +1,23 @@
 'use client'
 
+import { useState } from "react"
 import { format } from "date-fns"
 import { id } from "date-fns/locale"
-import { Trash2, FileText, Bot } from "lucide-react"
+import { Trash2, FileText, Bot, Loader2 } from "lucide-react"
 import { deleteDocument } from "@/app/actions/documentActions"
 
 export default function DocumentList({ initialDocuments }: { initialDocuments: any[] }) {
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  const handleDelete = async (docId: string) => {
+    setDeletingId(docId)
+    try {
+      await deleteDocument(docId)
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
   if (initialDocuments.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-12 mt-4 border border-dashed border-white/10 rounded-xl bg-slate-900/30">
@@ -52,10 +64,15 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
               </td>
               <td className="px-4 py-3 text-center">
                 <button 
-                  onClick={() => deleteDocument(doc.id)}
-                  className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-400/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
+                  onClick={() => handleDelete(doc.id)}
+                  disabled={deletingId === doc.id}
+                  className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-400/10 rounded-lg transition-colors opacity-100 group-hover:opacity-100 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  {deletingId === doc.id ? (
+                    <Loader2 className="w-4 h-4 text-rose-400 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-4 h-4" />
+                  )}
                 </button>
               </td>
             </tr>

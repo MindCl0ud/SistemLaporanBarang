@@ -33,13 +33,16 @@ export default function DocumentUploader() {
         formData.append('file', file)
         result = await parsePdfServer(formData)
 
+        // Clean pdf2json artifacts to accurately measure true text length
+        const cleanText = result.text.replace(/----------------Page \(\d+\) Break----------------/g, '').replace(/\\f/g, '').trim()
+        
         // Fallback for Scanned PDFs (Images wrapped in PDF)
-        if (result.text.trim().length < 50 && result.data.totalAmount === 0) {
+        if (cleanText.length < 50 && result.data.totalAmount === 0) {
           setStatusText('PDF Scan terdeteksi. Menyiapkan Mesin Pembaca Gambar...')
           // Dynamically import to keep bundle small
           const pdfjsLib = await import('pdfjs-dist')
           // Use unpkg CDN for the worker to avoid Next.js bundling issues
-          pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`
+          pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`
           
           const arrayBuffer = await file.arrayBuffer()
           const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
