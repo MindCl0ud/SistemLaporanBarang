@@ -32,6 +32,36 @@ export default function DocumentUploader() {
         const formData = new FormData()
         formData.append('file', file)
         result = await parsePdfServer(formData)
+
+        // Fallback for Scanned PDFs (Images wrapped in PDF)
+        if (result.text.trim().length < 50 && result.data.totalAmount === 0) {
+          setStatusText('PDF Scan terdeteksi. Menyiapkan Mesin Pembaca Gambar...')
+          // Dynamically import to keep bundle small
+          const pdfjsLib = await import('pdfjs-dist')
+          // Use unpkg CDN for the worker to avoid Next.js bundling issues
+          pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`
+          
+          const arrayBuffer = await file.arrayBuffer()
+          const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+          const page = await pdfDoc.getPage(1)
+          const viewport = page.getViewport({ scale: 2.0 })
+          
+          const canvas = document.createElement('canvas')
+          canvas.width = viewport.width
+          canvas.height = viewport.height
+          const ctx = canvas.getContext('2d')
+          
+          if (ctx) {
+            setStatusText('Mengubah PDF menjadi Gambar (Local)...')
+            // @ts-ignore
+            await page.render({ canvasContext: ctx, viewport }).promise
+            const imgDataUrl = canvas.toDataURL('image/png')
+            
+            setStatusText('Memulai OCR Gambar PDF...')
+            result = await parseDocumentImage(imgDataUrl, (msg) => setStatusText(msg))
+            if (!result.data.type) result.data.type = "Nota"
+          }
+        }
       } else {
         // Run Native OCR & AI Parsing for Images
         result = await parseDocumentImage(fileUrl, (msg) => setStatusText(msg))
