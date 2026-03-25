@@ -41,8 +41,8 @@ export default function DocumentUploader() {
           setStatusText('PDF Scan terdeteksi. Menyiapkan Mesin Pembaca Gambar...')
           // Dynamically import to keep bundle small
           const pdfjsLib = await import('pdfjs-dist')
-          // Use unpkg CDN for the worker to avoid Next.js bundling issues
-          pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`
+          // Use local worker to avoid CORS or Next.js strict CSP bundling issues
+          pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
           
           const arrayBuffer = await file.arrayBuffer()
           const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
