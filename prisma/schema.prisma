@@ -3,34 +3,34 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
 model Document {
   id            String         @id @default(cuid())
-  type          String         // "Nota", "Berita Acara", "Kwitansi"
+  type          String
   docNumber     String?
   vendorName    String?
   totalAmount   Float?
   date          DateTime?
   imageUrl      String?
   extractedText String?
-  items         DocumentItem[]
-  matchRecord   MatchRecord?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+  items         DocumentItem[]
+  matchRecord   MatchRecord?
 }
 
 model DocumentItem {
   id          String   @id @default(cuid())
   documentId  String
-  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
   description String
   quantity    Float?
   price       Float?
   total       Float?
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 }
 
 model BkuTransaction {
@@ -42,9 +42,9 @@ model BkuTransaction {
   receiptTotal Float?
   expenseTotal Float?
   balance      Float?
-  matchRecord  MatchRecord?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
+  matchRecord  MatchRecord?
 }
 
 model MatchRecord {
@@ -52,10 +52,10 @@ model MatchRecord {
   bkuTransactionId String         @unique
   documentId       String         @unique
   confidence       Float
-  status           String         // e.g. "MATCHED", "NEEDS_REVIEW"
+  status           String
   reasoning        String?
-  bkuTransaction   BkuTransaction @relation(fields: [bkuTransactionId], references: [id], onDelete: Cascade)
-  document         Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
+  bkuTransaction   BkuTransaction @relation(fields: [bkuTransactionId], references: [id], onDelete: Cascade)
+  document         Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
 }

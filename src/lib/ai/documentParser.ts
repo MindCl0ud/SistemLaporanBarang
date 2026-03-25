@@ -27,9 +27,9 @@ export async function parseDocumentImage(fileUrl: string | File, onProgress?: (m
     
     if (onProgress) onProgress('Selesai')
     return { text, data: parsedData }
-  } catch (error) {
+  } catch (error: any) {
     console.error('OCR Error:', error)
-    throw new Error('Gagal membaca dokumen.')
+    throw new Error('Gagal membaca dokumen: ' + (error?.message || error))
   }
 }
 
