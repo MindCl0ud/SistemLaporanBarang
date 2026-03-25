@@ -41,3 +41,22 @@ export async function deleteBkuRecord(id: string) {
   await prisma.bkuTransaction.delete({ where: { id } })
   revalidatePath('/bku')
 }
+
+export async function addBkuBulk(data: any[], month: number, year: number) {
+  const records = data.map(item => ({
+    month,
+    year,
+    code: String(item.Kode || item.code || item['Kode Rekening'] || ""),
+    description: String(item.Uraian || item.description || item.Deskripsi || "Tanpa Deskripsi"),
+    receiptTotal: Number(item.Penerimaan || item.receiptTotal || item.Terima || 0) || 0,
+    expenseTotal: Number(item.Pengeluaran || item.expenseTotal || item.Keluar || 0) || 0,
+    balance: Number(item.Saldo || item.balance || 0) || 0
+  }))
+
+  await prisma.bkuTransaction.createMany({
+    data: records
+  })
+
+  revalidatePath('/bku')
+  revalidatePath('/')
+}

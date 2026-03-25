@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { UploadCloud, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { parseDocumentImage } from '@/lib/ai/documentParser'
+import { parsePdfServer } from '@/lib/ai/pdfParser'
 import { saveDocument } from '@/app/actions/documentActions'
 
 export default function DocumentUploader() {
@@ -22,11 +23,19 @@ export default function DocumentUploader() {
     setStatusText('Menginisialisasi AI...')
 
     try {
-      // Create a temporary object URL for the image
-      const imageUrl = URL.createObjectURL(file)
+      let result;
+      // Convert to object URL for image preview or processing if it's an image
+      const fileUrl = URL.createObjectURL(file)
 
-      // Run Native OCR & AI Parsing
-      const result = await parseDocumentImage(imageUrl, (msg) => setStatusText(msg))
+      if (file.type === 'application/pdf') {
+        setStatusText('Mengekstrak Teks dari PDF (Server)...')
+        const formData = new FormData()
+        formData.append('file', file)
+        result = await parsePdfServer(formData)
+      } else {
+        // Run Native OCR & AI Parsing for Images
+        result = await parseDocumentImage(fileUrl, (msg) => setStatusText(msg))
+      }
 
       setStatusText('Menyimpan ke Database...')
       
@@ -39,7 +48,7 @@ export default function DocumentUploader() {
       })
 
       setSuccess(true)
-      URL.revokeObjectURL(imageUrl)
+      URL.revokeObjectURL(fileUrl)
     } catch (err: any) {
       setError(err.message || 'Terjadi kesalahan saat memproses dokumen')
     } finally {
@@ -49,7 +58,7 @@ export default function DocumentUploader() {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { 'image/*': [] },
+    accept: { 'image/*': [], 'application/pdf': ['.pdf'] },
     multiple: false
   })
 
@@ -64,9 +73,9 @@ export default function DocumentUploader() {
         <input {...getInputProps()} />
         <UploadCloud className={`w-12 h-12 mb-4 transition-colors ${isDragActive ? 'text-indigo-400' : 'text-slate-400'}`} />
         <p className="text-sm font-medium text-slate-200 text-center">
-          {isDragActive ? "Lepaskan file di sini..." : "Tarik & Lepas gambar dokumen ke sini"}
+          {isDragActive ? "Lepaskan file di sini..." : "Tarik & Lepas Gambar Dokumen atau PDF ke sini"}
         </p>
-        <p className="text-xs text-slate-400 mt-2 text-center">Mendukung JPG, PNG, WEBP</p>
+        <p className="text-xs text-slate-400 mt-2 text-center">Mendukung JPG, PNG, WEBP, dan PDF</p>
       </div>
 
       {loading && (
