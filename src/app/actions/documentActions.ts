@@ -51,3 +51,26 @@ export async function deleteDocument(id: string) {
   revalidatePath('/documents')
   revalidatePath('/')
 }
+
+export async function updateDocumentItem(id: string, data: {
+  description?: string
+  quantity?: number
+  price?: number
+  total?: number
+}) {
+  await prisma.documentItem.update({ where: { id }, data })
+  revalidatePath('/documents')
+}
+
+export async function updateDocument(id: string, data: {
+  docNumber?: string
+  vendorName?: string
+  kodeRek?: string
+  subKegiatan?: string
+  baNumber?: string
+  totalAmount?: number
+}) {
+  await prisma.document.update({ where: { id }, data })
+  revalidatePath('/documents')
+  revalidatePath('/')
+}

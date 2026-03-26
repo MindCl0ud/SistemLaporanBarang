@@ -550,16 +550,23 @@ export function extractDataFromText(rawText: string) {
   }
 
   // ── STRATEGY 3: Post-processing description cleaner ──────
-  // Safety net: if description still contains trailing "N unit", strip it and grab qty.
-  const TRAILING_QTY_UNIT = /\s+(\d{1,2})\s+(?:buah|botol|pcs|unit|ltr?|rim|set|[a-z]{2,})\s*x?\s*$/i
-  for (const item of items) {
-    const m = item.description.match(TRAILING_QTY_UNIT)
-    if (m) {
-      item.description = item.description.replace(TRAILING_QTY_UNIT, '').trim()
-      if (item.quantity === 1) item.quantity = parseInt(m[1]) // only override if qty wasn't found
+  // Safety net for Kwitansi/Nota items only.
+  // BA items are already correctly parsed by the 4-line collector — skip them.
+  if (type !== 'Berita Acara Penerimaan Barang') {
+    const TRAILING_QTY_UNIT = /\s+(\d{1,2})\s+(?:buah|botol|pcs|unit|ltr?|rim|set|[a-z]{2,})\s*x?\s*$/i
+    for (const item of items) {
+      const m = item.description.match(TRAILING_QTY_UNIT)
+      if (m) {
+        item.description = item.description.replace(TRAILING_QTY_UNIT, '').trim()
+        if (item.quantity === 1) item.quantity = parseInt(m[1])
+      }
+      item.description = item.description.replace(/^[-\s|]+/, '').replace(/[-\s|]+$/, '').trim()
     }
-    // Also strip any remaining leading/trailing noise chars
-    item.description = item.description.replace(/^[-\s|]+/, '').replace(/[-\s|]+$/, '').trim()
+  } else {
+    // For BA: just strip noise chars from description edges
+    for (const item of items) {
+      item.description = item.description.replace(/^[-\s|]+/, '').replace(/[-\s|]+$/, '').trim()
+    }
   }
 
   // ──────────────────────────────────────────────────────────

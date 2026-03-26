@@ -3,8 +3,8 @@
 import React, { useState, useRef, useCallback, useEffect } from "react"
 import { format } from "date-fns"
 import { id } from "date-fns/locale"
-import { Trash2, Bot, Loader2, WrapText, AlignJustify, ChevronDown, ChevronRight, CheckCircle2, Circle, GripVertical } from "lucide-react"
-import { deleteDocument } from "@/app/actions/documentActions"
+import { Trash2, Bot, Loader2, WrapText, AlignJustify, ChevronDown, ChevronRight, CheckCircle2, Circle, GripVertical, Pencil, Check, X } from "lucide-react"
+import { deleteDocument, updateDocumentItem } from "@/app/actions/documentActions"
 
 // ──────────────────────────────────────────────────────────
 // Column definitions
@@ -104,6 +104,8 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [wrapText, setWrapText] = useState(false)
   const [colWidths, setColWidths] = useState<Record<string, number>>(DEFAULT_WIDTHS)
+  const [editingItems, setEditingItems] = useState<Record<string, { description: string; quantity: number; price: number; total: number }>>({})
+  const [savingItemId, setSavingItemId] = useState<string | null>(null)
 
   const handleDelete = async (docId: string) => {
     setDeletingId(docId)
@@ -338,26 +340,100 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                                     <th className="text-center px-3 py-2 text-slate-400 font-semibold border border-slate-700 w-16">Qty</th>
                                     <th className="text-right px-3 py-2 text-slate-400 font-semibold border border-slate-700 w-32">Harga Satuan</th>
                                     <th className="text-right px-3 py-2 text-slate-400 font-semibold border border-slate-700 w-32">Jumlah</th>
+                                    <th className="text-center px-3 py-2 text-slate-400 font-semibold border border-slate-700 w-14">Aksi</th>
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {doc.items.map((item: any, idx: number) => (
-                                    <tr key={idx} className={idx % 2 === 0 ? 'bg-slate-900/60' : 'bg-slate-900/30'}>
-                                      <td className="px-3 py-1.5 text-white border border-slate-800">{item.description}</td>
-                                      <td className="px-3 py-1.5 text-slate-300 text-center border border-slate-800">{item.quantity}</td>
-                                      <td className="px-3 py-1.5 text-slate-300 text-right font-mono border border-slate-800">
-                                        Rp {formatCurrency(item.price)}
-                                      </td>
-                                      <td className="px-3 py-1.5 text-indigo-300 text-right font-mono font-bold border border-slate-800">
-                                        Rp {formatCurrency(item.total)}
-                                      </td>
-                                    </tr>
-                                  ))}
+                                   {doc.items.map((item: any, idx: number) => {
+                                     const editing = editingItems[item.id]
+                                     const isSaving = savingItemId === item.id
+                                     const rowBgC = idx % 2 === 0 ? 'bg-slate-900/60' : 'bg-slate-900/30'
+                                     return (
+                                       <tr key={item.id ?? idx} className={rowBgC}>
+                                         {editing ? (
+                                           <>
+                                             <td className="px-2 py-1 border border-slate-700">
+                                               <input
+                                                 className="w-full bg-slate-800 text-white text-xs px-2 py-1 rounded border border-indigo-500 outline-none"
+                                                 value={editing.description}
+                                                 onChange={e => setEditingItems(p => ({ ...p, [item.id]: { ...p[item.id], description: e.target.value } }))}
+                                               />
+                                             </td>
+                                             <td className="px-2 py-1 border border-slate-700 w-16">
+                                               <input
+                                                 type="number" min={1}
+                                                 className="w-full bg-slate-800 text-white text-xs px-2 py-1 rounded border border-indigo-500 outline-none text-center"
+                                                 value={editing.quantity}
+                                                 onChange={e => setEditingItems(p => ({ ...p, [item.id]: { ...p[item.id], quantity: Number(e.target.value) } }))}
+                                               />
+                                             </td>
+                                             <td className="px-2 py-1 border border-slate-700 w-32">
+                                               <input
+                                                 type="number" min={0}
+                                                 className="w-full bg-slate-800 text-white text-xs px-2 py-1 rounded border border-indigo-500 outline-none text-right font-mono"
+                                                 value={editing.price}
+                                                 onChange={e => setEditingItems(p => ({ ...p, [item.id]: { ...p[item.id], price: Number(e.target.value) } }))}
+                                               />
+                                             </td>
+                                             <td className="px-2 py-1 border border-slate-700 w-32">
+                                               <input
+                                                 type="number" min={0}
+                                                 className="w-full bg-slate-800 text-white text-xs px-2 py-1 rounded border border-indigo-500 outline-none text-right font-mono"
+                                                 value={editing.total}
+                                                 onChange={e => setEditingItems(p => ({ ...p, [item.id]: { ...p[item.id], total: Number(e.target.value) } }))}
+                                               />
+                                             </td>
+                                             <td className="px-2 py-1 border border-slate-700 text-center w-14">
+                                               <div className="flex gap-1 justify-center">
+                                                 <button
+                                                   disabled={isSaving}
+                                                   onClick={async () => {
+                                                     setSavingItemId(item.id)
+                                                     await updateDocumentItem(item.id, editing)
+                                                     setSavingItemId(null)
+                                                     setEditingItems(p => { const n = { ...p }; delete n[item.id]; return n })
+                                                   }}
+                                                   className="p-1 text-emerald-400 hover:bg-emerald-400/20 rounded transition-colors disabled:opacity-40"
+                                                   title="Simpan"
+                                                 >
+                                                   {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                                                 </button>
+                                                 <button
+                                                   onClick={() => setEditingItems(p => { const n = { ...p }; delete n[item.id]; return n })}
+                                                   className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-400/10 rounded transition-colors"
+                                                   title="Batal"
+                                                 >
+                                                   <X className="w-3 h-3" />
+                                                 </button>
+                                               </div>
+                                             </td>
+                                           </>
+                                         ) : (
+                                           <>
+                                             <td className="px-3 py-1.5 text-white border border-slate-800">{item.description}</td>
+                                             <td className="px-3 py-1.5 text-slate-300 text-center border border-slate-800">{item.quantity}</td>
+                                             <td className="px-3 py-1.5 text-slate-300 text-right font-mono border border-slate-800">Rp {formatCurrency(item.price)}</td>
+                                             <td className="px-3 py-1.5 text-indigo-300 text-right font-mono font-bold border border-slate-800">Rp {formatCurrency(item.total)}</td>
+                                             <td className="px-3 py-1.5 text-center border border-slate-800 w-12">
+                                               <button
+                                                 onClick={() => setEditingItems(p => ({ ...p, [item.id]: { description: item.description, quantity: item.quantity, price: item.price, total: item.total } }))}
+                                                 className="p-1 text-slate-600 hover:text-indigo-400 hover:bg-indigo-400/10 rounded transition-colors"
+                                                 title="Edit item"
+                                               >
+                                                 <Pencil className="w-3 h-3" />
+                                               </button>
+                                             </td>
+                                           </>
+                                         )}
+                                       </tr>
+                                     )
+                                   })}
                                   <tr className="bg-slate-800">
-                                    <td colSpan={3} className="px-3 py-2 text-right font-bold text-white border border-slate-700 text-xs uppercase">Total</td>
+                                    <td colSpan={4} className="px-3 py-2 text-right font-bold text-white border border-slate-700 text-xs uppercase">Total</td>
                                     <td className="px-3 py-2 text-right font-bold text-emerald-400 font-mono border border-slate-700">
                                       Rp {formatCurrency(doc.totalAmount)}
                                     </td>
+                                    <td className="px-3 py-2 border border-slate-700"></td> {/* Empty cell for the action column */}
                                   </tr>
                                 </tbody>
                               </table>
