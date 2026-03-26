@@ -154,8 +154,17 @@ export default function DocumentUploader() {
         // 2. Semantic Deduplication for the isolated source
         const finalMap = new Map<string, any>()
         targetItems.forEach(it => {
-          const fuzzyKey = it.description.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/[a-z]$/, '')
-          if (!finalMap.has(fuzzyKey)) finalMap.set(fuzzyKey, it)
+          // Sanity check: reject nonsense items
+          if (!it.description || !/[a-zA-Z]{2,}/.test(it.description)) return
+          if (it.quantity > 99) return // OCR noise (table column numbers etc)
+          if (it.total > 0 && it.price > 0) {
+            // Reject if qty * price is extremely far from total (>200% off)
+            const expected = it.quantity * it.price
+            if (Math.abs(expected - it.total) > 2 * it.total && it.total > 1000) return
+          }
+          // Dedup key: letters+digits only, lowercase
+          const key = it.description.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 15)
+          if (!finalMap.has(key)) finalMap.set(key, it)
         })
 
         let finalItems = Array.from(finalMap.values())

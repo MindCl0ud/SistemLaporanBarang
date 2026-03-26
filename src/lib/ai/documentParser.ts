@@ -138,13 +138,15 @@ export async function parseDocumentImage(fileUrl: string | File, onProgress?: (m
  * Also collapses multiple spaces and normalizes "W aikabubak" => "Waikabubak"
  */
 function normalizeText(text: string): string {
+  // 0. Strip table border characters (OCR reads BA table lines as | or +)
+  let t = text.replace(/[|+#]/g, ' ')
+
   // Fix OCR artifacts in codes, numbers, and common words:
   // 1. Bridges spaces between digits and dots/slashes
-  let t = text.replace(/([A-Z0-9])\s*\.\s*([A-Z0-9])/gi, '$1.$2')
+  t = t.replace(/([A-Z0-9])\s*\.\s*([A-Z0-9])/gi, '$1.$2')
   t = t.replace(/([A-Z0-9])\s*\/\s*([A-Z0-9])/gi, '$1/$2')
   
   // 2. Bridges spaces in common Indonesian vendor fragments/words/ITEMS
-  // e.g., "Sum ber" -> "Sumber", "kan ebo" -> "kanebo", "stella gantung g" -> "stella gantung"
   const fragments = [
     'Sum ber', 'Ba rat', 'Ba pperida', 'Bha yangkara', 'Week arou',
     'kan ebo', 'stella gan tung', 'sar ung', 'gar dan', 'coo lant', 'coo lat'
@@ -156,8 +158,9 @@ function normalizeText(text: string): string {
 
   // 3. Specific item fixes
   t = t.replace(/\bcoolat\b/gi, 'coolant')
+  t = t.replace(/\bcoolant\b/gi, 'coolant')
 
-  // 4. Normalize multiple spaces to single (but preserve double space for item separation)
+  // 4. Normalize 3+ spaces to double space
   t = t.replace(/[ \t]{3,}/g, '  ')
   return t
 }
@@ -400,7 +403,13 @@ export function extractDataFromText(rawText: string) {
     }
 
     const isNumToken = (s: string) => /^\d{1,3}(\.\d{3})*(,\d+)?$/.test(s) || /^\d{4,}$/.test(s)
-    const isUnitToken = (s: string) => /^(?:buah|botol|pcs|unit|ltr?|rim|set|bu[a-z]+|kg|gram|lembar|dos|dus)[a-z]*[sx]?$/i.test(s)
+    // Strip leading non-alpha characters before unit check (e.g., "|buah" → "buah")
+    const isUnitToken = (s: string) => {
+      const clean = s.replace(/^[^a-zA-Z]+/, '')
+      return /^(?:buah|botol|pcs|unit|ltr?|rim|set|bu[a-z]+|kg|gram|lembar|dos|dus)[a-z]*[sx]?$/i.test(clean)
+    }
+    const cleanUnit = (s: string) => s.replace(/^[^a-zA-Z]+/, '')
+    void cleanUnit
 
     // Tokenise by whitespace
     const tokens = stripped.split(/\s+/).filter(Boolean)
