@@ -15,6 +15,8 @@
  *  - JUMLAH is on its own line and total on next line in some pages
  */
 
+import Tesseract from 'tesseract.js'
+
 /**
  * Preprocess an image URL/File for best Tesseract OCR quality:
  *  1. Draw on canvas at 1.5× scale (more pixels = better OCR)
