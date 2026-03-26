@@ -102,11 +102,15 @@ export function extractDataFromText(rawText: string) {
   // 1. Document Type
   // ──────────────────────────────────────────────────────────
   let type = 'Nota Pesanan'
-  if (lowerText.includes('berita acara penerimaan') || /ba\s*p-br\s*g/i.test(text)) {
+  const isBA = lowerText.includes('berita acara') || /ba\s*p-br\s*g/i.test(text) || /penerimaan\s*barang/i.test(text)
+  const isKwitansi = lowerText.includes('kwitansi') || lowerText.includes('kuitansi') || /pembayaran\s*sejumlah/i.test(text)
+  const isNota = lowerText.includes('nota pesanan') || /np\.br\s*g/i.test(text) || /pesanan\s*barang/i.test(text)
+
+  if (isBA) {
     type = 'Berita Acara Penerimaan Barang'
-  } else if (lowerText.includes('kwitansi') || lowerText.includes('kuitansi')) {
+  } else if (isKwitansi) {
     type = 'Kwitansi'
-  } else if (lowerText.includes('nota pesanan') || /np\.br\s*g/i.test(text)) {
+  } else if (isNota) {
     type = 'Nota Pesanan'
   } else if (lowerText.includes('faktur') || lowerText.includes('invoice')) {
     type = 'Faktur'
