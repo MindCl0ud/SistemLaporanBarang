@@ -55,7 +55,10 @@ function normalizeText(text: string): string {
     t = t.replace(regex, frag.replace(/\s+/g, ''))
   })
 
-  // 3. Normalize multiple spaces to single (but preserve double space for item separation)
+  // 3. Specific item fixes
+  t = t.replace(/\bcoolat\b/gi, 'coolant')
+
+  // 4. Normalize multiple spaces to single (but preserve double space for item separation)
   t = t.replace(/[ \t]{3,}/g, '  ')
   return t
 }
@@ -265,75 +268,85 @@ export function extractDataFromText(rawText: string) {
 
   // ──────────────────────────────────────────────────────────
   // 6. Line Items
-  //    Three formats observed:
-  //    A) Nota Pesanan: "- name   qty buah x   price   total" (all on one line with lots of spaces)
-  //    B) Berita Acara: name on one line, "qty buahx   price   total" on the NEXT line
-  //    C) Kwitansi: multi-line variant similar to B
+  //    Resilient Segment-based Parsing
   // ──────────────────────────────────────────────────────────
   const items: any[] = []
-  // Unit pattern handles OCR splits: "bua h", "bot ol", "bua hx", etc.
-  const unitPattern = '(?:bu[a-z]{1,3}\\s*[hx]?|bot[a-z]{0,2}\\s*[lx]?|lt[a-z]?|li[a-z]+|rim|dos|dus|set|pcs|unit|lembar|kg|gram)'
+  const unitPattern = new RegExp('(?:bu[a-z]{1,3}\\s*[hx]?|bot[a-z]{0,2}\\s*[lx]?|lt[a-z]?|li[a-z]+|rim|dos|dus|set|pcs|unit|lembar|kg|gram)', 'i')
   
-  // Pattern A: handles "1 - item name   2 buah x   200.000   400.000"
-  const itemPatternA = new RegExp(
-    '^(?:\\d+\\s*)?-?\\s*(.+?)\\s+(\\d+)\\s+' + unitPattern + '\\s*x?\\s+([\\d.,\\s]+)\\s+([\\d.,]+)\\s*$',
-    'i'
-  )
-  
-  // Pattern B-qty: next line after name
-  const itemPatternBqty = new RegExp(
-    '^[Il1]?\\s*(\\d+)\\s+' + unitPattern + '\\s*x?\\s+([\\d.,\\s]+)\\s+([\\d.,]+)\\s*$',
-    'i'
-  )
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    if (line.includes('JUMLAH') || line.includes('Terima dari') || line.includes('Untuk Pembayaran')) continue
 
-  let idx = 0
-  while (idx < lines.length) {
-    const line = lines[idx]
+    // Strategy 1: Look for numeric patterns in the line
+    // e.g. name... [qty] [unit] [x] [price] [total]
+    const segments = line.split(/[ \t]{2,}/).filter(s => s.length > 0)
+    
+    // An item line usually has at least: description, quantity+unit, price, total
+    // But sometimes quantity and unit are separate segments or merged.
+    if (segments.length >= 2) {
+      // Find the segments that look like prices/totals (ending segments usually)
+      const lastSegment = segments[segments.length - 1]
+      const prevSegment = segments[segments.length - 2]
+      
+      const total = parseAmount(lastSegment)
+      const price = parseAmount(prevSegment)
+      
+      // If we found a valid total and price (or just a total)
+      if (total > 0) {
+        // Find quantity + unit
+        let qty = 0
+        let description = segments[0]
+        
+        // Try to find a segment with "digit + unit"
+        for (let j = 1; j < segments.length - 1; j++) {
+          const seg = segments[j]
+          const m = seg.match(/(\d+(?:\.\d+)?)\s*(?:buah|botol|pcs|unit|lt|rim|set|bu[a-z]+)/i)
+          if (m) {
+            qty = parseFloat(m[1])
+            // Description is everything before this segment
+            description = segments.slice(0, j).join(' ')
+            break
+          }
+        }
+        
+        // If still no qty, maybe it's the 2nd segment
+        if (qty === 0 && segments.length >= 3) {
+          const m = segments[1].match(/^\d+$/)
+          if (m) {
+            qty = parseFloat(segments[1])
+            description = segments[0]
+          }
+        }
 
-    // Skip obviously non-item lines
-    if (line.includes('JUMLAH') || line.includes('Terima dari') || line.includes('Untuk Pembayaran')) {
-      idx++
-      continue
-    }
-
-    // Try Pattern A first (single-line)
-    const matchA = line.match(itemPatternA)
-    if (matchA) {
-      const price = parseAmount(matchA[3])
-      const total = parseAmount(matchA[4])
-      if (price > 0 && total > 0) {
-        items.push({
-          description: matchA[1].replace(/^-?\s*/, '').trim(),
-          quantity: parseFloat(matchA[2].replace(/[^\d.]/g, '')),
-          price,
-          total
-        })
-      }
-      idx++
-      continue
-    }
-
-    // Try Pattern B: "- name" on this line, quantities on next (or same if split poorly)
-    if (/^-\s+\w/.test(line)) {
-      const nextLine = (lines[idx + 1] || '').trim()
-      const matchB = nextLine.match(itemPatternBqty)
-      if (matchB) {
-        const price = parseAmount(matchB[2])
-        const total = parseAmount(matchB[3])
-        if (price > 0) {
+        // Clean up description (remove leading #, dash, etc.)
+        description = description.replace(/^(?:\d+\s*)?-?\s*/, '').trim()
+        
+        if (description.length > 2 && (qty > 0 || total > 0)) {
           items.push({
-            description: line.replace(/^-\s*/, '').replace(/^\d+\s+/, '').trim(),
-            quantity: parseFloat(matchB[1].replace(/[^\d.]/g, '')),
-            price,
-            total: total || (parseFloat(matchB[1]) * price)
+            description,
+            quantity: qty || 1,
+            price: price || total,
+            total
           })
-          idx += 2
           continue
         }
       }
     }
 
-    idx++
+    // Strategy 2: Fallback to existing Pattern B (Two-line items)
+    if (/^-\s+\w/.test(line) && i + 1 < lines.length) {
+       const nextLine = lines[i+1]
+       const matchB = nextLine.match(/^[Il1]?\s*(\d+)\s+(?:buah|botol|lt|rim|set|pcs)\s*x?\s+([\d.,\s]+)\s+([\d.,]+)\s*$/i)
+       if (matchB) {
+         items.push({
+           description: line.replace(/^-\s*/, '').trim(),
+           quantity: parseFloat(matchB[1]),
+           price: parseAmount(matchB[2]),
+           total: parseAmount(matchB[3])
+         })
+         i++ // skip next line
+       }
+    }
   }
 
   // ──────────────────────────────────────────────────────────
