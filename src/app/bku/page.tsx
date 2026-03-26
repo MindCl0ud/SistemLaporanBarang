@@ -69,64 +69,54 @@ export default async function BkuPage({
             Ringkasan Keuangan
            </h2>
            
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Left Column: Current Month */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Left Column: Bulan berjalan */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="w-1 h-4 bg-emerald-500 rounded-full"></div>
-                  <h3 className="text-xs font-bold text-slate-300 uppercase tracking-widest">Bulan Berjalan</h3>
+                  <div className="w-1.5 h-4 bg-blue-500 rounded-full"></div>
+                  <h3 className="text-sm font-bold text-white uppercase tracking-widest">Bulan berjalan</h3>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="p-3 rounded-xl bg-white/5 border border-white/5 overflow-hidden">
-                    <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1">Penerimaan</p>
-                    <div className="flex items-baseline gap-2">
-                      <p className="text-lg font-bold text-emerald-400">{formatCurrency(stats.currentReceipt)}</p>
-                      <span className={`text-[8px] px-1 py-0.5 rounded ${isRecUp ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
-                        {isRecUp ? '+' : '-'}{recPct}%
-                      </span>
-                    </div>
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="flex justify-between items-center p-3.5 rounded-xl bg-white/5 border border-white/5">
+                    <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Total Penerimaan</span>
+                    <p className="text-lg font-bold text-emerald-400">{formatCurrency(stats.currentReceipt)}</p>
                   </div>
-                  <div className="p-3 rounded-xl bg-white/5 border border-white/5 overflow-hidden">
-                    <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1">Pengeluaran</p>
-                    <div className="flex items-baseline gap-2">
-                      <p className="text-lg font-bold text-rose-400">{formatCurrency(stats.currentExpense)}</p>
-                      <span className={`text-[8px] px-1 py-0.5 rounded ${isExpUp ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'}`}>
-                        {isExpUp ? '+' : '-'}{expPct}%
-                      </span>
-                    </div>
+                  <div className="flex justify-between items-center p-3.5 rounded-xl bg-white/5 border border-white/5">
+                    <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Total Pengeluaran</span>
+                    <p className="text-lg font-bold text-rose-400">{formatCurrency(stats.currentExpense)}</p>
                   </div>
-                  <div className="sm:col-span-2 p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 overflow-hidden">
+                  <div className="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
                     <div className="flex justify-between items-center mb-1">
-                      <p className="text-[10px] text-indigo-300 uppercase tracking-widest font-bold">Saldo Akhir</p>
+                      <span className="text-xs text-indigo-300 font-bold uppercase tracking-wider">Total Saldo</span>
                       <div className="text-right">
-                        <p className="text-[9px] text-indigo-400/60 uppercase font-bold tracking-widest">Total Kas Tersedia</p>
-                        <p className="text-sm font-bold text-indigo-300/90">{formatCurrency(stats.openingBalance + stats.currentReceipt)}</p>
+                        <span className="text-[9px] text-indigo-400 opacity-60 uppercase font-bold tracking-widest block">Kas Tersedia</span>
+                        <span className="text-xs font-bold text-indigo-300">{formatCurrency(stats.openingBalance + stats.currentReceipt)}</span>
                       </div>
                     </div>
-                    <p className="text-2xl font-bold text-white tracking-tight">{formatCurrency(stats.closingBalance)}</p>
+                    <p className="text-2xl font-black text-white">{formatCurrency(stats.closingBalance)}</p>
                   </div>
                 </div>
               </div>
 
-              {/* Right Column: Previous Month */}
+              {/* Right Column: Bulan sebelumnya */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="w-1 h-4 bg-slate-500 rounded-full"></div>
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Bulan Lalu</h3>
+                  <div className="w-1.5 h-4 bg-slate-500 rounded-full"></div>
+                  <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Bulan sebelumnya</h3>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 opacity-80">
-                  <div className="p-3 rounded-xl bg-white/5 border border-white/5 overflow-hidden border-dashed">
-                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">Penerimaan Lalu</p>
-                    <p className="text-base font-semibold text-slate-400">{formatCurrency(stats.prevReceipt)}</p>
+                <div className="grid grid-cols-1 gap-3 opacity-70">
+                  <div className="flex justify-between items-center p-3.5 rounded-xl bg-white/5 border border-white/5 border-dashed">
+                    <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">Total Penerimaan</span>
+                    <p className="text-lg font-semibold text-slate-400">{formatCurrency(stats.prevReceipt)}</p>
                   </div>
-                  <div className="p-3 rounded-xl bg-white/5 border border-white/5 overflow-hidden border-dashed">
-                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">Pengeluaran Lalu</p>
-                    <p className="text-base font-semibold text-slate-400">{formatCurrency(stats.prevExpense)}</p>
+                  <div className="flex justify-between items-center p-3.5 rounded-xl bg-white/5 border border-white/5 border-dashed">
+                    <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">Total Pengeluaran</span>
+                    <p className="text-lg font-semibold text-slate-400">{formatCurrency(stats.prevExpense)}</p>
                   </div>
-                  <div className="sm:col-span-2 p-4 rounded-xl bg-slate-800/40 border border-white/5 overflow-hidden">
-                    <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1">Saldo Bulan Lalu</p>
-                    <p className="text-xl font-bold text-slate-300 tracking-tight">{formatCurrency(stats.openingBalance)}</p>
-                    <p className="text-[9px] text-slate-500 italic mt-2">* Menjadi Saldo Awal periode berjalan</p>
+                  <div className="p-4 rounded-xl bg-slate-800/40 border border-white/5">
+                    <span className="text-xs text-slate-500 font-bold uppercase tracking-wider block mb-1">Total Saldo</span>
+                    <p className="text-xl font-bold text-slate-300">{formatCurrency(stats.openingBalance)}</p>
+                    <p className="text-[9px] text-slate-500 italic mt-2">* Saldo Bulan Lalu</p>
                   </div>
                 </div>
               </div>
