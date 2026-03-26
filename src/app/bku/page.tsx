@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { BookOpen, Plus, TrendingUp, TrendingDown } from "lucide-react"
 import BkuForm from "./BkuForm"
 import BkuList from "./BkuList"
+import BkuFilter from "./BkuFilter"
 
 export default async function BkuPage({
   searchParams,
@@ -24,63 +25,76 @@ export default async function BkuPage({
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-700">
-      <header className="flex justify-between items-end">
+    <div className="w-full max-w-[1800px] mx-auto px-4 space-y-8 animate-in fade-in duration-700">
+      <header className="flex flex-wrap justify-between items-center gap-6">
         <div>
           <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-300 flex items-center gap-3">
             <BookOpen className="w-8 h-8 text-blue-400" />
             Buku Kas Umum (BKU)
           </h1>
-          <p className="text-slate-400 mt-2">Kelola data pembukuan bulanan sebagai acuan AI mencocokkan dokumen pengeluaran.</p>
+          <p className="text-slate-400 mt-1">Kelola data pembukuan bulanan sebagai acuan AI mencocokkan dokumen pengeluaran.</p>
         </div>
+        
+        <BkuFilter currentMonth={currentMonth} currentYear={currentYear} />
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Col: Insert Form & Stats */}
-        <div className="lg:col-span-1 space-y-6">
-          <div className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
-            <h2 className="text-lg font-medium text-white mb-6 flex items-center gap-2">
-              <Plus className="w-5 h-5 text-indigo-400" />
-              Tambah Data BKU
-            </h2>
-            <BkuForm currentMonth={currentMonth} currentYear={currentYear} />
-          </div>
-
-          <div className="p-6 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-blue-500/5 border border-indigo-500/20">
-             <h2 className="text-sm font-medium text-indigo-300 mb-4 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4" />
-              Ringkasan Bulan Ini
-             </h2>
-             <div className="space-y-4">
-                <div>
-                  <p className="text-xs text-slate-400">Total Pengeluaran</p>
-                  <p className="text-2xl font-bold text-rose-400 mt-1">{formatCurrency(stats.currentExpense)}</p>
-                </div>
-                
-                <div className="p-3 bg-black/20 rounded-xl flex items-center justify-between border border-white/5 mt-2">
-                  <span className="text-xs text-slate-400">Bulan Lalu:</span>
-                  <span className="text-sm font-medium text-white">{formatCurrency(stats.prevExpense)}</span>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <span className={`flex items-center gap-1 text-xs px-2 py-1 rounded-md font-medium ${isIncrease ? (stats.currentExpense > 0 ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300') : 'bg-emerald-500/20 text-emerald-300'}`}>
-                    {isIncrease ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                    {percentage}%
-                  </span>
-                  <span className="text-xs text-slate-500">vs bulan lalu</span>
-                </div>
-             </div>
-          </div>
+      {/* Top Row: Insert Form & Stats Side by Side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Tambah Data BKU Card */}
+        <div className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+          <h2 className="text-lg font-medium text-white mb-6 flex items-center gap-2">
+            <Plus className="w-5 h-5 text-indigo-400" />
+            Tambah Data BKU
+          </h2>
+          <BkuForm currentMonth={currentMonth} currentYear={currentYear} />
         </div>
 
-        {/* Right Col: Data Table */}
-        <div className="lg:col-span-2">
-          <div className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md min-h-[500px]">
-             <div className="flex justify-between items-center mb-6">
-               <h2 className="text-lg font-medium text-white">Data BKU Bulan {currentMonth}/{currentYear}</h2>
+        {/* Ringkasan Stats Card */}
+        <div className="p-6 rounded-2xl bg-gradient-to-br from-slate-900 to-indigo-900/40 border border-white/10 backdrop-blur-md flex flex-col justify-between">
+           <div>
+             <h2 className="text-lg font-medium text-white mb-6 flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-emerald-400" />
+              Ringkasan Bulan Ini
+             </h2>
+             
+             <div className="grid grid-cols-2 gap-8">
+                <div className="space-y-1">
+                  <p className="text-xs text-slate-400 uppercase tracking-wider">Total Pengeluaran</p>
+                  <p className="text-3xl font-bold text-rose-400 tracking-tight">{formatCurrency(stats.currentExpense)}</p>
+                </div>
+                
+                <div className="space-y-1">
+                  <p className="text-xs text-slate-400 uppercase tracking-wider">Bulan Lalu</p>
+                  <p className="text-3xl font-bold text-white tracking-tight opacity-60">{formatCurrency(stats.prevExpense)}</p>
+                </div>
              </div>
-             <BkuList initialRecords={records} />
-          </div>
+           </div>
+
+           <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-sm ${isIncrease ? (stats.currentExpense > 0 ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300') : 'bg-emerald-500/20 text-emerald-300'}`}>
+                  {isIncrease ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                  {percentage}%
+                </div>
+                <span className="text-xs text-slate-400">Pebandingan dengan periode sebelumnya</span>
+              </div>
+              
+              <div className="text-[10px] text-slate-500 uppercase font-medium bg-white/5 px-2 py-1 rounded">Update Real-time</div>
+           </div>
+        </div>
+      </div>
+
+      {/* Bottom Section: Data List Table (Full Width) */}
+      <div className="w-full">
+        <div className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md min-h-[500px]">
+           <div className="flex justify-between items-center mb-8">
+             <div className="flex items-center gap-3">
+               <div className="w-1.5 h-6 bg-blue-500 rounded-full"></div>
+               <h2 className="text-xl font-semibold text-white tracking-tight">Data Transaksi BKU</h2>
+               <span className="bg-blue-500/10 text-blue-300 text-[10px] px-2 py-0.5 rounded-full border border-blue-500/20 uppercase font-bold">Periode: {currentMonth}/{currentYear}</span>
+             </div>
+           </div>
+           <BkuList initialRecords={records} />
         </div>
       </div>
     </div>
