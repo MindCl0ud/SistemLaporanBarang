@@ -31,30 +31,18 @@ export default function BkuList({ initialRecords, openingBalance = 0 }: { initia
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount)
   }
 
-  const parseDateString = (d: string | null) => {
-    if (!d) return 0
-    const parts = d.split(/[-/]/)
-    if (parts.length === 3) {
-      // DD-MM-YYYY -> YYYY, MM-1, DD
-      return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])).getTime()
-    }
-    return 0
-  }
-
-  // Always sort chronologically ASC first to calculate running balance correctly
-  const sortedChronologically = [...initialRecords].sort((a, b) => {
-    const timeA = parseDateString(a.date) || new Date(a.createdAt).getTime()
-    const timeB = parseDateString(b.date) || new Date(b.createdAt).getTime()
-    return timeA - timeB
-  })
+  // Sort by createdAt ascending first to calculate running balance in input order
+  const sortedByInput = [...initialRecords].sort((a, b) => 
+    new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  )
 
   let currentRunningBalance = openingBalance
-  const recordsWithBalance = sortedChronologically.map(record => {
+  const recordsWithBalance = sortedByInput.map(record => {
     currentRunningBalance += (record.receiptTotal || 0) - (record.expenseTotal || 0)
     return { ...record, calculatedBalance: currentRunningBalance }
   })
 
-  // Finally apply the user's preferred display sort order
+  // Finally apply the user's preferred display sort order (Asc or Desc)
   const displayedRecords = sortDesc ? [...recordsWithBalance].reverse() : recordsWithBalance
 
   return (
