@@ -44,6 +44,7 @@ export default function DocumentUploader() {
           totalAmount: 0,
           extractedText: "",
           itemsMap: new Map<string, any>(),
+          hasNotaPesanan: false,
           date: null,
           baDate: null,
           docNumber: "",
@@ -65,22 +66,31 @@ export default function DocumentUploader() {
           if (res.data.kodeRek) masterData.kodeRek = res.data.kodeRek
           if (res.data.subKegiatan) masterData.subKegiatan = res.data.subKegiatan
 
-          // Merge items with fuzzier deduplication
-          if (res.data.items) {
+          // ────────────────────────────────────────────────────────
+          // Item Merging Logic with Nota Pesanan Priority
+          // ────────────────────────────────────────────────────────
+          const isNota = res.data.type === 'Nota Pesanan'
+          
+          if (isNota && !masterData.hasNotaPesanan) {
+            // Found Nota Pesanan for the first time: CLEAR PREVIOUS NOISY ITEMS
+            masterData.itemsMap.clear()
+            masterData.hasNotaPesanan = true
+          }
+
+          if (res.data.items && (isNota || !masterData.hasNotaPesanan)) {
             res.data.items.forEach((it: any) => {
-              // Create a fuzzy key: alphanumeric only, lowercase, no trailing single letters
               const fuzzyKey = it.description.toLowerCase()
                 .replace(/[^a-z0-9]/g, '')
-                .replace(/[a-z]$/, '') // e.g. "kanebog" -> "kanebo"
+                .replace(/[a-z]$/, '') 
               
               const existing = masterData.itemsMap.get(fuzzyKey)
               if (!existing) {
                 masterData.itemsMap.set(fuzzyKey, it)
-              } else {
-                // If existing has no price but new one does, prefer the new one
-                if ((existing.price === 0 || existing.total === 0) && it.price > 0) {
-                  masterData.itemsMap.set(fuzzyKey, it)
-                }
+              } else if (isNota) {
+                // If it's a Nota and we already have it, prefer the Nota's data
+                masterData.itemsMap.set(fuzzyKey, it)
+              } else if (it.price > 0 && existing.price === 0) {
+                masterData.itemsMap.set(fuzzyKey, it)
               }
             })
           }
