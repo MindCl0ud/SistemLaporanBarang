@@ -395,11 +395,6 @@ export function extractDataFromText(rawText: string) {
     // ── Indonesian number parser ──────────────────────────────
     const toNum = (s: string) => {
       const n = s.replace(/\./g, '').replace(',', '.')
-      return parseFloat(n) || 0
-    }
-    // ── Indonesian number parser ──────────────────────────────
-    const toNum = (s: string) => {
-      const n = s.replace(/\./g, '').replace(',', '.')
       const v = parseFloat(n)
       return isNaN(v) ? 0 : v
     }
