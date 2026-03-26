@@ -39,11 +39,20 @@ export async function parseDocumentImage(fileUrl: string | File, onProgress?: (m
  * Also collapses multiple spaces and normalizes "W aikabubak" => "Waikabubak"
  */
 function normalizeText(text: string): string {
-  // Fix OCR artifacts in codes and numbers:
+  // Fix OCR artifacts in codes, numbers, and common words:
   // 1. Bridges spaces between digits and dots/slashes
   let t = text.replace(/([A-Z0-9])\s*\.\s*([A-Z0-9])/gi, '$1.$2')
   t = t.replace(/([A-Z0-9])\s*\/\s*([A-Z0-9])/gi, '$1/$2')
-  // 2. Normalize multiple spaces to single (but preserve double space for item separation)
+  
+  // 2. Bridges spaces in common Indonesian vendor fragments/words
+  // e.g., "Sum ber" -> "Sumber", "Ba rat" -> "Barat"
+  const fragments = ['Sum ber', 'Ba rat', 'Ba pperida', 'Bha yangkara', 'Week arou']
+  fragments.forEach(frag => {
+    const regex = new RegExp(frag.split('').join('\\s*'), 'gi')
+    t = t.replace(regex, frag.replace(/\s+/g, ''))
+  })
+
+  // 3. Normalize multiple spaces to single (but preserve double space for item separation)
   t = t.replace(/[ \t]{3,}/g, '  ')
   return t
 }

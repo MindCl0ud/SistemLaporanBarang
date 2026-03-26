@@ -61,15 +61,19 @@ export async function runMatchingEngine(month: number, year: number) {
       }
     }
 
-    if (bestMatchDoc && highestConfidence >= 0.5) {
+      if (bestMatchDoc && highestConfidence >= 0.5) {
       // Create match record
+      const reason = highestConfidence >= 0.8 
+        ? 'Cocok Sempurna (Kode Rekening & Nominal sama persis).'
+        : 'Cocok berdasarkan kesamaan nominal dan sebagian kode rekening.';
+
       await prisma.matchRecord.create({
         data: {
           bkuTransactionId: bku.id,
           documentId: bestMatchDoc.id,
           confidence: highestConfidence,
           status: 'MATCHED',
-          reasoning: 'Otomatis dicocokkan berdasarkan kesamaan jumlah nominal dan kata kunci.'
+          reasoning: reason
         }
       })
       matchCount++
