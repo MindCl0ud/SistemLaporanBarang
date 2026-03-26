@@ -87,38 +87,49 @@ export default function DocumentUploader() {
           }
         }
 
-        // Check for Scanned PDFs
-        const firstResult = pdfResults[0]
-        const cleanFirstText = firstResult?.text?.replace(/\\f/g, '').trim() || ''
+        // ────────────────────────────────────────────────────────
+        // ALWAYS render via pdf.js at HIGH resolution (3.5×) for OCR.
+        // The server-side text (pdf2json) may be corrupted for scanned PDFs.
+        // We use high-res canvas rendering as the sole input to Tesseract.
+        // ────────────────────────────────────────────────────────
+        setStatusText('Memuat Halaman PDF...')
+        const pdfjsLib = await import('pdfjs-dist')
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
+
+        const arrayBuffer = await file.arrayBuffer()
+        const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+        const numPages = Math.min(pdfDoc.numPages, 5)
         
-        if (cleanFirstText.length < 50 && (!firstResult || firstResult.data.totalAmount === 0)) {
-          setStatusText('PDF Scan terdeteksi. Menjalankan OCR Multi-Halaman...')
-          const pdfjsLib = await import('pdfjs-dist')
-          pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-          
-          const arrayBuffer = await file.arrayBuffer()
-          const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
-          const numPages = Math.min(pdfDoc.numPages, 5)
-          
-          for (let i = 1; i <= numPages; i++) {
-            setStatusText(`Mengolah Halaman ${i} dari ${numPages}...`)
-            const page = await pdfDoc.getPage(i)
-            const viewport = page.getViewport({ scale: 2.0 })
-            const canvas = document.createElement('canvas')
-            canvas.width = viewport.width
-            canvas.height = viewport.height
-            const ctx = canvas.getContext('2d')
-            if (ctx) {
-              // @ts-ignore
-              await page.render({ canvasContext: ctx, viewport }).promise
-              const imgDataUrl = canvas.toDataURL('image/png')
-              const pageResult = await parseDocumentImage(imgDataUrl, (msg) => setStatusText(`Halaman ${i}: ${msg}`))
-              processPageResult(pageResult)
-            }
+        for (let i = 1; i <= numPages; i++) {
+          setStatusText(`Mengolah Halaman ${i} dari ${numPages}...`)
+          const page = await pdfDoc.getPage(i)
+          // Scale 3.5× gives ~2450px width for A4 — much better for Tesseract
+          const viewport = page.getViewport({ scale: 3.5 })
+          const canvas = document.createElement('canvas')
+          canvas.width = viewport.width
+          canvas.height = viewport.height
+          const ctx = canvas.getContext('2d')
+          if (ctx) {
+            // @ts-ignore
+            await page.render({ canvasContext: ctx, viewport }).promise
+            // JPEG at 95% quality → smaller + clean edges for Tesseract
+            const imgDataUrl = canvas.toDataURL('image/jpeg', 0.95)
+            const pageResult = await parseDocumentImage(imgDataUrl, (msg) => setStatusText(`Halaman ${i}: ${msg}`))
+            processPageResult(pageResult)
           }
-        } else {
-          // Searchable PDF
-          pdfResults.forEach(res => processPageResult(res))
+        }
+
+        // Apply server-side metadata as fallback for fields not found via OCR
+        if (pdfResults && pdfResults.length > 0) {
+          pdfResults.forEach((res: any) => {
+            if (!res?.data) return
+            if (res.data.vendorName && res.data.vendorName !== 'Tidak Diketahui' && masterData.vendorName === 'Tidak Diketahui') {
+              masterData.vendorName = res.data.vendorName
+            }
+            if (res.data.kodeRek && !masterData.kodeRek) masterData.kodeRek = res.data.kodeRek
+            if (res.data.subKegiatan && !masterData.subKegiatan) masterData.subKegiatan = res.data.subKegiatan
+            if (res.data.baNumber && !masterData.baNumber) masterData.baNumber = res.data.baNumber
+          })
         }
 
         // Final Consolidation & Deduplication
