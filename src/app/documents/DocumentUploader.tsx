@@ -31,22 +31,20 @@ export default function DocumentUploader() {
         setStatusText('Mengekstrak Teks dari PDF (Server)...')
         const formData = new FormData()
         formData.append('file', file)
-        result = await parsePdfServer(formData)
+        const pdfResults = await parsePdfServer(formData) as any[]
 
-        // Clean pdf2json artifacts to accurately measure true text length
-        const cleanText = result.text.replace(/----------------Page \(\d+\) Break----------------/g, '').replace(/\\f/g, '').trim()
-        
         // Fallback for Scanned PDFs (Images wrapped in PDF)
-        if (cleanText.length < 100 && result.data.totalAmount === 0) {
+        // If the first page has almost no text and no amount, trigger multi-page OCR
+        const firstResult = pdfResults[0]
+        const cleanFirstText = firstResult?.text?.replace(/\\f/g, '').trim() || ''
+        
+        if (cleanFirstText.length < 50 && (!firstResult || firstResult.data.totalAmount === 0)) {
           setStatusText('PDF Scan/Dokumen Gambar terdeteksi. Menyiapkan OCR Multi-Halaman...')
           const pdfjsLib = await import('pdfjs-dist')
           pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
           
           const arrayBuffer = await file.arrayBuffer()
           const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
-          
-          let combinedText = ""
-          let combinedData: any = { type: "Nota", vendorName: "", totalAmount: 0 }
           
           // Process up to first 5 pages
           const numPages = Math.min(pdfDoc.numPages, 5)
@@ -67,41 +65,57 @@ export default function DocumentUploader() {
               const imgDataUrl = canvas.toDataURL('image/png')
               
               const pageResult = await parseDocumentImage(imgDataUrl, (msg) => setStatusText(`Halaman ${i}: ${msg}`))
-              combinedText += "\n" + pageResult.text
               
-              // Best of logic: take the one with higher amount or more certain vendor
-              if (pageResult.data.totalAmount > combinedData.totalAmount) {
-                combinedData.totalAmount = pageResult.data.totalAmount
-              }
-              if (!combinedData.vendorName || combinedData.vendorName.includes('Tidak Diketahui')) {
-                combinedData.vendorName = pageResult.data.vendorName
-              }
-              if (pageResult.data.type !== "Nota") {
-                combinedData.type = pageResult.data.type
+              // Only save if it looks like a real document (has text or amount)
+              if (pageResult.text.length > 50 || pageResult.data.totalAmount > 0) {
+                setStatusText(`Menyimpan Halaman ${i}...`)
+                await saveDocument({
+                  type: pageResult.data.type,
+                  vendorName: pageResult.data.vendorName,
+                  totalAmount: pageResult.data.totalAmount,
+                  extractedText: pageResult.text,
+                  items: pageResult.data.items || [],
+                  date: pageResult.data.date,
+                  kodeRek: pageResult.data.kodeRek,
+                  subKegiatan: pageResult.data.subKegiatan,
+                  docNumber: pageResult.data.docNumber
+                })
               }
             }
           }
-          
-          result = { text: combinedText, data: combinedData }
+        } else {
+          // Searchable PDF with content - Save each identified logical document
+          setStatusText(`Menyimpan ${pdfResults.length} Dokumen...`)
+          for (const res of pdfResults) {
+            await saveDocument({
+              type: res.data.type,
+              vendorName: res.data.vendorName,
+              totalAmount: res.data.totalAmount,
+              extractedText: res.text,
+              items: res.data.items || [],
+              date: res.data.date,
+              kodeRek: res.data.kodeRek,
+              subKegiatan: res.data.subKegiatan,
+              docNumber: res.data.docNumber
+            })
+          }
         }
       } else {
-        // Run Native OCR & AI Parsing for Images
-        result = await parseDocumentImage(fileUrl, (msg) => setStatusText(msg))
+        // Run Native OCR & AI Parsing for Single Images
+        const result = await parseDocumentImage(fileUrl, (msg) => setStatusText(msg))
+        setStatusText('Menyimpan ke Database...')
+        await saveDocument({
+          type: result.data.type,
+          vendorName: result.data.vendorName,
+          totalAmount: result.data.totalAmount,
+          extractedText: result.text,
+          items: result.data.items || [],
+          date: result.data.date,
+          kodeRek: result.data.kodeRek,
+          subKegiatan: result.data.subKegiatan,
+          docNumber: result.data.docNumber
+        })
       }
-
-      setStatusText('Menyimpan ke Database...')
-      
-      // Save to Supabase (via Server Action)
-      await saveDocument({
-        type: result.data.type,
-        vendorName: result.data.vendorName,
-        totalAmount: result.data.totalAmount,
-        extractedText: result.text,
-        items: result.data.items || [],
-        date: result.data.date,
-        kodeRek: result.data.kodeRek,
-        subKegiatan: result.data.subKegiatan
-      })
 
       setSuccess(true)
       URL.revokeObjectURL(fileUrl)

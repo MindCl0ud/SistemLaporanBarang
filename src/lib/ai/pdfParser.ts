@@ -19,9 +19,21 @@ export async function parsePdfServer(formData: FormData) {
     pdfParser.on("pdfParser_dataError", (errData: any) => reject(new Error(errData.parserError)));
     pdfParser.on("pdfParser_dataReady", () => {
       try {
-        const text = pdfParser.getRawTextContent() || "";
-        const result = extractDataFromText(text)
-        resolve({ text, data: result })
+        const fullText = pdfParser.getRawTextContent() || "";
+        
+        // Split by page break markers "----------------Page (n) Break----------------"
+        const pageChunks = fullText.split(/----------------Page \(\d+\) Break----------------/g)
+          .map((c: string) => c.trim())
+          .filter((c: string) => c.length > 50) // skip empty/short pages
+
+        const results = pageChunks.map((chunk: string) => {
+          return {
+            text: chunk,
+            data: extractDataFromText(chunk)
+          }
+        })
+
+        resolve(results)
       } catch (err: any) {
         reject(err)
       }

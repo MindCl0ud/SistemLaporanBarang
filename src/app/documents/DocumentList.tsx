@@ -11,14 +11,15 @@ import { deleteDocument } from "@/app/actions/documentActions"
 // ──────────────────────────────────────────────────────────
 const DEFAULT_WIDTHS: Record<string, number> = {
   no: 55,
-  status: 85,
+  status: 100,
   tanggal: 110,
-  kodeRek: 200,
+  docNumber: 180, // New Column
+  kodeRek: 160,
   subKegiatan: 160,
-  tipe: 120,
-  vendor: 250,
-  total: 150,
-  items: 400,
+  tipe: 110,
+  vendor: 220,
+  total: 130,
+  items: 380,
   aksi: 72,
 }
 
@@ -28,6 +29,7 @@ const COL_LABELS: Record<string, string> = {
   no: 'No',
   status: 'Status',
   tanggal: 'Tanggal',
+  docNumber: 'Nomor Dokumen',
   kodeRek: 'Kode Rek',
   subKegiatan: 'Sub Kegiatan',
   tipe: 'Tipe',
@@ -239,6 +241,11 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
 
                     {/* Tanggal */}
                     <td className={cellClass + ' font-mono'}>{docDate}</td>
+
+                    {/* Nomor Dokumen */}
+                    <td className={cellClass + ' font-mono text-slate-400 text-[11px]'}>
+                      {doc.docNumber || '—'}
+                    </td>
 
                     {/* Kode Rek */}
                     <td className={cellClass + ' font-mono text-indigo-300 text-[11px]'}>

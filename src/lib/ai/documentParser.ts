@@ -108,8 +108,8 @@ export function extractDataFromText(rawText: string) {
   // ──────────────────────────────────────────────────────────
   let docNumber = ''
   // Even more aggressive regex for Nomor Dokumen
-  // Captures until a known keyword or a double newline
-  const docNumRegex = /(?:N\s*o\s*m\s*[oe]\s*r|N\s*o\s*\.?|N\s*o\s*m\s*e\s*r|N\s*u\s*m\s*b\s*e\s*r)\s*[:.]?\s*([A-Z0-9.\s/\-]{5,100})/i
+  // Captures until a known keyword or a date or double newline
+  const docNumRegex = /(?:N\s*o\s*m\s*[oe]\s*r|N\s*o\s*\.?|B\s*R\s*I\s*D\s*A\s*\.?|N\s*u\s*m\s*b\s*e\s*r)\s*[:.]?\s*([A-Z0-9.\s/\-]{5,100})/i
   const docNumMatch = text.match(docNumRegex)
   if (docNumMatch) {
     // Clean up the match: stop at keywords manually
