@@ -205,19 +205,33 @@ export function extractDataFromText(rawText: string) {
   // ──────────────────────────────────────────────────────────
   let vendorName = 'Tidak Diketahui'
 
-  // Look for "PIHAK KEDUA" followed by "Nama" or "Jabatan"
-  const vendorContextIndex = lines.findIndex(l => l.toUpperCase().includes('PIHAK KEDUA'))
-  if (vendorContextIndex !== -1) {
-    for (let i = vendorContextIndex + 1; i < vendorContextIndex + 5 && i < lines.length; i++) {
-       const line = lines[i]
-       if (line.includes(':')) {
-         const val = line.split(':')[1].trim()
-         if (val.length > 3) {
-           vendorName = val
-           break
-         }
-       }
+  // ──────────────────────────────────────────────────────────
+  // 5. Vendor / Penyedia
+  // ──────────────────────────────────────────────────────────
+  let vendorName = 'Tidak Diketahui'
+
+  // Strategy: Find "PIHAK KEDUA" and look at lines around it (-5 to +5)
+  const pkIndex = lines.findIndex(l => l.toUpperCase().includes('PIHAK KEDUA'))
+  if (pkIndex !== -1) {
+    const start = Math.max(0, pkIndex - 6)
+    const end = Math.min(lines.length, pkIndex + 6)
+    
+    // Look for Jabatan (prioritized) then Nama
+    let foundJabatan = ''
+    let foundNama = ''
+    
+    for (let i = start; i < end; i++) {
+      const line = lines[i]
+      if (line.includes(':')) {
+        const parts = line.split(':')
+        const key = parts[0].toLowerCase()
+        const val = parts[1].trim()
+        
+        if (key.includes('jabatan') && val.length > 3) foundJabatan = val
+        if (key.includes('nama') && val.length > 3 && !/LEKO|AGUSTINUS/i.test(val)) foundNama = val
+      }
     }
+    vendorName = foundJabatan || foundNama || vendorName
   }
 
   // Fallback: look for "Terima Dari" or common patterns
@@ -264,14 +278,16 @@ export function extractDataFromText(rawText: string) {
   const items: any[] = []
   // Unit pattern handles OCR splits: "bua h", "bot ol", "bua hx", etc.
   const unitPattern = '(?:bu[a-z]{1,3}\\s*[hx]?|bot[a-z]{0,2}\\s*[lx]?|lt[a-z]?|li[a-z]+|rim|dos|dus|set|pcs|unit|lembar|kg|gram)'
-  // Pattern A: "- name   2 buah x   200.000   400.000" (single line, lots of spaces)
+  
+  // Pattern A: handles "1 - item name   2 buah x   200.000   400.000"
   const itemPatternA = new RegExp(
-    '^-?\\s*(.+?)\\s+(\\d+)\\s+' + unitPattern + '\\s*x?\\s+([\\d.,]+)\\s+([\\d.,]+)\\s*$',
+    '^(?:\\d+\\s*)?-?\\s*(.+?)\\s+(\\d+)\\s+' + unitPattern + '\\s*x?\\s+([\\d.,\\s]+)\\s+([\\d.,]+)\\s*$',
     'i'
   )
-  // Pattern B-qty: next line after "- name" has "qty unit [x] price total"
+  
+  // Pattern B-qty: next line after name
   const itemPatternBqty = new RegExp(
-    '^[Il1]?\\s*(\\d+)\\s+' + unitPattern + '\\s*x?\\s+([\\d.,]+)\\s+([\\d.,]+)\\s*$',
+    '^[Il1]?\\s*(\\d+)\\s+' + unitPattern + '\\s*x?\\s+([\\d.,\\s]+)\\s+([\\d.,]+)\\s*$',
     'i'
   )
 
