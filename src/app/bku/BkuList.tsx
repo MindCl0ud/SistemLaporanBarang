@@ -10,15 +10,15 @@ import { deleteBkuRecord } from "@/app/actions/bkuActions"
 // Column definitions
 // ──────────────────────────────────────────────────────────
 const DEFAULT_WIDTHS: Record<string, number> = {
-  no:           48,
-  tanggal:     110,
-  kode:        200,
-  uraian:      340,
-  penerimaan:  140,
-  pengeluaran: 140,
-  saldo:       150,
-  status:       90,
-  aksi:         60,
+  no:           55,
+  tanggal:     120,
+  kode:        220,
+  uraian:      450,
+  penerimaan:  150,
+  pengeluaran: 150,
+  saldo:       160,
+  status:      100,
+  aksi:         70,
 }
 const COL_KEYS = Object.keys(DEFAULT_WIDTHS)
 const COL_LABELS: Record<string, string> = {
@@ -149,7 +149,7 @@ export default function BkuList({ initialRecords, openingBalance = 0 }: {
 
       {/* Spreadsheet */}
       <div className="overflow-auto rounded-xl border border-slate-700/60 shadow-2xl" style={{ maxHeight: '68vh' }}>
-        <table className="border-collapse text-sm" style={{ width: totalWidth, tableLayout: 'fixed' }}>
+        <table className="border-collapse text-sm min-w-full" style={{ width: '100%', minWidth: totalWidth, tableLayout: 'fixed' }}>
           <colgroup>
             {COL_KEYS.map(k => <col key={k} style={{ width: colWidths[k] }} />)}
           </colgroup>

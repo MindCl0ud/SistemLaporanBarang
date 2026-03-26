@@ -10,15 +10,15 @@ import { deleteDocument } from "@/app/actions/documentActions"
 // Column definitions
 // ──────────────────────────────────────────────────────────
 const DEFAULT_WIDTHS: Record<string, number> = {
-  no: 48,
-  status: 80,
+  no: 55,
+  status: 85,
   tanggal: 110,
-  kodeRek: 220,
-  subKegiatan: 140,
-  tipe: 110,
-  vendor: 200,
-  total: 140,
-  items: 320,
+  kodeRek: 200,
+  subKegiatan: 160,
+  tipe: 120,
+  vendor: 250,
+  total: 150,
+  items: 400,
   aksi: 72,
 }
 
@@ -156,8 +156,8 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
       <div className="overflow-auto rounded-xl border border-slate-700/60 shadow-2xl"
            style={{ maxHeight: '75vh' }}>
         <table
-          className="border-collapse text-sm"
-          style={{ width: totalWidth, tableLayout: 'fixed' }}
+          className="border-collapse text-sm min-w-full"
+          style={{ width: '100%', minWidth: totalWidth, tableLayout: 'fixed' }}
         >
           {/* ── Column sizing ── */}
           <colgroup>
