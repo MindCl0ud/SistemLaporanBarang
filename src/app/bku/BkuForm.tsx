@@ -50,11 +50,12 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
           let itemMonth = currentMonth
           let itemYear = currentYear
           
-          if (currentDate.includes('-')) {
-            const parts = currentDate.split('-')
+          if (currentDate.includes('-') || currentDate.includes('/')) {
+            const separator = currentDate.includes('-') ? '-' : '/'
+            const parts = currentDate.split(separator)
             if (parts.length === 3) {
-              const m = parseInt(parts[1])
-              const y = parseInt(parts[2])
+              const m = parseInt(parts[1], 10)
+              const y = parseInt(parts[2], 10)
               if (!isNaN(m)) itemMonth = m
               if (!isNaN(y)) itemYear = y
             }

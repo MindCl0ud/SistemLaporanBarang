@@ -51,22 +51,22 @@ export default function BkuList({ initialRecords }: { initialRecords: any[] }) {
           <thead className="text-xs uppercase text-slate-400 sticky top-0 z-10 shadow-sm">
             <tr>
               <th className="px-4 py-3 bg-slate-900/95 border-b border-white/10 backdrop-blur-sm w-32 font-semibold">
-                <div className="resize-x overflow-hidden min-w-[100px] hover:border-r border-indigo-500/50 pr-2">Tanggal Bukti</div>
+                <div className="resize-x overflow-auto min-w-[50px] hover:border-r border-indigo-500/50 pr-2 whitespace-nowrap">Tanggal Bukti</div>
               </th>
               <th className="px-4 py-3 bg-slate-900/95 border-b border-white/10 backdrop-blur-sm font-semibold">
-                <div className="resize-x overflow-hidden min-w-[80px] hover:border-r border-indigo-500/50 pr-2">Kode Rek.</div>
+                <div className="resize-x overflow-auto min-w-[50px] hover:border-r border-indigo-500/50 pr-2 whitespace-nowrap">Kode Rek.</div>
               </th>
               <th className="px-4 py-3 bg-slate-900/95 border-b border-white/10 backdrop-blur-sm font-semibold">
-                <div className="resize-x overflow-hidden min-w-[150px] hover:border-r border-indigo-500/50 pr-2">Uraian</div>
+                <div className="resize-x overflow-auto min-w-[80px] hover:border-r border-indigo-500/50 pr-2 whitespace-nowrap">Uraian</div>
               </th>
               <th className="px-4 py-3 bg-slate-900/95 border-b border-white/10 backdrop-blur-sm text-right font-semibold">
-                <div className="resize-x overflow-hidden min-w-[100px] hover:border-x border-indigo-500/50 px-2">Penerimaan</div>
+                <div className="resize-x overflow-auto min-w-[80px] hover:border-x border-indigo-500/50 px-2 whitespace-nowrap ml-auto">Penerimaan</div>
               </th>
               <th className="px-4 py-3 bg-slate-900/95 border-b border-white/10 backdrop-blur-sm text-right font-semibold">
-                <div className="resize-x overflow-hidden min-w-[100px] hover:border-x border-indigo-500/50 px-2">Pengeluaran</div>
+                <div className="resize-x overflow-auto min-w-[80px] hover:border-x border-indigo-500/50 px-2 whitespace-nowrap ml-auto">Pengeluaran</div>
               </th>
               <th className="px-4 py-3 bg-slate-900/95 border-b border-white/10 backdrop-blur-sm text-right font-semibold">
-                <div className="resize-x overflow-hidden min-w-[100px] hover:border-x border-indigo-500/50 px-2">Saldo</div>
+                <div className="resize-x overflow-auto min-w-[80px] hover:border-x border-indigo-500/50 px-2 whitespace-nowrap ml-auto">Saldo</div>
               </th>
               <th className="px-2 py-3 bg-slate-900/95 border-b border-white/10 backdrop-blur-sm text-center font-semibold w-16">Aksi</th>
             </tr>
