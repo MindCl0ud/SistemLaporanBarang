@@ -67,17 +67,17 @@ export default function DocumentUploader() {
           if (res.data.subKegiatan) masterData.subKegiatan = res.data.subKegiatan
 
           // ────────────────────────────────────────────────────────
-          // Item Merging Logic with Nota Pesanan Priority
+          // Item Merging Logic with KWITANSI Priority
           // ────────────────────────────────────────────────────────
-          const isNota = res.data.type === 'Nota Pesanan'
+          const isKwitansi = res.data.type === 'Kwitansi'
           
-          if (isNota && !masterData.hasNotaPesanan) {
-            // Found Nota Pesanan for the first time: CLEAR PREVIOUS NOISY ITEMS
+          if (isKwitansi && !masterData.hasKwitansiPriority) {
+            // Found Kwitansi: CLEAR ALL OTHERS, this is our source of truth
             masterData.itemsMap.clear()
-            masterData.hasNotaPesanan = true
+            masterData.hasKwitansiPriority = true
           }
 
-          if (res.data.items && (isNota || !masterData.hasNotaPesanan)) {
+          if (res.data.items && (isKwitansi || !masterData.hasKwitansiPriority)) {
             res.data.items.forEach((it: any) => {
               const fuzzyKey = it.description.toLowerCase()
                 .replace(/[^a-z0-9]/g, '')
@@ -86,10 +86,10 @@ export default function DocumentUploader() {
               const existing = masterData.itemsMap.get(fuzzyKey)
               if (!existing) {
                 masterData.itemsMap.set(fuzzyKey, it)
-              } else if (isNota) {
-                // If it's a Nota and we already have it, prefer the Nota's data
+              } else if (isKwitansi) {
+                // If it's a Kwitansi, override existing data (Nota/BA)
                 masterData.itemsMap.set(fuzzyKey, it)
-              } else if (it.price > 0 && existing.price === 0) {
+              } else if (it.price > 0 && (existing.price === 0 || existing.price === '0')) {
                 masterData.itemsMap.set(fuzzyKey, it)
               }
             })
