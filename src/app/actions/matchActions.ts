@@ -30,14 +30,23 @@ export async function runMatchingEngine(month: number, year: number) {
          confidence += 0.3
       }
 
-      // 2. Code Suffix Match (New - Very Strong Indicator)
-      // Prefix to ignore: 5.01.01.2.09.0002
-      const prefix = "5.01.01.2.09.0002"
-      const bkuSuffix = bku.code?.startsWith(prefix) ? bku.code.replace(prefix, "").replace(/^\./, "") : bku.code
-      const docSuffix = doc.subKegiatan || (doc.kodeRek?.startsWith(prefix) ? doc.kodeRek.replace(prefix, "").replace(/^\./, "") : "")
+      // 2. Code String Match (Strong Indicator: Full Code)
+      const fullDocCode = doc.subKegiatan 
+        ? `${doc.kodeRek}.${doc.subKegiatan}` 
+        : doc.kodeRek?.replace(/\s+/g, '') || ''
+      
+      const bkuCode = bku.code?.replace(/\s+/g, '') || ''
 
-      if (bkuSuffix && docSuffix && bkuSuffix === docSuffix) {
+      if (bkuCode && fullDocCode && bkuCode === fullDocCode) {
         confidence += 0.4
+      } else if (bkuCode && fullDocCode && (bkuCode.includes(fullDocCode) || fullDocCode.includes(bkuCode))) {
+        confidence += 0.2
+      } else {
+        // 2a. Fallback: Check if common base activity code matches
+        const prefix = "5.01.01.2.09.0002"
+        if (bkuCode.startsWith(prefix) && fullDocCode.startsWith(prefix)) {
+          confidence += 0.3
+        }
       }
 
       // 3. Keyword match (Secondary Weight)
