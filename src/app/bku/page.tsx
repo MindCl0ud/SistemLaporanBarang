@@ -93,14 +93,14 @@ export default async function BkuPage({
               </div>
 
               <div className="space-y-1 p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 overflow-hidden">
-                <p className="text-[10px] text-indigo-300 uppercase tracking-widest font-bold">Saldo Berjalan</p>
+                <p className="text-[10px] text-indigo-300 uppercase tracking-widest font-bold">Saldo Akhir</p>
                 <div className="flex flex-wrap items-baseline gap-2">
-                  <p className="text-lg font-bold text-white leading-tight">{formatCurrency(stats.currentBalance)}</p>
+                  <p className="text-lg font-bold text-white leading-tight">{formatCurrency(stats.closingBalance)}</p>
                   <span className={`text-[9px] px-1.5 py-0.5 rounded whitespace-nowrap ${isBalUp ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
                     {isBalUp ? '+' : '-'}{balPct}%
                   </span>
                 </div>
-                <p className="text-[10px] text-indigo-300/50 mt-1">Bulan Lalu: <span className="text-indigo-300/80 font-medium">{formatCurrency(stats.prevBalance)}</span></p>
+                <p className="text-[10px] text-indigo-300/50 mt-1">Saldo Awal: <span className="text-indigo-300/80 font-medium">{formatCurrency(stats.openingBalance)}</span></p>
               </div>
            </div>
 
