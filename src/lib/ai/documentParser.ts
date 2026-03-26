@@ -48,7 +48,7 @@ function normalizeText(text: string): string {
   // e.g., "Sum ber" -> "Sumber", "kan ebo" -> "kanebo", "stella gantung g" -> "stella gantung"
   const fragments = [
     'Sum ber', 'Ba rat', 'Ba pperida', 'Bha yangkara', 'Week arou',
-    'kan ebo', 'stella gan tung', 'sar ung', 'gar dan'
+    'kan ebo', 'stella gan tung', 'sar ung', 'gar dan', 'coo lant', 'coo lat'
   ]
   fragments.forEach(frag => {
     const regex = new RegExp(frag.split('').join('\\s*'), 'gi')
@@ -237,13 +237,21 @@ export function extractDataFromText(rawText: string) {
     }
   }
 
-  // Final Cleanup for Vendor Name: REMOVE ALL PREFIXES
+  // Final Cleanup for Vendor Name: REMOVE ALL PREFIXES & EXCLUDE PAYERS
   if (vendorName !== 'Tidak Diketahui') {
-    vendorName = vendorName
-      .replace(/\b(?:Pengusaha|Toko|Penyedia|Nama|Pihak\s+Kedua|Jabatan)\b\s*[:.-]?\s*/gi, '')
-      .replace(/\b(?:CV\.?|PT\.?|UD\.?)\b\s*/gi, '')
-      .replace(/\s+/g, ' ')
-      .trim()
+    // If it looks like a document number or internal agency, reset it
+    const isInternalAgency = /BAPPERIDA|BRIDA|DAERAH|KABUPATEN|SUMBA|PENGGUNA|ANGGARAN|PROSE/i.test(vendorName)
+    const isDocNumber = /[\d./]{8,}/.test(vendorName) && vendorName.includes('/')
+
+    if (isInternalAgency || isDocNumber) {
+      vendorName = 'Tidak Diketahui'
+    } else {
+      vendorName = vendorName
+        .replace(/\b(?:Pengusaha|Toko|Penyedia|Nama|Pihak\s+Kedua|Jabatan)\b\s*[:.-]?\s*/gi, '')
+        .replace(/\b(?:CV\.?|PT\.?|UD\.?)\b\s*/gi, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+    }
   }
 
   // ──────────────────────────────────────────────────────────
@@ -271,6 +279,12 @@ export function extractDataFromText(rawText: string) {
   while (idx < lines.length) {
     const line = lines[idx]
 
+    // Skip obviously non-item lines
+    if (line.includes('JUMLAH') || line.includes('Terima dari') || line.includes('Untuk Pembayaran')) {
+      idx++
+      continue
+    }
+
     // Try Pattern A first (single-line)
     const matchA = line.match(itemPatternA)
     if (matchA) {
@@ -279,7 +293,7 @@ export function extractDataFromText(rawText: string) {
       if (price > 0 && total > 0) {
         items.push({
           description: matchA[1].replace(/^-?\s*/, '').trim(),
-          quantity: parseFloat(matchA[2]),
+          quantity: parseFloat(matchA[2].replace(/[^\d.]/g, '')),
           price,
           total
         })
@@ -288,19 +302,19 @@ export function extractDataFromText(rawText: string) {
       continue
     }
 
-    // Try Pattern B: "- name" on this line, quantities on next
-    if (/^-\s+\w/.test(line) && idx + 1 < lines.length) {
-      const nextLine = lines[idx + 1]
+    // Try Pattern B: "- name" on this line, quantities on next (or same if split poorly)
+    if (/^-\s+\w/.test(line)) {
+      const nextLine = (lines[idx + 1] || '').trim()
       const matchB = nextLine.match(itemPatternBqty)
       if (matchB) {
         const price = parseAmount(matchB[2])
         const total = parseAmount(matchB[3])
-        if (price > 0 && total > 0) {
+        if (price > 0) {
           items.push({
             description: line.replace(/^-\s*/, '').replace(/^\d+\s+/, '').trim(),
-            quantity: parseFloat(matchB[1]),
+            quantity: parseFloat(matchB[1].replace(/[^\d.]/g, '')),
             price,
-            total
+            total: total || (parseFloat(matchB[1]) * price)
           })
           idx += 2
           continue

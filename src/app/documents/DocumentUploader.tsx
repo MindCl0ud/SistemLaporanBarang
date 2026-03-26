@@ -198,14 +198,16 @@ export default function DocumentUploader() {
 
         <div
           {...getRootProps()}
-          className={`relative overflow-hidden border-2 border-dashed rounded-2xl p-12 text-center transition-all cursor-pointer bg-slate-900/40 duration-300 ${isDragActive ? 'border-indigo-400 bg-indigo-500/10 scale-105' : 'border-indigo-500/30 hover:border-indigo-400 bg-black/20 hover:bg-black/40'}`}
+          className={`relative overflow-hidden border-2 border-dashed rounded-2xl p-12 text-center transition-all cursor-pointer bg-slate-900/40 duration-300 flex flex-col items-center justify-center min-h-[250px] ${isDragActive ? 'border-indigo-400 bg-indigo-500/10 scale-[1.02]' : 'border-indigo-500/30 hover:border-indigo-400 bg-black/20 hover:bg-black/40'}`}
         >
           <input {...getInputProps()} />
-          <Upload className={`w-12 h-12 mb-4 transition-colors ${isDragActive ? 'text-indigo-400' : 'text-slate-400'}`} />
-          <p className="text-sm font-medium text-slate-200 text-center">
-            {isDragActive ? "Lepaskan file di sini..." : "Tarik & Lepas Gambar Dokumen atau PDF ke sini"}
-          </p>
-          <p className="text-xs text-slate-400 mt-2 text-center">Mendukung JPG, PNG, WEBP, dan PDF</p>
+          <Upload className={`w-16 h-16 mb-4 transition-colors ${isDragActive ? 'text-indigo-400' : 'text-slate-400'}`} />
+          <div className="space-y-1">
+            <p className="text-base font-bold text-slate-200">
+              {isDragActive ? "Lepaskan file di sini..." : "Tarik & Lepas Gambar Dokumen atau PDF"}
+            </p>
+            <p className="text-sm text-slate-400">Mendukung JPG, PNG, WEBP, dan PDF</p>
+          </div>
         </div>
 
         {loading && (
