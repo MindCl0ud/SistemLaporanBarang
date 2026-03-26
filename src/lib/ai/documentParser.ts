@@ -33,30 +33,61 @@ export async function parseDocumentImage(fileUrl: string | File, onProgress?: (m
   }
 }
 
-function extractDataFromText(text: string) {
-  // A simple heuristic extractor (Fallback before loading 2GB LLM in browser)
-  const lines = text.split('\n')
+export function extractDataFromText(text: string) {
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0)
   
   let type = "Nota"
-  if (text.toLowerCase().includes('berita acara') || text.toLowerCase().includes('bap')) type = "Berita Acara"
-  if (text.toLowerCase().includes('kwitansi') || text.toLowerCase().includes('kuitansi')) type = "Kwitansi"
+  const lowerText = text.toLowerCase()
+  if (lowerText.includes('berita acara') || lowerText.includes('bap')) type = "Berita Acara"
+  else if (lowerText.includes('kwitansi') || lowerText.includes('kuitansi')) type = "Kwitansi"
+  else if (lowerText.includes('faktur') || lowerText.includes('invoice')) type = "Faktur"
 
-  // Attempt to find total amount: search for "total", "jumlah", "Rp"
-  let totalAmount = 0
-  const rpRegex = /(?:Rp|Total|Jumlah)[\s\S]*?([\d,.]+)/i
-  const match = text.match(rpRegex)
-  if (match && match[1]) {
-    const cleaned = match[1].replace(/[^\d]/g, '')
-    totalAmount = parseInt(cleaned, 10)
+  // 1. Find the largest number in the text (often the Grand Total)
+  // Regex to find currency-like numbers: 1.000, 1,000, 1000.00 etc.
+  // Match numbers that are at least 3 digits long to avoid dates/codes
+  const amountRegex = /(?:Rp|IDR)?\s*([\d,.]{4,})/gi
+  let match;
+  let matches: number[] = []
+  
+  while ((match = amountRegex.exec(text)) !== null) {
+    const cleaned = match[1].replace(/[.,]/g, '')
+    const val = parseInt(cleaned, 10)
+    if (!isNaN(val) && val > 100) {
+      matches.push(val)
+    }
   }
 
-  // Attempt to find vendor/toko
+  // Fallback direct regex for "Total" or "Jumlah"
+  const totalKeywordsRegex = /(?:Total|Jumlah|Total Bayar|Grand Total)[\s\S]*?([\d,.]{4,})/i
+  const keywordMatch = text.match(totalKeywordsRegex)
+  if (keywordMatch) {
+    const val = parseInt(keywordMatch[1].replace(/[.,]/g, ''), 10)
+    if (!isNaN(val)) matches.push(val)
+  }
+
+  // Pick the largest one (Heuristic: The total is usually the biggest number)
+  const totalAmount = matches.length > 0 ? Math.max(...matches) : 0
+
+  // 2. Find Vendor Name (Searching first 10 significant lines)
   let vendorName = "Toko/Penyedia Tidak Diketahui"
-  const startLines = lines.slice(0, 5) // Usually at the top
-  for (const line of startLines) {
-    if (line.toLowerCase().includes('toko') || line.toLowerCase().includes('cv') || line.toLowerCase().includes('pt')) {
-      vendorName = line.trim()
+  const vendorKeywords = ['toko', 'cv.', 'pt.', 'market', 'jaya', 'abadi', 'sentosa', 'koperasi', 'ud.']
+  
+  const scanLimit = Math.min(lines.length, 12)
+  for (let i = 0; i < scanLimit; i++) {
+    const line = lines[i].toLowerCase()
+    const hasKeyword = vendorKeywords.some(k => line.includes(k))
+    
+    // Heuristic: If it has "JL." (address) or is very short, skip
+    if (hasKeyword && !line.includes('jl.') && line.length > 3) {
+      vendorName = lines[i].replace(/[:=]/g, '').trim()
       break
+    }
+  }
+
+  // If still not found, just take first line if it looks like a name (not date/header)
+  if (vendorName.startsWith("Toko/Penyedia") && lines.length > 0) {
+    if (!lines[0].match(/\d{2}[-/]\d{2}[-/]\d{4}/)) { // not a date
+        vendorName = lines[0]
     }
   }
 

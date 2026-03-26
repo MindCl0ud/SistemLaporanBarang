@@ -3,6 +3,8 @@
 // @ts-ignore
 const PDFParser = require('pdf2json')
 
+import { extractDataFromText } from './documentParser';
+
 export async function parsePdfServer(formData: FormData) {
   const file = formData.get('file') as File
   if (!file) throw new Error('No file provided')
@@ -18,30 +20,8 @@ export async function parsePdfServer(formData: FormData) {
     pdfParser.on("pdfParser_dataReady", () => {
       try {
         const text = pdfParser.getRawTextContent() || "";
-        
-        let type = "Nota"
-        if (text.toLowerCase().includes('berita acara') || text.toLowerCase().includes('bap')) type = "Berita Acara"
-        if (text.toLowerCase().includes('kwitansi') || text.toLowerCase().includes('kuitansi')) type = "Kwitansi"
-        
-        let totalAmount = 0
-        const rpRegex = /(?:Rp|Total|Jumlah)[\s\S]*?([\d,.]+)/i
-        const match = text.match(rpRegex)
-        if (match && match[1]) {
-          const cleaned = match[1].replace(/[^\d]/g, '')
-          totalAmount = parseInt(cleaned, 10)
-        }
-
-        let vendorName = "Toko/Penyedia (Dari PDF)"
-        const lines = text.split('\n').filter((l: string) => l.trim().length > 0)
-        const startLines = lines.slice(0, 8)
-        for (const line of startLines) {
-          if (line.toLowerCase().includes('toko') || line.toLowerCase().includes('cv') || line.toLowerCase().includes('pt')) {
-            vendorName = line.trim()
-            break
-          }
-        }
-
-        resolve({ text, data: { type, vendorName, totalAmount } })
+        const result = extractDataFromText(text)
+        resolve({ text, data: result })
       } catch (err: any) {
         reject(err)
       }

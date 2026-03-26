@@ -37,33 +37,52 @@ export default function DocumentUploader() {
         const cleanText = result.text.replace(/----------------Page \(\d+\) Break----------------/g, '').replace(/\\f/g, '').trim()
         
         // Fallback for Scanned PDFs (Images wrapped in PDF)
-        if (cleanText.length < 50 && result.data.totalAmount === 0) {
-          setStatusText('PDF Scan terdeteksi. Menyiapkan Mesin Pembaca Gambar...')
-          // Dynamically import to keep bundle small
+        if (cleanText.length < 100 && result.data.totalAmount === 0) {
+          setStatusText('PDF Scan/Dokumen Gambar terdeteksi. Menyiapkan OCR Multi-Halaman...')
           const pdfjsLib = await import('pdfjs-dist')
-          // Use local worker to avoid CORS or Next.js strict CSP bundling issues
           pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
           
           const arrayBuffer = await file.arrayBuffer()
           const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
-          const page = await pdfDoc.getPage(1)
-          const viewport = page.getViewport({ scale: 2.0 })
           
-          const canvas = document.createElement('canvas')
-          canvas.width = viewport.width
-          canvas.height = viewport.height
-          const ctx = canvas.getContext('2d')
+          let combinedText = ""
+          let combinedData: any = { type: "Nota", vendorName: "", totalAmount: 0 }
           
-          if (ctx) {
-            setStatusText('Mengubah PDF menjadi Gambar (Local)...')
-            // @ts-ignore
-            await page.render({ canvasContext: ctx, viewport }).promise
-            const imgDataUrl = canvas.toDataURL('image/png')
+          // Process up to first 5 pages
+          const numPages = Math.min(pdfDoc.numPages, 5)
+          
+          for (let i = 1; i <= numPages; i++) {
+            setStatusText(`Mengolah Halaman ${i} dari ${numPages}...`)
+            const page = await pdfDoc.getPage(i)
+            const viewport = page.getViewport({ scale: 2.0 })
             
-            setStatusText('Memulai OCR Gambar PDF...')
-            result = await parseDocumentImage(imgDataUrl, (msg) => setStatusText(msg))
-            if (!result.data.type) result.data.type = "Nota"
+            const canvas = document.createElement('canvas')
+            canvas.width = viewport.width
+            canvas.height = viewport.height
+            const ctx = canvas.getContext('2d')
+            
+            if (ctx) {
+              // @ts-ignore
+              await page.render({ canvasContext: ctx, viewport }).promise
+              const imgDataUrl = canvas.toDataURL('image/png')
+              
+              const pageResult = await parseDocumentImage(imgDataUrl, (msg) => setStatusText(`Halaman ${i}: ${msg}`))
+              combinedText += "\n" + pageResult.text
+              
+              // Best of logic: take the one with higher amount or more certain vendor
+              if (pageResult.data.totalAmount > combinedData.totalAmount) {
+                combinedData.totalAmount = pageResult.data.totalAmount
+              }
+              if (!combinedData.vendorName || combinedData.vendorName.includes('Tidak Diketahui')) {
+                combinedData.vendorName = pageResult.data.vendorName
+              }
+              if (pageResult.data.type !== "Nota") {
+                combinedData.type = pageResult.data.type
+              }
+            }
           }
+          
+          result = { text: combinedText, data: combinedData }
         }
       } else {
         // Run Native OCR & AI Parsing for Images
