@@ -6,7 +6,7 @@ import { id } from "date-fns/locale"
 import { Trash2, Loader2, ArrowUpDown } from "lucide-react"
 import { deleteBkuRecord } from "@/app/actions/bkuActions"
 
-export default function BkuList({ initialRecords }: { initialRecords: any[] }) {
+export default function BkuList({ initialRecords, openingBalance = 0 }: { initialRecords: any[], openingBalance: number }) {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [sortDesc, setSortDesc] = useState(false) // false = Dari Awal (Earliest first), true = Terbaru
 
@@ -41,11 +41,21 @@ export default function BkuList({ initialRecords }: { initialRecords: any[] }) {
     return 0
   }
 
-  const displayedRecords = [...initialRecords].sort((a, b) => {
+  // Always sort chronologically ASC first to calculate running balance correctly
+  const sortedChronologically = [...initialRecords].sort((a, b) => {
     const timeA = parseDateString(a.date) || new Date(a.createdAt).getTime()
     const timeB = parseDateString(b.date) || new Date(b.createdAt).getTime()
-    return sortDesc ? timeB - timeA : timeA - timeB
+    return timeA - timeB
   })
+
+  let currentRunningBalance = openingBalance
+  const recordsWithBalance = sortedChronologically.map(record => {
+    currentRunningBalance += (record.receiptTotal || 0) - (record.expenseTotal || 0)
+    return { ...record, calculatedBalance: currentRunningBalance }
+  })
+
+  // Finally apply the user's preferred display sort order
+  const displayedRecords = sortDesc ? [...recordsWithBalance].reverse() : recordsWithBalance
 
   return (
     <div className="space-y-4">
@@ -85,6 +95,19 @@ export default function BkuList({ initialRecords }: { initialRecords: any[] }) {
             </tr>
           </thead>
           <tbody className="bg-white/5">
+            {/* Saldo Awal Row (Only shown if sorting "Dari Awal" or always at the relevant end) */}
+            {!sortDesc && (
+              <tr className="bg-indigo-500/5 border-b border-indigo-500/10 italic">
+                <td className="px-4 py-3 text-indigo-300 font-medium">-</td>
+                <td className="px-4 py-3 text-indigo-300">-</td>
+                <td className="px-4 py-3 text-indigo-300 font-bold uppercase tracking-wider">Saldo Awal (Bulan Lalu)</td>
+                <td className="px-4 py-3 text-right text-indigo-300">-</td>
+                <td className="px-4 py-3 text-right text-indigo-300">-</td>
+                <td className="px-4 py-3 text-right text-indigo-300 font-bold">{formatCurrency(openingBalance)}</td>
+                <td className="px-4 py-3 text-center">-</td>
+              </tr>
+            )}
+
             {displayedRecords.map((record) => (
             <tr key={record.id} className="border-b border-white/5 hover:bg-white/5 transition-colors group">
               <td className="px-4 py-3 whitespace-nowrap">
@@ -107,7 +130,7 @@ export default function BkuList({ initialRecords }: { initialRecords: any[] }) {
                 {record.expenseTotal > 0 ? formatCurrency(record.expenseTotal) : '-'}
               </td>
               <td className="px-4 py-3 text-right text-blue-300 font-semibold border-b border-white/5">
-                {formatCurrency(record.balance)}
+                {formatCurrency(record.calculatedBalance)}
               </td>
               <td className="px-4 py-3 text-center border-b border-white/5">
                 <button 

@@ -53,7 +53,9 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
           const keluar = Number(row[5] || 0)
           const saldo = Number(row[6] || 0)
           
-          if (uraian && (kode || terima > 0 || keluar > 0) && !uraian.toLowerCase().includes("saldo bulan lalu") && !uraian.toLowerCase().includes("uraian")) {
+          const isSaldoLalu = uraian.toLowerCase().includes("saldo bulan lalu") || uraian.toLowerCase().includes("saldo s.d bulan lalu")
+          
+          if (uraian && (kode || terima > 0 || keluar > 0) && !isSaldoLalu && !uraian.toLowerCase().includes("uraian")) {
             // Extract month and year from currentDate
             let itemMonth = currentMonth
             let itemYear = currentYear
