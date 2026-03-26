@@ -373,132 +373,163 @@ export function extractDataFromText(rawText: string) {
   }
 
   // ──────────────────────────────────────────────────────────
-  // 6. Line Items  
-  //    Two-strategy parser:
-  //    A) Single-line:  "- item   2 buah   200.000   400.000"
-  //    B) Two-line span: "- item\n  2 buah   200.000   400.000"  (common in Kwitansi scans)
+  // 6. Line Items
   // ──────────────────────────────────────────────────────────
   const items: any[] = []
-  
-  // Exclusion patterns for non-item lines (doc noise)
   const noisePattern = /\b(?:JUMLAH|Terbilang|NIP|Nama|Jabatan|Alamat|Waikabubak|BAPPERIDA|BRIDA|DAERAH|Tanda\s+Tangan|Pihak|Pertama|Kedua|Nomor|Terima|Uang|Jalan|Jl\.)\b/i
 
-  // Helper: parse one item line (or two-line span) using regex-first approach.
-  // Handles both tight OCR ("2buahx") and spaced OCR ("2  buah x").
-  function tryParseItem(mainLine: string, nextLine?: string): any | null {
-    if (noisePattern.test(mainLine)) return null
+  const toNum = (s: string) => {
+    const v = parseFloat(s.replace(/\./g, '').replace(',', '.'))
+    return isNaN(v) ? 0 : v
+  }
 
-    const combined = nextLine ? `${mainLine} ${nextLine}` : mainLine
-
-    // Strip leading marker: "- ", "1. ", "1 - "
-    const stripped = combined.replace(/^(?:\d+\s*)?[-.\s]{0,3}/, '').trim()
-    if (!stripped || !/[a-zA-Z]{2,}/.test(stripped)) return null
-    if (noisePattern.test(stripped)) return null
-
-    // ── Indonesian number parser ──────────────────────────────
-    const toNum = (s: string) => {
-      const n = s.replace(/\./g, '').replace(',', '.')
-      const v = parseFloat(n)
-      return isNaN(v) ? 0 : v
+  // ── STRATEGY 1: Dedicated BA Table Parser ────────────────
+  // Activates when document type is Berita Acara.
+  // Looks for table start then parses "1 - description qty unit x price total" rows.
+  if (type === 'Berita Acara Penerimaan Barang') {
+    // Find the table start line index
+    let tableStart = -1
+    for (let i = 0; i < lines.length; i++) {
+      const l = lines[i].toLowerCase()
+      if (l.includes('barang tersebut sebesar') || l.includes('nama barang') || l.includes('rincian')) {
+        tableStart = i
+        break
+      }
     }
+    if (tableStart === -1) tableStart = 0 // fallback to beginning
 
+    // BA item row pattern: starts with 1-2 digit row number, optional dash, desc, qty, unit, optional x, price, total
+    const NUM_PAT = '(\\d{1,3}(?:\\.\\d{3})*)'
+    const UNIT_PAT = '(buah|botol|pcs|unit|ltr?|rim|set|kg|gram|lembar|dos|dus|[a-z]+)'
+    const rowRegex = new RegExp(
+      `^\\s*(\\d{1,2})\\s*[-.]?\\s*(.+?)\\s+(\\d{1,2})\\s+${UNIT_PAT}\\s*x?\\s*${NUM_PAT}\\s+${NUM_PAT}\\s*$`, 'i'
+    )
+    // Simpler fallback: desc + qty + price + total (no unit captured)
+    const rowRegex2 = new RegExp(
+      `^\\s*(\\d{1,2})\\s*[-.]?\\s*(.+?)\\s+(\\d{1,2})\\s+${NUM_PAT}\\s+${NUM_PAT}\\s*$`
+    )
+
+    for (let i = tableStart; i < lines.length; i++) {
+      const line = lines[i]
+      if (noisePattern.test(line)) continue
+      if (/^JUMLAH/i.test(line.trim())) break // end of table
+
+      // Try joining with next line for two-line item rows
+      const nextLine = i + 1 < lines.length ? lines[i + 1] : ''
+      const combined = /\d{3,}/.test(line) ? line : `${line} ${nextLine}`
+
+      let m = combined.match(rowRegex)
+      if (m) {
+        const desc  = m[2].replace(/^[-\s]+/, '').trim()
+        const qty   = parseInt(m[3])
+        const price = toNum(m[5])
+        const total = toNum(m[6])
+        if (/[a-zA-Z]{2,}/.test(desc) && total > 0) {
+          items.push({ description: desc, quantity: qty || 1, price: price || total, total })
+          if (combined !== line) i++ // consumed nextLine
+          continue
+        }
+      }
+
+      m = combined.match(rowRegex2)
+      if (m) {
+        const desc  = m[2].replace(/^[-\s]+/, '').trim()
+        const qty   = parseInt(m[3])
+        const price = toNum(m[4])
+        const total = toNum(m[5])
+        if (/[a-zA-Z]{2,}/.test(desc) && total > 0) {
+          items.push({ description: desc, quantity: qty || 1, price: price || total, total })
+          if (combined !== line) i++
+        }
+      }
+    }
+  }
+
+  // ── STRATEGY 2: Generic right-anchored token parser (Kwitansi/Nota) ──
+  // Runs only if no BA items were found
+  if (items.length === 0) {
     const isNumToken = (s: string) => /^\d{1,3}(\.\d{3})*(,\d+)?$/.test(s) || /^\d{4,}$/.test(s)
-    // Strip leading non-alpha characters before unit check (e.g., "|buah" → "buah")
     const isUnitToken = (s: string) => {
       const clean = s.replace(/^[^a-zA-Z]+/, '')
       return /^(?:buah|botol|pcs|unit|ltr?|rim|set|bu[a-z]+|kg|gram|lembar|dos|dus)[a-z]*[sx]?$/i.test(clean)
     }
-    const cleanUnit = (s: string) => s.replace(/^[^a-zA-Z]+/, '')
-    void cleanUnit
 
-    // Tokenise by whitespace
-    const tokens = stripped.split(/\s+/).filter(Boolean)
-    if (tokens.length < 3) return null
+    function tryParseItem(mainLine: string, nextLine?: string): any | null {
+      if (noisePattern.test(mainLine)) return null
+      const combined = nextLine ? `${mainLine} ${nextLine}` : mainLine
+      const stripped = combined.replace(/^(?:\d+\s*)?[-.\s]{0,3}/, '').trim()
+      if (!stripped || !/[a-zA-Z]{2,}/.test(stripped)) return null
+      if (noisePattern.test(stripped)) return null
 
-    // Step 1: Extract last two numeric tokens (price, total) from the RIGHT
-    let rIdx = tokens.length - 1
-    let total = 0, price = 0
+      const tokens = stripped.split(/\s+/).filter(Boolean)
+      if (tokens.length < 3) return null
 
-    if (isNumToken(tokens[rIdx])) { total = toNum(tokens[rIdx]); rIdx-- }
-    if (rIdx >= 0 && isNumToken(tokens[rIdx])) { price = toNum(tokens[rIdx]); rIdx-- }
+      let rIdx = tokens.length - 1
+      let total = 0, price = 0
+      if (isNumToken(tokens[rIdx])) { total = toNum(tokens[rIdx]); rIdx-- }
+      if (rIdx >= 0 && isNumToken(tokens[rIdx])) { price = toNum(tokens[rIdx]); rIdx-- }
+      if (total <= 0) return null
 
-    if (total <= 0) return null
+      if (rIdx >= 0 && /^x$/i.test(tokens[rIdx])) rIdx--
 
-    // Step 2: Scan backwards for the 'x' multiplier (optional), then unit, then qty
-    if (rIdx >= 0 && /^x$/i.test(tokens[rIdx])) rIdx-- // skip 'x'
-
-    let qty = 0
-    let unitIdx = -1
-
-    // Find the first unit word scanning backwards from rIdx
-    for (let k = rIdx; k >= 1; k--) {
-      if (isUnitToken(tokens[k])) {
-        unitIdx = k
-        break
+      let qty = 0, unitIdx = -1
+      for (let k = rIdx; k >= 1; k--) {
+        if (isUnitToken(tokens[k])) { unitIdx = k; break }
       }
-    }
-
-    if (unitIdx > 0) {
-      // Token just before the unit should be the qty
-      const qtyCandidate = tokens[unitIdx - 1]
-      if (/^\d+$/.test(qtyCandidate)) {
-        qty = parseInt(qtyCandidate)
-        // Description = everything before the qty token
+      if (unitIdx > 0 && /^\d+$/.test(tokens[unitIdx - 1])) {
+        qty = parseInt(tokens[unitIdx - 1])
         const desc = tokens.slice(0, unitIdx - 1).join(' ')
         if (/[a-zA-Z]{2,}/.test(desc) && !noisePattern.test(desc)) {
-          const finalQty = (qty > 5 && Math.abs(price - total) < 0.01 * total) ? 1 : qty || 1
-          return { description: desc, quantity: finalQty, price: price || total, total }
+          const fq = (qty > 5 && Math.abs(price - total) < 0.01 * total) ? 1 : qty || 1
+          return { description: desc, quantity: fq, price: price || total, total }
         }
       }
+      if (rIdx >= 0 && isNumToken(tokens[rIdx]) && toNum(tokens[rIdx]) <= 10) {
+        qty = parseInt(tokens[rIdx])
+        const desc = tokens.slice(0, rIdx).join(' ')
+        if (/[a-zA-Z]{2,}/.test(desc) && !noisePattern.test(desc)) {
+          const fq = (qty > 5 && Math.abs(price - total) < 0.01 * total) ? 1 : qty || 1
+          return { description: desc, quantity: fq, price: price || total, total }
+        }
+      }
+      if (price > 0) {
+        const desc = tokens.slice(0, rIdx + 1).join(' ')
+        if (/[a-zA-Z]{2,}/.test(desc) && !noisePattern.test(desc)) {
+          return { description: desc, quantity: 1, price, total }
+        }
+      }
+      return null
     }
 
-    // Step 3: Fallback — [desc] [qty(<=10)] [price] [total]: last number is total,
-    // second-to-last is price. Token before price is qty if <= 10, rest is description.
-    if (isNumToken(tokens[rIdx]) && parseFloat(tokens[rIdx].replace(/\./g,'')) <= 10) {
-      qty = parseInt(tokens[rIdx])
-      const desc = tokens.slice(0, rIdx).join(' ')
-      if (/[a-zA-Z]{2,}/.test(desc) && !noisePattern.test(desc)) {
-        const finalQty = (qty > 5 && Math.abs(price - total) < 0.01 * total) ? 1 : qty || 1
-        return { description: desc, quantity: finalQty, price: price || total, total }
-      }
-    }
-
-    // Step 4: No qty found — description is everything up to the price token
-    if (price > 0) {
-      const desc = tokens.slice(0, rIdx + 1).join(' ')
-      if (/[a-zA-Z]{2,}/.test(desc) && !noisePattern.test(desc)) {
-        return { description: desc, quantity: 1, price, total }
-      }
-    }
-
-    return null
-  }
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
-    if (noisePattern.test(line) || line.length < 5) continue
-
-    // Strategy A: line starts with a bullet/number marker
-    const hasMarker = /^[-Il1]/.test(line) || /^\d+\s*[-.]/.test(line)
-    if (hasMarker) {
-      const parsed = tryParseItem(line)
-      if (parsed) {
-        items.push(parsed)
-        continue
-      }
-      // Strategy B: try joining with next line (description on this line, numbers on next)
-      if (i + 1 < lines.length) {
-        const nextLine = lines[i + 1]
-        if (!noisePattern.test(nextLine) && /\d{3,}/.test(nextLine)) {
-          const parsed2 = tryParseItem(line, nextLine)
-          if (parsed2) {
-            items.push(parsed2)
-            i++ // consume next line
-            continue
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
+      if (noisePattern.test(line) || line.length < 5) continue
+      const hasMarker = /^[-Il1]/.test(line) || /^\d+\s*[-.]/.test(line)
+      if (hasMarker) {
+        const parsed = tryParseItem(line)
+        if (parsed) { items.push(parsed); continue }
+        if (i + 1 < lines.length) {
+          const nextLine = lines[i + 1]
+          if (!noisePattern.test(nextLine) && /\d{3,}/.test(nextLine)) {
+            const parsed2 = tryParseItem(line, nextLine)
+            if (parsed2) { items.push(parsed2); i++; continue }
           }
         }
       }
     }
+  }
+
+  // ── STRATEGY 3: Post-processing description cleaner ──────
+  // Safety net: if description still contains trailing "N unit", strip it and grab qty.
+  const TRAILING_QTY_UNIT = /\s+(\d{1,2})\s+(?:buah|botol|pcs|unit|ltr?|rim|set|[a-z]{2,})\s*x?\s*$/i
+  for (const item of items) {
+    const m = item.description.match(TRAILING_QTY_UNIT)
+    if (m) {
+      item.description = item.description.replace(TRAILING_QTY_UNIT, '').trim()
+      if (item.quantity === 1) item.quantity = parseInt(m[1]) // only override if qty wasn't found
+    }
+    // Also strip any remaining leading/trailing noise chars
+    item.description = item.description.replace(/^[-\s|]+/, '').replace(/[-\s|]+$/, '').trim()
   }
 
   // ──────────────────────────────────────────────────────────
