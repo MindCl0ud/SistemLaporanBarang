@@ -8,11 +8,12 @@ import BkuFilter from "./BkuFilter"
 export default async function BkuPage({
   searchParams,
 }: {
-  searchParams: { month?: string, year?: string }
+  searchParams: Promise<{ month?: string, year?: string }>
 }) {
+  const awaitedParams = await searchParams
   const currentDate = new Date()
-  const currentMonth = searchParams.month ? parseInt(searchParams.month) : currentDate.getMonth() + 1
-  const currentYear = searchParams.year ? parseInt(searchParams.year) : currentDate.getFullYear()
+  const currentMonth = awaitedParams.month ? parseInt(awaitedParams.month) : currentDate.getMonth() + 1
+  const currentYear = awaitedParams.year ? parseInt(awaitedParams.year) : currentDate.getFullYear()
 
   const records = await getBkuRecords(currentMonth, currentYear)
   const stats = await getBkuComparison(currentMonth, currentYear)

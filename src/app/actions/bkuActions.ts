@@ -59,6 +59,7 @@ export async function addBkuRecord(data: FormData) {
 export async function deleteBkuRecord(id: string) {
   await prisma.bkuTransaction.delete({ where: { id } })
   revalidatePath('/bku')
+  revalidatePath('/')
 }
 
 export async function addBkuBulk(data: any[], month: number, year: number) {
