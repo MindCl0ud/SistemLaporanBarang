@@ -43,8 +43,8 @@ export default function DocumentUploader() {
           vendorName: "Tidak Diketahui",
           totalAmount: 0,
           extractedText: "",
-          itemsMap: new Map<string, any>(),
-          hasKwitansiPriority: false,
+          // Collect items per page type for final arbitration
+          pageItems: [] as { type: string, items: any[] }[],
           date: null,
           baDate: null,
           docNumber: "",
@@ -66,32 +66,11 @@ export default function DocumentUploader() {
           if (res.data.kodeRek) masterData.kodeRek = res.data.kodeRek
           if (res.data.subKegiatan) masterData.subKegiatan = res.data.subKegiatan
 
-          // ────────────────────────────────────────────────────────
-          // Item Merging Logic with KWITANSI Priority
-          // ────────────────────────────────────────────────────────
-          const isKwitansi = res.data.type === 'Kwitansi'
-          
-          if (isKwitansi && !masterData.hasKwitansiPriority) {
-            // Found Kwitansi: CLEAR ALL OTHERS, this is our source of truth
-            masterData.itemsMap.clear()
-            masterData.hasKwitansiPriority = true
-          }
-
-          if (res.data.items && (isKwitansi || !masterData.hasKwitansiPriority)) {
-            res.data.items.forEach((it: any) => {
-              const fuzzyKey = it.description.toLowerCase()
-                .replace(/[^a-z0-9]/g, '')
-                .replace(/[a-z]$/, '') 
-              
-              const existing = masterData.itemsMap.get(fuzzyKey)
-              if (!existing) {
-                masterData.itemsMap.set(fuzzyKey, it)
-              } else if (isKwitansi) {
-                // If it's a Kwitansi, override existing data (Nota/BA)
-                masterData.itemsMap.set(fuzzyKey, it)
-              } else if (it.price > 0 && (existing.price === 0 || existing.price === '0')) {
-                masterData.itemsMap.set(fuzzyKey, it)
-              }
+          // Collect items with their source type
+          if (res.data.items && res.data.items.length > 0) {
+            masterData.pageItems.push({
+              type: res.data.type,
+              items: res.data.items
             })
           }
 
