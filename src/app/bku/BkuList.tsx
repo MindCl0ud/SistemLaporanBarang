@@ -50,13 +50,25 @@ export default function BkuList({ initialRecords }: { initialRecords: any[] }) {
         <table className="w-full text-left text-sm text-slate-300 relative border-collapse">
           <thead className="text-xs uppercase text-slate-400 sticky top-0 z-10 shadow-sm">
             <tr>
-              <th className="px-4 py-3 bg-slate-900/95 border-b border-white/10 backdrop-blur-sm w-32 font-semibold">Tanggal Bukti</th>
-              <th className="px-4 py-3 bg-slate-900/95 border-b border-white/10 backdrop-blur-sm font-semibold">Kode Rek.</th>
-              <th className="px-4 py-3 bg-slate-900/95 border-b border-white/10 backdrop-blur-sm font-semibold">Uraian</th>
-              <th className="px-4 py-3 bg-slate-900/95 border-b border-white/10 backdrop-blur-sm text-right font-semibold">Penerimaan</th>
-              <th className="px-4 py-3 bg-slate-900/95 border-b border-white/10 backdrop-blur-sm text-right font-semibold">Pengeluaran</th>
-              <th className="px-4 py-3 bg-slate-900/95 border-b border-white/10 backdrop-blur-sm text-right font-semibold">Saldo</th>
-              <th className="px-4 py-3 bg-slate-900/95 border-b border-white/10 backdrop-blur-sm text-center font-semibold w-16">Aksi</th>
+              <th className="px-4 py-3 bg-slate-900/95 border-b border-white/10 backdrop-blur-sm w-32 font-semibold">
+                <div className="resize-x overflow-hidden min-w-[100px] hover:border-r border-indigo-500/50 pr-2">Tanggal Bukti</div>
+              </th>
+              <th className="px-4 py-3 bg-slate-900/95 border-b border-white/10 backdrop-blur-sm font-semibold">
+                <div className="resize-x overflow-hidden min-w-[80px] hover:border-r border-indigo-500/50 pr-2">Kode Rek.</div>
+              </th>
+              <th className="px-4 py-3 bg-slate-900/95 border-b border-white/10 backdrop-blur-sm font-semibold">
+                <div className="resize-x overflow-hidden min-w-[150px] hover:border-r border-indigo-500/50 pr-2">Uraian</div>
+              </th>
+              <th className="px-4 py-3 bg-slate-900/95 border-b border-white/10 backdrop-blur-sm text-right font-semibold">
+                <div className="resize-x overflow-hidden min-w-[100px] hover:border-x border-indigo-500/50 px-2">Penerimaan</div>
+              </th>
+              <th className="px-4 py-3 bg-slate-900/95 border-b border-white/10 backdrop-blur-sm text-right font-semibold">
+                <div className="resize-x overflow-hidden min-w-[100px] hover:border-x border-indigo-500/50 px-2">Pengeluaran</div>
+              </th>
+              <th className="px-4 py-3 bg-slate-900/95 border-b border-white/10 backdrop-blur-sm text-right font-semibold">
+                <div className="resize-x overflow-hidden min-w-[100px] hover:border-x border-indigo-500/50 px-2">Saldo</div>
+              </th>
+              <th className="px-2 py-3 bg-slate-900/95 border-b border-white/10 backdrop-blur-sm text-center font-semibold w-16">Aksi</th>
             </tr>
           </thead>
           <tbody className="bg-white/5">
@@ -72,7 +84,7 @@ export default function BkuList({ initialRecords }: { initialRecords: any[] }) {
                 )}
               </td>
               <td className="px-4 py-3">{record.code || '-'}</td>
-              <td className="px-4 py-3 font-medium text-white max-w-[200px] truncate" title={record.description}>
+              <td className="px-4 py-3 font-medium text-white truncate" title={record.description}>
                 {record.description}
               </td>
               <td className="px-4 py-3 text-right text-emerald-400 border-b border-white/5">
