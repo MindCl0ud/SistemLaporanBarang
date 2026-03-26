@@ -38,20 +38,31 @@ export async function getBkuComparison(month: number, year: number) {
 }
 
 export async function addBkuRecord(data: FormData) {
-  const date = data.get('date') as string | null
-  const month = Number(data.get('month'))
-  const year = Number(data.get('year'))
+  const dateStr = data.get('date') as string | null
+  let month = Number(data.get('month'))
+  let year = Number(data.get('year'))
+  
+  if (dateStr && (dateStr.includes('-') || dateStr.includes('/'))) {
+    const separator = dateStr.includes('-') ? '-' : '/'
+    const parts = dateStr.split(separator)
+    if (parts.length === 3) {
+      const parsedMonth = parseInt(parts[1], 10)
+      const parsedYear = parseInt(parts[2], 10)
+      if (!isNaN(parsedMonth)) month = parsedMonth
+      if (!isNaN(parsedYear)) year = parsedYear
+    }
+  }
+
   const code = data.get('code') as string
   const description = data.get('description') as string
   const receiptTotal = Number(data.get('receiptTotal')) || 0
   const expenseTotal = Number(data.get('expenseTotal')) || 0
   
-  // Quick calculation for balance if needed, or user inputs
   const balance = Number(data.get('balance')) || 0
 
   await prisma.bkuTransaction.create({
     data: {
-      date,
+      date: dateStr,
       month,
       year,
       code,
@@ -63,6 +74,7 @@ export async function addBkuRecord(data: FormData) {
   })
   
   revalidatePath('/bku')
+  revalidatePath('/')
 }
 
 export async function deleteBkuRecord(id: string) {

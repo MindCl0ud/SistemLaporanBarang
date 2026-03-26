@@ -10,9 +10,15 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
 
   const handleSubmit = async (formData: FormData) => {
     setLoading(true)
-    await addBkuRecord(formData)
-    formRef.current?.reset()
-    setLoading(false)
+    try {
+      await addBkuRecord(formData)
+      alert("Berhasil menambahkan 1 data BKU manual (Otomatis masuk ke periode yang sesuai).")
+      formRef.current?.reset()
+    } catch (e) {
+      alert("Gagal menambahkan data.")
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {

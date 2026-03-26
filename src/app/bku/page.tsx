@@ -70,31 +70,31 @@ export default async function BkuPage({
            </h2>
            
            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="space-y-2 p-4 rounded-xl bg-white/5 border border-white/5">
+              <div className="space-y-1 p-3 rounded-xl bg-white/5 border border-white/5 overflow-hidden">
                 <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Total Penerimaan</p>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-xl font-bold text-emerald-400 truncate">{formatCurrency(stats.currentReceipt)}</p>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded ${isRecUp ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
+                <div className="flex flex-wrap items-baseline gap-2">
+                  <p className="text-lg font-bold text-emerald-400 leading-tight">{formatCurrency(stats.currentReceipt)}</p>
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded whitespace-nowrap ${isRecUp ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
                     {isRecUp ? '+' : '-'}{recPct}%
                   </span>
                 </div>
               </div>
               
-              <div className="space-y-2 p-4 rounded-xl bg-white/5 border border-white/5">
+              <div className="space-y-1 p-3 rounded-xl bg-white/5 border border-white/5 overflow-hidden">
                 <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Total Pengeluaran</p>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-xl font-bold text-rose-400 truncate">{formatCurrency(stats.currentExpense)}</p>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded ${isExpUp ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'}`}>
+                <div className="flex flex-wrap items-baseline gap-2">
+                  <p className="text-lg font-bold text-rose-400 leading-tight">{formatCurrency(stats.currentExpense)}</p>
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded whitespace-nowrap ${isExpUp ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'}`}>
                     {isExpUp ? '+' : '-'}{expPct}%
                   </span>
                 </div>
               </div>
 
-              <div className="space-y-2 p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
+              <div className="space-y-1 p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 overflow-hidden">
                 <p className="text-[10px] text-indigo-300 uppercase tracking-widest font-bold">Saldo Berjalan</p>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-xl font-bold text-white truncate">{formatCurrency(stats.currentBalance)}</p>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded ${isBalUp ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
+                <div className="flex flex-wrap items-baseline gap-2">
+                  <p className="text-lg font-bold text-white leading-tight">{formatCurrency(stats.currentBalance)}</p>
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded whitespace-nowrap ${isBalUp ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
                     {isBalUp ? '+' : '-'}{balPct}%
                   </span>
                 </div>
