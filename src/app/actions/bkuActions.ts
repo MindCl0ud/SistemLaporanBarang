@@ -71,12 +71,14 @@ export async function addBkuBulk(data: any[], month: number, year: number) {
     const expenseTotal = Number(item.expenseTotal || 0) || 0;
     const balance = Number(item.balance || 0) || 0;
     const date = item.date ? String(item.date) : null;
+    const itemMonth = item.month || month;
+    const itemYear = item.year || year;
 
     // Lakukan pencegahan pendobelan data
     const exists = await prisma.bkuTransaction.findFirst({
       where: {
-        month,
-        year,
+        month: itemMonth,
+        year: itemYear,
         description,
         receiptTotal,
         expenseTotal
@@ -87,8 +89,8 @@ export async function addBkuBulk(data: any[], month: number, year: number) {
       await prisma.bkuTransaction.create({
         data: {
           date,
-          month,
-          year,
+          month: itemMonth,
+          year: itemYear,
           code,
           description,
           receiptTotal,

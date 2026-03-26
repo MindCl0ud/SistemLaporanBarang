@@ -84,7 +84,7 @@ export default function BkuList({ initialRecords }: { initialRecords: any[] }) {
                 )}
               </td>
               <td className="px-4 py-3">{record.code || '-'}</td>
-              <td className="px-4 py-3 font-medium text-white truncate" title={record.description}>
+              <td className="px-4 py-3 font-medium text-white whitespace-normal break-words min-w-[300px]" title={record.description}>
                 {record.description}
               </td>
               <td className="px-4 py-3 text-right text-emerald-400 border-b border-white/5">

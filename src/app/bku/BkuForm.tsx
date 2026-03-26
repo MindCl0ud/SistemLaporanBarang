@@ -46,8 +46,24 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
         const saldo = Number(row[6] || 0)
         
         if (uraian && (kode || terima > 0 || keluar > 0) && !uraian.toLowerCase().includes("saldo bulan lalu")) {
+          // Extract month and year from currentDate (format: DD-MM-YYYY)
+          let itemMonth = currentMonth
+          let itemYear = currentYear
+          
+          if (currentDate.includes('-')) {
+            const parts = currentDate.split('-')
+            if (parts.length === 3) {
+              const m = parseInt(parts[1])
+              const y = parseInt(parts[2])
+              if (!isNaN(m)) itemMonth = m
+              if (!isNaN(y)) itemYear = y
+            }
+          }
+
           parsedData.push({
             date: currentDate,
+            month: itemMonth,
+            year: itemYear,
             code: kode,
             description: uraian,
             receiptTotal: terima,
@@ -58,7 +74,8 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
       }
       
       if (parsedData.length > 0) {
-        const addedCount = await addBkuBulk(parsedData, currentMonth, currentYear)
+        // Pass dummy 0,0 since we now use item-specific month/year
+        const addedCount = await addBkuBulk(parsedData, 0, 0)
         alert(`Berhasil mengimpor ${addedCount} data baru (Data dobel otomatis dilewati).`)
       } else {
         alert("Tidak ada baris data valid ditemukan di file Excel.")
