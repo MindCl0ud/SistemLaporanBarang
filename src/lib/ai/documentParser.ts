@@ -205,12 +205,7 @@ export function extractDataFromText(rawText: string) {
   // ──────────────────────────────────────────────────────────
   let vendorName = 'Tidak Diketahui'
 
-  // ──────────────────────────────────────────────────────────
-  // 5. Vendor / Penyedia
-  // ──────────────────────────────────────────────────────────
-  let vendorName = 'Tidak Diketahui'
-
-  // Strategy: Find "PIHAK KEDUA" and look at lines around it (-5 to +5)
+  // Strategy: Find "PIHAK KEDUA" and look at lines around it (-6 to +6)
   const pkIndex = lines.findIndex(l => l.toUpperCase().includes('PIHAK KEDUA'))
   if (pkIndex !== -1) {
     const start = Math.max(0, pkIndex - 6)
