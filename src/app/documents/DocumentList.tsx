@@ -218,12 +218,12 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                   >
                     {/* No */}
                     <td className={`${cellClass} text-slate-500 text-center font-mono`}>
-                      <div className="flex items-center justify-center gap-1">
+                      <div className="flex items-center justify-center gap-1.5">
                         {isExpanded
-                          ? <ChevronDown className="w-3 h-3 text-indigo-400" />
-                          : <ChevronRight className="w-3 h-3 text-slate-600 group-hover:text-slate-400" />
+                          ? <ChevronDown className="w-3.5 h-3.5 text-indigo-400" />
+                          : <ChevronRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-amber-500 transition-colors" />
                         }
-                        {rowIdx + 1}
+                        <span className="text-[11px] min-w-[12px]">{rowIdx + 1}</span>
                       </div>
                     </td>
 
@@ -231,7 +231,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                     <td className={`${cellClass} text-center`} style={{ overflow: 'hidden' }}>
                       {isMatched ? (
                         <div className="flex flex-col items-center gap-0.5" title={doc.matchRecord.bkuTransaction.description}>
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[9px] font-bold border border-emerald-500/30 uppercase tracking-tighter">
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[9px] font-bold border border-emerald-500/30 uppercase tracking-tighter shadow-sm shadow-emerald-500/10">
                             <CheckCircle2 className="w-2 h-2" />TERCOCOKKAN
                           </span>
                           <span className="text-[9px] text-slate-500 font-mono leading-none">
@@ -239,9 +239,10 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                           </span>
                         </div>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-700/50 text-slate-500 text-[10px] font-bold border border-slate-700">
-                          <Circle className="w-2.5 h-2.5" />—
-                        </span>
+                        <div className="flex flex-col items-center gap-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
+                          <Circle className="w-2.5 h-2.5 text-slate-600" />
+                          <span className="text-[8px] text-slate-600 uppercase font-bold tracking-tighter">Pending</span>
+                        </div>
                       )}
                     </td>
 

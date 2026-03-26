@@ -65,12 +65,22 @@ export default function DocumentUploader() {
           if (res.data.kodeRek) masterData.kodeRek = res.data.kodeRek
           if (res.data.subKegiatan) masterData.subKegiatan = res.data.subKegiatan
 
-          // Merge items deduplicated by description
+          // Merge items with fuzzier deduplication
           if (res.data.items) {
             res.data.items.forEach((it: any) => {
-              const key = it.description.toLowerCase().trim()
-              if (!masterData.itemsMap.has(key)) {
-                masterData.itemsMap.set(key, it)
+              // Create a fuzzy key: alphanumeric only, lowercase, no trailing single letters
+              const fuzzyKey = it.description.toLowerCase()
+                .replace(/[^a-z0-9]/g, '')
+                .replace(/[a-z]$/, '') // e.g. "kanebog" -> "kanebo"
+              
+              const existing = masterData.itemsMap.get(fuzzyKey)
+              if (!existing) {
+                masterData.itemsMap.set(fuzzyKey, it)
+              } else {
+                // If existing has no price but new one does, prefer the new one
+                if ((existing.price === 0 || existing.total === 0) && it.price > 0) {
+                  masterData.itemsMap.set(fuzzyKey, it)
+                }
               }
             })
           }
@@ -172,16 +182,19 @@ export default function DocumentUploader() {
 
   return (
     <div className="p-6 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-blue-500/5 border border-indigo-500/20 backdrop-blur-md">
-      <h2 className="text-lg font-medium text-white mb-4">Unggah Dokumen</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-medium text-white flex items-center gap-2">
+           Unggah Dokumen
+        </h2>
+        <button
+          onClick={() => setShowManualForm(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-xl text-sm font-bold hover:bg-indigo-500/20 transition-all"
+        >
+          <Plus className="w-4 h-4" /> Input Manual
+        </button>
+      </div>
+      
       <div className="space-y-4">
-        <div className="flex justify-end">
-          <button
-            onClick={() => setShowManualForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-xl text-sm font-bold hover:bg-indigo-500/20 transition-all"
-          >
-            <Plus className="w-4 h-4" /> Input Manual
-          </button>
-        </div>
 
         <div
           {...getRootProps()}

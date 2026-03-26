@@ -44,9 +44,12 @@ function normalizeText(text: string): string {
   let t = text.replace(/([A-Z0-9])\s*\.\s*([A-Z0-9])/gi, '$1.$2')
   t = t.replace(/([A-Z0-9])\s*\/\s*([A-Z0-9])/gi, '$1/$2')
   
-  // 2. Bridges spaces in common Indonesian vendor fragments/words
-  // e.g., "Sum ber" -> "Sumber", "Ba rat" -> "Barat"
-  const fragments = ['Sum ber', 'Ba rat', 'Ba pperida', 'Bha yangkara', 'Week arou']
+  // 2. Bridges spaces in common Indonesian vendor fragments/words/ITEMS
+  // e.g., "Sum ber" -> "Sumber", "kan ebo" -> "kanebo", "stella gantung g" -> "stella gantung"
+  const fragments = [
+    'Sum ber', 'Ba rat', 'Ba pperida', 'Bha yangkara', 'Week arou',
+    'kan ebo', 'stella gan tung', 'sar ung', 'gar dan'
+  ]
   fragments.forEach(frag => {
     const regex = new RegExp(frag.split('').join('\\s*'), 'gi')
     t = t.replace(regex, frag.replace(/\s+/g, ''))
@@ -202,18 +205,45 @@ export function extractDataFromText(rawText: string) {
   // ──────────────────────────────────────────────────────────
   let vendorName = 'Tidak Diketahui'
 
-  // Look for "Pengusaha CV. Sumber Mas" or "Pengusaha Toko Sumber Mas"
-  const vendorPatterns = [
-    /(?:Pengusaha\s+)?CV\.\s+([A-Z][A-Za-z\s]+?)(?:\r?\n|Alam|Jabat|;|,)/,
-    /(?:Pengusaha\s+)?Toko\s+([A-Za-z\s]+?)(?:\r?\n|Alam|Jabat|;|,)/,
-    /(?:UD\.|PT\.)\s+([A-Z][A-Za-z\s]+?)(?:\r?\n|Alam|Jabat|;|,)/
-  ]
-  for (const pat of vendorPatterns) {
-    const m = text.match(pat)
-    if (m) {
-      vendorName = m[0].split(/\r?\n/)[0].replace(/[;,]$/, '').trim()
-      break
+  // Look for "PIHAK KEDUA" followed by "Nama" or "Jabatan"
+  const vendorContextIndex = lines.findIndex(l => l.toUpperCase().includes('PIHAK KEDUA'))
+  if (vendorContextIndex !== -1) {
+    for (let i = vendorContextIndex + 1; i < vendorContextIndex + 5 && i < lines.length; i++) {
+       const line = lines[i]
+       if (line.includes(':')) {
+         const val = line.split(':')[1].trim()
+         if (val.length > 3) {
+           vendorName = val
+           break
+         }
+       }
     }
+  }
+
+  // Fallback: look for "Terima Dari" or common patterns
+  if (vendorName === 'Tidak Diketahui') {
+    const vendorPatterns = [
+      /(?:Pengusaha\s+)?CV\.\s+([A-Z][A-Za-z\s]+?)(?:\r?\n|Alam|Jabat|;|,)/,
+      /(?:Pengusaha\s+)?Toko\s+([A-Za-z\s]+?)(?:\r?\n|Alam|Jabat|;|,)/,
+      /(?:UD\.|PT\.)\s+([A-Z][A-Za-z\s]+?)(?:\r?\n|Alam|Jabat|;|,)/,
+      /Terima Dari\s*[:]\s*([A-Z\s.,]{3,50})/i,
+    ]
+    for (const pat of vendorPatterns) {
+      const m = text.match(pat)
+      if (m) {
+        vendorName = m[1]?.trim() || m[0].trim()
+        break
+      }
+    }
+  }
+
+  // Final Cleanup for Vendor Name: REMOVE ALL PREFIXES
+  if (vendorName !== 'Tidak Diketahui') {
+    vendorName = vendorName
+      .replace(/\b(?:Pengusaha|Toko|Penyedia|Nama|Pihak\s+Kedua|Jabatan)\b\s*[:.-]?\s*/gi, '')
+      .replace(/\b(?:CV\.?|PT\.?|UD\.?)\b\s*/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim()
   }
 
   // ──────────────────────────────────────────────────────────
