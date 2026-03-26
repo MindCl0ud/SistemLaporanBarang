@@ -380,78 +380,83 @@ export function extractDataFromText(rawText: string) {
   // Exclusion patterns for non-item lines (doc noise)
   const noisePattern = /\b(?:JUMLAH|Terbilang|NIP|Nama|Jabatan|Alamat|Waikabubak|BAPPERIDA|BRIDA|DAERAH|Tanda\s+Tangan|Pihak|Pertama|Kedua|Nomor|Terima|Uang|Jalan|Jl\.)\b/i
 
-  // Helper: parse one or two lines as an item
+  // Helper: parse one item line (or two-line span) using regex-first approach.
+  // Handles both tight OCR ("2buahx") and spaced OCR ("2  buah x").
   function tryParseItem(mainLine: string, nextLine?: string): any | null {
     if (noisePattern.test(mainLine)) return null
-    
-    // Combine with next line if needed (two-line span strategy)
-    const combined = nextLine ? `${mainLine}  ${nextLine}` : mainLine
 
+    const combined = nextLine ? `${mainLine} ${nextLine}` : mainLine
+
+    // Strip leading marker: "- ", "1. ", "1 - "
+    const stripped = combined.replace(/^(?:\d+\s*)?[-.\s]{0,3}/, '').trim()
+    if (!stripped || !/[a-zA-Z]{2,}/.test(stripped)) return null
+    if (noisePattern.test(stripped)) return null
+
+    // ── Indonesian number parser ──────────────────────────────
+    const toNum = (s: string) => {
+      const n = s.replace(/\./g, '').replace(',', '.')
+      return parseFloat(n) || 0
+    }
+    // Regex to match a number like "200.000" or "1.195.000"
+    const NUM = '(\\d{1,3}(?:\\.\\d{3})*(?:,\\d+)?|\\d+)'
+    const UNIT = '(?:buah|botol|pcs|unit|ltr?|rim|set|bu[a-z]+|kg|gram|lembar|dos|dus)[a-z]*'
+
+    // ── Primary: [desc] [qty] [unit][x?] [price] [total] ─────
+    const r1 = new RegExp(
+      `^(.+?)\\s+(\\d+)\\s*${UNIT}[sx]*\\s*${NUM}\\s+${NUM}\\s*$`, 'i'
+    )
+    let m = stripped.match(r1)
+    if (m) {
+      const desc  = m[1].trim()
+      const qty   = parseInt(m[2])
+      const price = toNum(m[3])
+      const total = toNum(m[4])
+      if (/[a-zA-Z]{2,}/.test(desc) && (price > 0 || total > 0)) {
+        const finalQty   = (qty > 5 && Math.abs(price - total) < 0.01 * total) ? 1 : qty || 1
+        const finalPrice = price || total
+        const finalTotal = total || finalQty * finalPrice
+        return { description: desc, quantity: finalQty, price: finalPrice, total: finalTotal }
+      }
+    }
+
+    // ── Secondary: [desc] [qty] [price] [total] ──────────────
+    const r2 = new RegExp(`^(.+?)\\s+(\\d+)\\s+${NUM}\\s+${NUM}\\s*$`)
+    m = stripped.match(r2)
+    if (m) {
+      const desc  = m[1].trim()
+      const qty   = parseInt(m[2])
+      const price = toNum(m[3])
+      const total = toNum(m[4])
+      if (/[a-zA-Z]{2,}/.test(desc) && total > 0) {
+        const finalQty   = (qty > 5 && Math.abs(price - total) < 0.01 * total) ? 1 : qty || 1
+        return { description: desc, quantity: finalQty, price: price || total, total }
+      }
+    }
+
+    // ── Tertiary: [desc] [price] [total] (qty=1 implied) ─────
+    const r3 = new RegExp(`^(.+?)\\s+${NUM}\\s+${NUM}\\s*$`)
+    m = stripped.match(r3)
+    if (m) {
+      const desc  = m[1].trim()
+      const price = toNum(m[2])
+      const total = toNum(m[3])
+      if (/[a-zA-Z]{2,}/.test(desc) && total > 0 && price > 0 && !noisePattern.test(desc)) {
+        return { description: desc, quantity: 1, price, total }
+      }
+    }
+
+    // ── Fallback: segment-split for spaced layouts ────────────
     const segments = combined.split(/[ \t]{2,}/).filter(s => s.length > 0)
-    if (segments.length < 2) return null
-
-    const lastSegment = segments[segments.length - 1]
-    const prevSegment = segments[segments.length - 2]
-
-    const total = parseAmount(lastSegment)
-    const price = parseAmount(prevSegment)
-    if (total <= 0) return null
-
-    let qty = 0
-    let descEndIdx = 0 // the last segment index that is part of the description
-
-    const unitPattern = /^(?:buah|botol|pcs|unit|lt|ltr|rim|set|bu[a-z]+|kg|gram|lembar|dos|dus)/i
-
-    // Scan middle segments (not first, not last two which are price+total)
-    for (let j = 1; j < segments.length - 2; j++) {
-      const seg = segments[j]
-
-      // Case A: "2 buah x" or "2buah" — digit+unit in ONE segment
-      const mCombined = seg.match(/^(\d+(?:\.\d+)?)\s*(?:buah|botol|pcs|unit|lt|ltr|rim|set|bu[a-z]+|kg|gram|lembar|dos|dus)/i)
-      if (mCombined) {
-        qty = parseFloat(mCombined[1])
-        descEndIdx = j - 1
-        break
+    if (segments.length >= 3) {
+      const totalF = toNum(segments[segments.length - 1])
+      const priceF = toNum(segments[segments.length - 2])
+      const descF  = segments[0].replace(/^(?:\d+\s*)?[-.]*\s*/, '').trim()
+      if (totalF > 0 && /[a-zA-Z]{2,}/.test(descF)) {
+        return { description: descF, quantity: 1, price: priceF || totalF, total: totalF }
       }
-
-      // Case B: "2" followed by "buah x" in the NEXT segment — the Kwitansi OCR pattern
-      if (/^\d+$/.test(seg) && j + 1 < segments.length - 2) {
-        const nextSeg = segments[j + 1]
-        if (unitPattern.test(nextSeg)) {
-          qty = parseFloat(seg)
-          descEndIdx = j - 1
-          break
-        }
-      }
-
-      // Case C: Segment starting with "x" (multiplier only) — skip, not part of description
-      if (/^x\s*$/i.test(seg)) break
     }
 
-    // Build description from the first segment up to descEndIdx
-    let description = segments.slice(0, descEndIdx + 1).join('  ')
-    if (!description) description = segments[0]
-
-    // Clean leading marker: "1. ", "- ", "1 - "
-    description = description.replace(/^(?:\d+\s*)?[-.\s]{0,2}/, '').trim()
-
-    if (!/[a-zA-Z]{2,}/.test(description)) return null
-    if (noisePattern.test(description)) return null
-
-    let finalQty   = qty || 1
-    let finalPrice = price || total
-    let finalTotal = total
-
-    // Fix OCR misread weight: if price first matches total and qty is suspiciously high, 
-    // the number was a description fragment (e.g. "gardan 90")
-    if (Math.abs(finalPrice - finalTotal) < 0.01 * finalTotal && finalQty > 5) {
-      finalQty = 1
-    }
-    if (finalTotal === 0 && finalQty > 0 && finalPrice > 0) {
-      finalTotal = finalQty * finalPrice
-    }
-
-    return { description, quantity: finalQty, price: finalPrice, total: finalTotal }
+    return null
   }
 
   for (let i = 0; i < lines.length; i++) {
