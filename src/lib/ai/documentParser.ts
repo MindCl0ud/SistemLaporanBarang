@@ -397,62 +397,73 @@ export function extractDataFromText(rawText: string) {
       const n = s.replace(/\./g, '').replace(',', '.')
       return parseFloat(n) || 0
     }
-    // Regex to match a number like "200.000" or "1.195.000"
-    const NUM = '(\\d{1,3}(?:\\.\\d{3})*(?:,\\d+)?|\\d+)'
-    const UNIT = '(?:buah|botol|pcs|unit|ltr?|rim|set|bu[a-z]+|kg|gram|lembar|dos|dus)[a-z]*'
+    // ── Indonesian number parser ──────────────────────────────
+    const toNum = (s: string) => {
+      const n = s.replace(/\./g, '').replace(',', '.')
+      const v = parseFloat(n)
+      return isNaN(v) ? 0 : v
+    }
 
-    // ── Primary: [desc] [qty] [unit][x?] [price] [total] ─────
-    const r1 = new RegExp(
-      `^(.+?)\\s+(\\d+)\\s*${UNIT}[sx]*\\s*${NUM}\\s+${NUM}\\s*$`, 'i'
-    )
-    let m = stripped.match(r1)
-    if (m) {
-      const desc  = m[1].trim()
-      const qty   = parseInt(m[2])
-      const price = toNum(m[3])
-      const total = toNum(m[4])
-      if (/[a-zA-Z]{2,}/.test(desc) && (price > 0 || total > 0)) {
-        const finalQty   = (qty > 5 && Math.abs(price - total) < 0.01 * total) ? 1 : qty || 1
-        const finalPrice = price || total
-        const finalTotal = total || finalQty * finalPrice
-        return { description: desc, quantity: finalQty, price: finalPrice, total: finalTotal }
+    const isNumToken = (s: string) => /^\d{1,3}(\.\d{3})*(,\d+)?$/.test(s) || /^\d{4,}$/.test(s)
+    const isUnitToken = (s: string) => /^(?:buah|botol|pcs|unit|ltr?|rim|set|bu[a-z]+|kg|gram|lembar|dos|dus)[a-z]*[sx]?$/i.test(s)
+
+    // Tokenise by whitespace
+    const tokens = stripped.split(/\s+/).filter(Boolean)
+    if (tokens.length < 3) return null
+
+    // Step 1: Extract last two numeric tokens (price, total) from the RIGHT
+    let rIdx = tokens.length - 1
+    let total = 0, price = 0
+
+    if (isNumToken(tokens[rIdx])) { total = toNum(tokens[rIdx]); rIdx-- }
+    if (rIdx >= 0 && isNumToken(tokens[rIdx])) { price = toNum(tokens[rIdx]); rIdx-- }
+
+    if (total <= 0) return null
+
+    // Step 2: Scan backwards for the 'x' multiplier (optional), then unit, then qty
+    if (rIdx >= 0 && /^x$/i.test(tokens[rIdx])) rIdx-- // skip 'x'
+
+    let qty = 0
+    let unitIdx = -1
+
+    // Find the first unit word scanning backwards from rIdx
+    for (let k = rIdx; k >= 1; k--) {
+      if (isUnitToken(tokens[k])) {
+        unitIdx = k
+        break
       }
     }
 
-    // ── Secondary: [desc] [qty] [price] [total] ──────────────
-    const r2 = new RegExp(`^(.+?)\\s+(\\d+)\\s+${NUM}\\s+${NUM}\\s*$`)
-    m = stripped.match(r2)
-    if (m) {
-      const desc  = m[1].trim()
-      const qty   = parseInt(m[2])
-      const price = toNum(m[3])
-      const total = toNum(m[4])
-      if (/[a-zA-Z]{2,}/.test(desc) && total > 0) {
-        const finalQty   = (qty > 5 && Math.abs(price - total) < 0.01 * total) ? 1 : qty || 1
+    if (unitIdx > 0) {
+      // Token just before the unit should be the qty
+      const qtyCandidate = tokens[unitIdx - 1]
+      if (/^\d+$/.test(qtyCandidate)) {
+        qty = parseInt(qtyCandidate)
+        // Description = everything before the qty token
+        const desc = tokens.slice(0, unitIdx - 1).join(' ')
+        if (/[a-zA-Z]{2,}/.test(desc) && !noisePattern.test(desc)) {
+          const finalQty = (qty > 5 && Math.abs(price - total) < 0.01 * total) ? 1 : qty || 1
+          return { description: desc, quantity: finalQty, price: price || total, total }
+        }
+      }
+    }
+
+    // Step 3: Fallback — [desc] [qty(<=10)] [price] [total]: last number is total,
+    // second-to-last is price. Token before price is qty if <= 10, rest is description.
+    if (isNumToken(tokens[rIdx]) && parseFloat(tokens[rIdx].replace(/\./g,'')) <= 10) {
+      qty = parseInt(tokens[rIdx])
+      const desc = tokens.slice(0, rIdx).join(' ')
+      if (/[a-zA-Z]{2,}/.test(desc) && !noisePattern.test(desc)) {
+        const finalQty = (qty > 5 && Math.abs(price - total) < 0.01 * total) ? 1 : qty || 1
         return { description: desc, quantity: finalQty, price: price || total, total }
       }
     }
 
-    // ── Tertiary: [desc] [price] [total] (qty=1 implied) ─────
-    const r3 = new RegExp(`^(.+?)\\s+${NUM}\\s+${NUM}\\s*$`)
-    m = stripped.match(r3)
-    if (m) {
-      const desc  = m[1].trim()
-      const price = toNum(m[2])
-      const total = toNum(m[3])
-      if (/[a-zA-Z]{2,}/.test(desc) && total > 0 && price > 0 && !noisePattern.test(desc)) {
+    // Step 4: No qty found — description is everything up to the price token
+    if (price > 0) {
+      const desc = tokens.slice(0, rIdx + 1).join(' ')
+      if (/[a-zA-Z]{2,}/.test(desc) && !noisePattern.test(desc)) {
         return { description: desc, quantity: 1, price, total }
-      }
-    }
-
-    // ── Fallback: segment-split for spaced layouts ────────────
-    const segments = combined.split(/[ \t]{2,}/).filter(s => s.length > 0)
-    if (segments.length >= 3) {
-      const totalF = toNum(segments[segments.length - 1])
-      const priceF = toNum(segments[segments.length - 2])
-      const descF  = segments[0].replace(/^(?:\d+\s*)?[-.]*\s*/, '').trim()
-      if (totalF > 0 && /[a-zA-Z]{2,}/.test(descF)) {
-        return { description: descF, quantity: 1, price: priceF || totalF, total: totalF }
       }
     }
 

@@ -133,19 +133,19 @@ export default function DocumentUploader() {
         }
 
         // Final Consolidation & Deduplication
-        setStatusText('Membersihkan Data Item (Eksklusif Kuitansi)...')
+        setStatusText('Membersihkan Data Item (Prioritas Berita Acara)...')
         
-        // 1. Identify Priority: KWITANSI > NOTA PESANAN
+        // Priority: BERITA ACARA > KWITANSI > NOTA PESANAN
+        const baPages = masterData.pageItems.filter((p: any) => p.type === 'Berita Acara Penerimaan Barang')
         const kwitansiPages = masterData.pageItems.filter((p: any) => p.type === 'Kwitansi')
         const notaPages = masterData.pageItems.filter((p: any) => p.type === 'Nota Pesanan')
         
         let targetItems: any[] = []
-        if (kwitansiPages.length > 0) {
-          // EXCLUSIVE: If Kwitansi exists, take ONLY from Kwitansi pages
+        if (baPages.length > 0) {
+          // EXCLUSIVE: BA table is the most structured source
+          targetItems = baPages.flatMap((p: any) => p.items)
+        } else if (kwitansiPages.length > 0) {
           targetItems = kwitansiPages.flatMap((p: any) => p.items)
-        } else if (notaPages.length > 0) {
-          // Fallback to Nota Pesanan
-          targetItems = notaPages.flatMap((p: any) => p.items)
         } else {
           // Final fallback: all items found
           targetItems = masterData.pageItems.flatMap((p: any) => p.items)
