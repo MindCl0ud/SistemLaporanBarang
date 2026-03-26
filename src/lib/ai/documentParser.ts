@@ -305,8 +305,8 @@ export function extractDataFromText(rawText: string) {
         // Find quantity + unit segment
         for (let j = 1; j < segments.length - 1; j++) {
           const seg = segments[j].toLowerCase()
-          // Look for digit + unit
-          const m = seg.match(/(\d+(?:\.\d+)?)\s*(?:buah|botol|pcs|unit|lt|rim|set|bu[a-z]+|kg|gram|lembar|dos|dus)/i)
+          // Look for digit + unit (most reliable)
+          const m = seg.match(/^(\d+(?:\.\d+)?)\s*(?:buah|botol|pcs|unit|lt|rim|set|bu[a-z]+|kg|gram|lembar|dos|dus|x)/i)
           if (m) {
             qty = parseFloat(m[1])
             description = segments.slice(0, j).join(' ')
@@ -314,10 +314,15 @@ export function extractDataFromText(rawText: string) {
           }
         }
         
-        // Final sanity check: if qty is 0, try to find a standalone number segment for qty (segment 1 usually)
-        if (qty === 0 && segments.length >= 3) {
-          const m = segments[1].match(/^\d+$/)
-          if (m) qty = parseFloat(segments[1])
+        // If still no qty, try to find a standalone number segment that looks like a quantity
+        // (Usually it's the segment before the price)
+        if (qty === 0 && segments.length >= 4) {
+          // Standard layout: [DESC] [QTY] [PRICE] [TOTAL]
+          const possibleQty = segments[segments.length - 3]
+          if (/^\d+$/.test(possibleQty) && parseFloat(possibleQty) < 100) {
+             qty = parseFloat(possibleQty)
+             description = segments.slice(0, segments.length - 3).join(' ')
+          }
         }
 
         // Clean up description: remove the leading marker "1 - " or "- "

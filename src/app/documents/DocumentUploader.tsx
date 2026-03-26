@@ -142,14 +142,43 @@ export default function DocumentUploader() {
           pdfResults.forEach(res => processPageResult(res))
         }
 
-        // Final Save for Combined PDF
+        // Final Consolidation & Deduplication for Combined PDF
+        setStatusText('Membersihkan Data Item (Deduplikasi)...')
+        
+        let finalItems = Array.from(masterData.itemsMap.values() as any[])
+        
+        // 1. Semantic Deduplication: Remove fragments (e.g., 'stuff' vs 'stuff sarung jog')
+        // Sort by description length (descending) to prefer longer names
+        finalItems.sort((a, b) => b.description.length - a.description.length)
+        
+        const cleanedItems: any[] = []
+        for (const item of finalItems) {
+          const descVal = item.description.toLowerCase().replace(/\s+/g, '')
+          // Check if this item is a substring of ANY already accepted (longer) item
+          const isFragment = cleanedItems.some(existing => {
+            const existingDesc = existing.description.toLowerCase().replace(/\s+/g, '')
+            // If descriptions overlap and prices/totals are same or zero
+            const samePrice = (item.price === existing.price || item.total === existing.total || item.price === 0)
+            return existingDesc.includes(descVal) && samePrice
+          })
+          
+          if (!isFragment) {
+            cleanedItems.push(item)
+          }
+        }
+
+        // 2. Total Amount Guard (Optional: help user catch gross errors)
+        const itemsTotalSum = cleanedItems.reduce((acc, it) => acc + (it.total || 0), 0)
+        let finalTotal = masterData.totalAmount
+        if (finalTotal === 0 && itemsTotalSum > 0) finalTotal = itemsTotalSum
+
         setStatusText('Menyimpan Dokumen Gabungan...')
         await saveDocument({
           type: "Dokumen Gabungan",
           vendorName: masterData.vendorName,
-          totalAmount: masterData.totalAmount,
+          totalAmount: finalTotal,
           extractedText: masterData.extractedText,
-          items: Array.from(masterData.itemsMap.values()),
+          items: cleanedItems,
           date: masterData.date || masterData.baDate || new Date(),
           baDate: masterData.baDate,
           kodeRek: masterData.kodeRek,
