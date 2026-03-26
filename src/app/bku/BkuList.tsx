@@ -3,11 +3,12 @@
 import { useState } from "react"
 import { format } from "date-fns"
 import { id } from "date-fns/locale"
-import { Trash2, Loader2 } from "lucide-react"
+import { Trash2, Loader2, ArrowUpDown } from "lucide-react"
 import { deleteBkuRecord } from "@/app/actions/bkuActions"
 
 export default function BkuList({ initialRecords }: { initialRecords: any[] }) {
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [sortDesc, setSortDesc] = useState(false) // false = Dari Awal (Earliest first), true = Terbaru
 
   const handleDelete = async (recordId: string) => {
     setDeletingId(recordId)
@@ -30,21 +31,36 @@ export default function BkuList({ initialRecords }: { initialRecords: any[] }) {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount)
   }
 
+  // initialRecords is DESC (from DB orderBy createdAt: 'desc')
+  const displayedRecords = sortDesc ? [...initialRecords] : [...initialRecords].reverse()
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-left text-sm text-slate-300">
-        <thead className="bg-white/5 text-xs uppercase text-slate-400">
-          <tr>
-            <th className="px-4 py-3 rounded-tl-xl w-32">Tanggal Bukti</th>
-            <th className="px-4 py-3">Kode Rek.</th>
-            <th className="px-4 py-3">Uraian</th>
-            <th className="px-4 py-3 text-right">Penerimaan</th>
-            <th className="px-4 py-3 text-right">Pengeluaran</th>
-            <th className="px-4 py-3 text-center rounded-tr-xl">Aksi</th>
-          </tr>
-        </thead>
-        <tbody>
-          {initialRecords.map((record) => (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <button 
+          onClick={() => setSortDesc(!sortDesc)}
+          className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-medium text-slate-300 transition-colors"
+        >
+          <ArrowUpDown className="w-3.5 h-3.5 text-indigo-400" />
+          {sortDesc ? 'Urutkan: Dari Terbaru' : 'Urutkan: Dari Awal'}
+        </button>
+      </div>
+
+      <div className="overflow-x-auto max-h-[60vh] rounded-xl border border-white/10 custom-scrollbar relative">
+        <table className="w-full text-left text-sm text-slate-300 relative border-collapse">
+          <thead className="text-xs uppercase text-slate-400 sticky top-0 z-10 shadow-sm">
+            <tr>
+              <th className="px-4 py-3 bg-slate-900/95 border-b border-white/10 backdrop-blur-sm w-32 font-semibold">Tanggal Bukti</th>
+              <th className="px-4 py-3 bg-slate-900/95 border-b border-white/10 backdrop-blur-sm font-semibold">Kode Rek.</th>
+              <th className="px-4 py-3 bg-slate-900/95 border-b border-white/10 backdrop-blur-sm font-semibold">Uraian</th>
+              <th className="px-4 py-3 bg-slate-900/95 border-b border-white/10 backdrop-blur-sm text-right font-semibold">Penerimaan</th>
+              <th className="px-4 py-3 bg-slate-900/95 border-b border-white/10 backdrop-blur-sm text-right font-semibold">Pengeluaran</th>
+              <th className="px-4 py-3 bg-slate-900/95 border-b border-white/10 backdrop-blur-sm text-right font-semibold">Saldo</th>
+              <th className="px-4 py-3 bg-slate-900/95 border-b border-white/10 backdrop-blur-sm text-center font-semibold w-16">Aksi</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white/5">
+            {displayedRecords.map((record) => (
             <tr key={record.id} className="border-b border-white/5 hover:bg-white/5 transition-colors group">
               <td className="px-4 py-3 whitespace-nowrap">
                 {record.date ? (
@@ -59,13 +75,16 @@ export default function BkuList({ initialRecords }: { initialRecords: any[] }) {
               <td className="px-4 py-3 font-medium text-white max-w-[200px] truncate" title={record.description}>
                 {record.description}
               </td>
-              <td className="px-4 py-3 text-right text-emerald-400">
+              <td className="px-4 py-3 text-right text-emerald-400 border-b border-white/5">
                 {record.receiptTotal > 0 ? formatCurrency(record.receiptTotal) : '-'}
               </td>
-              <td className="px-4 py-3 text-right text-rose-400">
+              <td className="px-4 py-3 text-right text-rose-400 border-b border-white/5">
                 {record.expenseTotal > 0 ? formatCurrency(record.expenseTotal) : '-'}
               </td>
-              <td className="px-4 py-3 text-center">
+              <td className="px-4 py-3 text-right text-blue-300 font-semibold border-b border-white/5">
+                {formatCurrency(record.balance)}
+              </td>
+              <td className="px-4 py-3 text-center border-b border-white/5">
                 <button 
                   onClick={() => handleDelete(record.id)}
                   disabled={deletingId === record.id}
@@ -83,5 +102,6 @@ export default function BkuList({ initialRecords }: { initialRecords: any[] }) {
         </tbody>
       </table>
     </div>
+  </div>
   )
 }
