@@ -33,73 +33,107 @@ export default function DocumentUploader() {
         formData.append('file', file)
         const pdfResults = await parsePdfServer(formData) as any[]
 
-        // Fallback for Scanned PDFs (Images wrapped in PDF)
-        // If the first page has almost no text and no amount, trigger multi-page OCR
+        // Consolidation Object
+        const masterData: any = {
+          type: "Dokumen Gabungan",
+          vendorName: "Tidak Diketahui",
+          totalAmount: 0,
+          extractedText: "",
+          itemsMap: new Map<string, any>(),
+          date: null,
+          baDate: null,
+          docNumber: "",
+          baNumber: "",
+          kodeRek: "",
+          subKegiatan: ""
+        }
+
+        const processPageResult = (res: any) => {
+          if (!res) return
+          masterData.extractedText += "\n" + res.text
+          
+          if (res.data.totalAmount > masterData.totalAmount) {
+            masterData.totalAmount = res.data.totalAmount
+          }
+          if (res.data.vendorName && res.data.vendorName !== 'Tidak Diketahui') {
+            masterData.vendorName = res.data.vendorName
+          }
+          if (res.data.kodeRek) masterData.kodeRek = res.data.kodeRek
+          if (res.data.subKegiatan) masterData.subKegiatan = res.data.subKegiatan
+
+          // Merge items deduplicated by description
+          if (res.data.items) {
+            res.data.items.forEach((it: any) => {
+              const key = it.description.toLowerCase().trim()
+              if (!masterData.itemsMap.has(key)) {
+                masterData.itemsMap.set(key, it)
+              }
+            })
+          }
+
+          // Specific Logic based on Document Type
+          if (res.data.type === 'Berita Acara Penerimaan Barang') {
+            masterData.baNumber = res.data.docNumber
+            masterData.baDate = res.data.date
+          } else if (res.data.type === 'Kwitansi') {
+            masterData.docNumber = res.data.docNumber
+            masterData.date = res.data.date
+          } else if (res.data.type === 'Nota Pesanan') {
+            if (!masterData.docNumber) masterData.docNumber = res.data.docNumber
+            if (!masterData.date) masterData.date = res.data.date
+          }
+        }
+
+        // Check for Scanned PDFs
         const firstResult = pdfResults[0]
         const cleanFirstText = firstResult?.text?.replace(/\\f/g, '').trim() || ''
         
         if (cleanFirstText.length < 50 && (!firstResult || firstResult.data.totalAmount === 0)) {
-          setStatusText('PDF Scan/Dokumen Gambar terdeteksi. Menyiapkan OCR Multi-Halaman...')
+          setStatusText('PDF Scan terdeteksi. Menjalankan OCR Multi-Halaman...')
           const pdfjsLib = await import('pdfjs-dist')
           pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
           
           const arrayBuffer = await file.arrayBuffer()
           const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
-          
-          // Process up to first 5 pages
           const numPages = Math.min(pdfDoc.numPages, 5)
           
           for (let i = 1; i <= numPages; i++) {
             setStatusText(`Mengolah Halaman ${i} dari ${numPages}...`)
             const page = await pdfDoc.getPage(i)
             const viewport = page.getViewport({ scale: 2.0 })
-            
             const canvas = document.createElement('canvas')
             canvas.width = viewport.width
             canvas.height = viewport.height
             const ctx = canvas.getContext('2d')
-            
             if (ctx) {
               // @ts-ignore
               await page.render({ canvasContext: ctx, viewport }).promise
               const imgDataUrl = canvas.toDataURL('image/png')
-              
               const pageResult = await parseDocumentImage(imgDataUrl, (msg) => setStatusText(`Halaman ${i}: ${msg}`))
-              
-              // Only save if it looks like a real document (has text or amount)
-              if (pageResult.text.length > 50 || pageResult.data.totalAmount > 0) {
-                setStatusText(`Menyimpan Halaman ${i}...`)
-                await saveDocument({
-                  type: pageResult.data.type,
-                  vendorName: pageResult.data.vendorName,
-                  totalAmount: pageResult.data.totalAmount,
-                  extractedText: pageResult.text,
-                  items: pageResult.data.items || [],
-                  date: pageResult.data.date,
-                  kodeRek: pageResult.data.kodeRek,
-                  subKegiatan: pageResult.data.subKegiatan,
-                  docNumber: pageResult.data.docNumber
-                })
-              }
+              processPageResult(pageResult)
             }
           }
         } else {
-          // Searchable PDF with content - Save each identified logical document
-          setStatusText(`Menyimpan ${pdfResults.length} Dokumen...`)
-          for (const res of pdfResults) {
-            await saveDocument({
-              type: res.data.type,
-              vendorName: res.data.vendorName,
-              totalAmount: res.data.totalAmount,
-              extractedText: res.text,
-              items: res.data.items || [],
-              date: res.data.date,
-              kodeRek: res.data.kodeRek,
-              subKegiatan: res.data.subKegiatan,
-              docNumber: res.data.docNumber
-            })
-          }
+          // Searchable PDF
+          pdfResults.forEach(res => processPageResult(res))
         }
+
+        // Final Save for Combined PDF
+        setStatusText('Menyimpan Dokumen Gabungan...')
+        await saveDocument({
+          type: "Dokumen Gabungan",
+          vendorName: masterData.vendorName,
+          totalAmount: masterData.totalAmount,
+          extractedText: masterData.extractedText,
+          items: Array.from(masterData.itemsMap.values()),
+          date: masterData.date || masterData.baDate || new Date(),
+          baDate: masterData.baDate,
+          kodeRek: masterData.kodeRek,
+          subKegiatan: masterData.subKegiatan,
+          docNumber: masterData.docNumber,
+          baNumber: masterData.baNumber
+        })
+
       } else {
         // Run Native OCR & AI Parsing for Single Images
         const result = await parseDocumentImage(fileUrl, (msg) => setStatusText(msg))

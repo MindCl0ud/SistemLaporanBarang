@@ -185,11 +185,17 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
 
           <tbody>
             {initialDocuments.map((doc, rowIdx) => {
+              const showBA = !!doc.baNumber || !!doc.baDate
               const isExpanded = expandedId === doc.id
               const isMatched = !!doc.matchRecord
-              const docDate = doc.date
+              
+              const kwatDate = doc.date
                 ? format(new Date(doc.date), 'dd/MM/yyyy', { locale: id })
                 : format(new Date(doc.createdAt), 'dd/MM/yyyy', { locale: id })
+              
+              const baDateStr = doc.baDate
+                ? format(new Date(doc.baDate), 'dd/MM/yyyy', { locale: id })
+                : null
 
               // Build items string
               const itemsText = doc.items && doc.items.length > 0
@@ -240,11 +246,25 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                     </td>
 
                     {/* Tanggal */}
-                    <td className={cellClass + ' font-mono'}>{docDate}</td>
+                    <td className={cellClass + ' font-mono'}>
+                      <div className="flex flex-col gap-0.5">
+                        <span title="Tanggal Kwitansi/Nota">{kwatDate}</span>
+                        {baDateStr && (
+                          <span className="text-[9px] text-amber-500/70" title="Tanggal Berita Acara">BA: {baDateStr}</span>
+                        )}
+                      </div>
+                    </td>
 
                     {/* Nomor Dokumen */}
                     <td className={cellClass + ' font-mono text-slate-400 text-[11px]'}>
-                      {doc.docNumber || '—'}
+                      <div className="flex flex-col gap-0.5">
+                        <span title="Nomor Kwitansi/Nota">{doc.docNumber || '—'}</span>
+                        {doc.baNumber && (
+                          <span className="text-[10px] text-amber-500/80 font-bold" title="Nomor Berita Acara">
+                             {doc.baNumber}
+                          </span>
+                        )}
+                      </div>
                     </td>
 
                     {/* Kode Rek */}
@@ -262,9 +282,11 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                       <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
                         doc.type === 'Berita Acara Penerimaan Barang' ? 'bg-amber-500/20 text-amber-300' :
                         doc.type === 'Kwitansi' ? 'bg-emerald-500/20 text-emerald-300' :
+                        doc.type === 'Dokumen Gabungan' ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' :
                         'bg-blue-500/20 text-blue-300'
                       }`}>
-                        {doc.type === 'Berita Acara Penerimaan Barang' ? 'BA Penerimaan' : doc.type}
+                        {doc.type === 'Berita Acara Penerimaan Barang' ? 'BA Penerimaan' : 
+                         doc.type === 'Dokumen Gabungan' ? 'Kwitansi + BA' : doc.type}
                       </span>
                     </td>
 
@@ -347,14 +369,16 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                           <div className="space-y-3">
                             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Info Dokumen</p>
                             {[
-                              { label: 'Nomor Dokumen', value: doc.docNumber || '—' },
+                              { label: 'Nomor Kwitansi/Nota', value: doc.docNumber || '—' },
+                              { label: 'Nomor Berita Acara (BA)', value: doc.baNumber || '—' },
+                              { label: 'Tanggal Kwitansi', value: kwatDate },
+                              { label: 'Tanggal Berita Acara', value: baDateStr || '—' },
                               { label: 'Kode Rekening', value: doc.kodeRek || '—' },
                               { label: 'Sub Kegiatan', value: doc.subKegiatan || '—' },
-                              { label: 'Tanggal Dokumen', value: docDate },
                             ].map(({ label, value }) => (
                               <div key={label} className="flex flex-col gap-0.5">
                                 <span className="text-[10px] text-slate-600 uppercase font-semibold">{label}</span>
-                                <span className="text-xs text-white font-mono bg-slate-800/60 px-2 py-1 rounded border border-slate-700">{value}</span>
+                                <span className={`text-xs text-white font-mono bg-slate-800/60 px-2 py-1 rounded border border-slate-700 ${label.includes('BA') ? 'text-amber-300/90' : ''}`}>{value}</span>
                               </div>
                             ))}
                             {doc.matchRecord && (
