@@ -144,20 +144,32 @@ export function extractDataFromText(rawText: string) {
 
   // ──────────────────────────────────────────────────────────
   // 4. Kode Rekening & Sub Kegiatan
-  //    Base code always: 5.01.01.2.09.0002
-  //    Sub-kegiatan = everything after this code in the full code string
-  //    OCR may insert spaces: "5 .01 .0 1.2.09.0002"
+  //    Base: 5.01.01.2.09.0002  (suffix = sub-kegiatan)
+  //    OCR reality from kwitansi: "5.0 1 .Ol. 2.09.0002.5.1.02.03.02.0035"
+  //    Strategy: process line-by-line, strip spaces, normalize O→0, then match
   // ──────────────────────────────────────────────────────────
   let kodeRek = ''
   let subKegiatan = ''
 
-  // Flexible pattern that allows spaces between digits and dots
-  const kodePattern = /(5\s*\.\s*01\s*\.\s*0[1lI]\s*\.\s*2\s*\.\s*09\s*\.\s*0002)((?:\s*[\.\d\s]+)?)/i
-  const kodeMatch = text.match(kodePattern)
-  if (kodeMatch) {
-    kodeRek = '5.01.01.2.09.0002'
-    if (kodeMatch[2]) {
-      subKegiatan = kodeMatch[2].replace(/\s+/g, '').replace(/^\./, '').trim()
+  const rawLines = rawText.split(/\r?\n/)
+  for (const rawLine of rawLines) {
+    // Strip ALL spaces from the line
+    let stripped = rawLine.replace(/\s+/g, '')
+    // Normalize OCR letter-for-digit swaps in code context
+    stripped = stripped
+      .replace(/(\d)O(\d)/g, '$10$2')   // digit-O-digit → digit-0-digit
+      .replace(/(\d)O\./g, '$10.')       // digit-O-dot   → digit-0-dot
+      .replace(/\.O(\d)/g, '.0$1')       // dot-O-digit   → dot-0-digit
+      .replace(/\.l(\d)/g, '.1$1')       // dot-l-digit   → dot-1-digit
+      .replace(/(\d)l\./g, '$11.')       // digit-l-dot   → digit-1-dot
+      .replace(/\.Ol\./g, '.01.')        // ".Ol." → ".01."
+
+    // Match base code 5.01.01.2.09.0002 and capture the suffix
+    const m = stripped.match(/5\.0[1]\.0[1]\.2\.09\.0002([\d.]*)/i)
+    if (m) {
+      kodeRek = '5.01.01.2.09.0002'
+      subKegiatan = (m[1] || '').replace(/^\./, '').replace(/\.$/, '')
+      break
     }
   }
 
