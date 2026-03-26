@@ -31,22 +31,26 @@ export async function runMatchingEngine(month: number, year: number) {
       }
 
       // 2. Code String Match (Strong Indicator: Full Code)
-      const fullDocCode = (doc.subKegiatan 
-        ? `${doc.kodeRek}.${doc.subKegiatan}` 
+      // Raw concatenation — subKegiatan already contains the dot prefix (e.g. "5.1.02.03.02.0035")
+      // So fullDocCode = "5.01.01.2.09.00025.1.02.03.02.0035" stripped of all spaces,
+      // which must match the BKU code field stored the same way.
+      const rawDocCode = (doc.subKegiatan
+        ? `${doc.kodeRek}${doc.subKegiatan}`
         : doc.kodeRek || '')
         .replace(/\s+/g, '')
-      
+
       const bkuCode = bku.code?.replace(/\s+/g, '') || ''
 
-      if (bkuCode && fullDocCode && bkuCode === fullDocCode) {
-        confidence += 0.4
-      } else if (bkuCode && fullDocCode && (bkuCode.includes(fullDocCode) || fullDocCode.includes(bkuCode))) {
-        confidence += 0.2
+      if (bkuCode && rawDocCode && bkuCode === rawDocCode) {
+        // Exact full-code match is the strongest signal
+        confidence += 0.5
+      } else if (bkuCode && rawDocCode && (bkuCode.includes(rawDocCode) || rawDocCode.includes(bkuCode))) {
+        confidence += 0.3
       } else {
-        // 2a. Fallback: Check if common base activity code matches
-        const prefix = "5.01.01.2.09.0002"
-        if (bkuCode.startsWith(prefix) && fullDocCode.startsWith(prefix)) {
-          confidence += 0.3
+        // Fallback: both start with the same base activity code
+        const prefix = '5.01.01.2.09.0002'
+        if (bkuCode.startsWith(prefix) && rawDocCode.startsWith(prefix)) {
+          confidence += 0.2
         }
       }
 

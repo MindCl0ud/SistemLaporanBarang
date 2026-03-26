@@ -271,90 +271,98 @@ export function extractDataFromText(rawText: string) {
   }
 
   // ──────────────────────────────────────────────────────────
-  // 6. Line Items
-  //    Resilient but STRICT Segment-based Parsing
+  // 6. Line Items  
+  //    Two-strategy parser:
+  //    A) Single-line:  "- item   2 buah   200.000   400.000"
+  //    B) Two-line span: "- item\n  2 buah   200.000   400.000"  (common in Kwitansi scans)
   // ──────────────────────────────────────────────────────────
   const items: any[] = []
   
   // Exclusion patterns for non-item lines (doc noise)
   const noisePattern = /\b(?:JUMLAH|Terbilang|NIP|Nama|Jabatan|Alamat|Waikabubak|BAPPERIDA|BRIDA|DAERAH|Tanda\s+Tangan|Pihak|Pertama|Kedua|Nomor|Terima|Uang|Jalan|Jl\.)\b/i
 
+  // Helper: parse one or two lines as an item
+  function tryParseItem(mainLine: string, nextLine?: string): any | null {
+    if (noisePattern.test(mainLine)) return null
+    
+    // Combine with next line if needed (two-line span strategy)
+    const combined = nextLine ? `${mainLine}  ${nextLine}` : mainLine
+
+    const segments = combined.split(/[ \t]{2,}/).filter(s => s.length > 0)
+    if (segments.length < 2) return null
+
+    const lastSegment = segments[segments.length - 1]
+    const prevSegment = segments[segments.length - 2]
+
+    const total = parseAmount(lastSegment)
+    const price = parseAmount(prevSegment)
+    if (total <= 0) return null
+
+    let qty = 0
+    let description = segments[0]
+
+    // Find quantity + unit segment
+    for (let j = 1; j < segments.length - 1; j++) {
+      const seg = segments[j].toLowerCase()
+      const m = seg.match(/^(\d+(?:\.\d+)?)\s*(?:buah|botol|pcs|unit|lt|ltr|rim|set|bu[a-z]+|kg|gram|lembar|dos|dus|x\b)/i)
+      if (m) {
+        qty = parseFloat(m[1])
+        description = segments.slice(0, j).join(' ')
+        break
+      }
+    }
+
+    // Fallback: standalone number 2 positions before the rightmost price  
+    if (qty === 0 && segments.length >= 4) {
+      const possibleQty = segments[segments.length - 3]
+      if (/^\d+$/.test(possibleQty) && parseFloat(possibleQty) < 100) {
+        qty = parseFloat(possibleQty)
+        description = segments.slice(0, segments.length - 3).join(' ')
+      }
+    }
+
+    // Clean leading marker: "1. ", "- ", "1 - "
+    description = description.replace(/^(?:\d+\s*)?[-.]?\s*/, '').trim()
+
+    if (!/[a-zA-Z]{2,}/.test(description)) return null
+
+    let finalQty   = qty || 1
+    let finalPrice = price || total
+    let finalTotal = total
+
+    // Fix OCR misread: if price≈total and qty>5, qty was likely a description number
+    if (Math.abs(finalPrice - finalTotal) < 0.01 * finalTotal && finalQty > 5) {
+      finalQty = 1
+    }
+    if (finalTotal === 0 && finalQty > 0 && finalPrice > 0) {
+      finalTotal = finalQty * finalPrice
+    }
+
+    return { description, quantity: finalQty, price: finalPrice, total: finalTotal }
+  }
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
-    
-    // Skip if noise or too short
     if (noisePattern.test(line) || line.length < 5) continue
 
-    // MUST start with a bullet/dash marker to be an item in these documents
-    // e.g. "- stuff" or "1 - stuff" or "1. stuff"
-    if (!/^[-Il1]|^\d+\s*[-.]/.test(line)) continue
-
-    const segments = line.split(/[ \t]{2,}/).filter(s => s.length > 0)
-    
-    if (segments.length >= 2) {
-      const lastSegment = segments[segments.length - 1]
-      const prevSegment = segments[segments.length - 2]
-      
-      const total = parseAmount(lastSegment)
-      const price = parseAmount(prevSegment)
-      
-      if (total > 0) {
-        let qty = 0
-        let description = segments[0]
-        
-        // Find quantity + unit segment
-        for (let j = 1; j < segments.length - 1; j++) {
-          const seg = segments[j].toLowerCase()
-          // Look for digit + unit (most reliable)
-          const m = seg.match(/^(\d+(?:\.\d+)?)\s*(?:buah|botol|pcs|unit|lt|rim|set|bu[a-z]+|kg|gram|lembar|dos|dus|x)/i)
-          if (m) {
-            qty = parseFloat(m[1])
-            description = segments.slice(0, j).join(' ')
-            break
+    // Strategy A: line starts with a bullet/number marker
+    const hasMarker = /^[-Il1]/.test(line) || /^\d+\s*[-.]/.test(line)
+    if (hasMarker) {
+      const parsed = tryParseItem(line)
+      if (parsed) {
+        items.push(parsed)
+        continue
+      }
+      // Strategy B: try joining with next line (description on this line, numbers on next)
+      if (i + 1 < lines.length) {
+        const nextLine = lines[i + 1]
+        if (!noisePattern.test(nextLine) && /\d{3,}/.test(nextLine)) {
+          const parsed2 = tryParseItem(line, nextLine)
+          if (parsed2) {
+            items.push(parsed2)
+            i++ // consume next line
+            continue
           }
-        }
-        
-        // If still no qty, try to find a standalone number segment that looks like a quantity
-        // (Usually it's the segment before the price)
-        if (qty === 0 && segments.length >= 4) {
-          // Standard layout: [DESC] [QTY] [PRICE] [TOTAL]
-          const possibleQty = segments[segments.length - 3]
-          if (/^\d+$/.test(possibleQty) && parseFloat(possibleQty) < 100) {
-             qty = parseFloat(possibleQty)
-             description = segments.slice(0, segments.length - 3).join(' ')
-          }
-        }
-
-        // Clean up description: remove the leading marker "1 - " or "- "
-        description = description.replace(/^(?:\d+\s*)?[-.]?\s*/, '').trim()
-        
-        // Final validity check: description must be alphabetical mainly
-        const isLegitDesc = /[a-zA-Z]{2,}/.test(description)
-        
-        if (isLegitDesc && (total > 0 || price > 0)) {
-          // ────────────────────────────────────────────────────────
-          // NEW: MATHEMATICAL VALIDATION
-          // Check if Qty * Price = Total. Fix OCR artifacts if not.
-          // ────────────────────────────────────────────────────────
-          let finalQty = qty || 1
-          let finalPrice = price || total
-          let finalTotal = total || (finalQty * finalPrice)
-
-          // Case: Qty is very high (90) but price * 1 matches total
-          if (Math.abs(finalPrice - finalTotal) < (0.01 * finalTotal) && finalQty > 5) {
-            finalQty = 1 // Likely an OCR misread of the description number
-          }
-          // Case: Total is 0, infer from qty/price
-          if (finalTotal === 0 && finalQty > 0 && finalPrice > 0) {
-            finalTotal = finalQty * finalPrice
-          }
-          
-          items.push({
-            description,
-            quantity: finalQty,
-            price: finalPrice,
-            total: finalTotal
-          })
         }
       }
     }
