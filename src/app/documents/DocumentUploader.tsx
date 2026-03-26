@@ -44,7 +44,7 @@ export default function DocumentUploader() {
           totalAmount: 0,
           extractedText: "",
           itemsMap: new Map<string, any>(),
-          hasNotaPesanan: false,
+          hasKwitansiPriority: false,
           date: null,
           baDate: null,
           docNumber: "",
