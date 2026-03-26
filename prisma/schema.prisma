@@ -35,6 +35,7 @@ model DocumentItem {
 
 model BkuTransaction {
   id           String       @id @default(cuid())
+  date         String?
   month        Int
   year         Int
   code         String?

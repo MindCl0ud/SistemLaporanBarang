@@ -12,6 +12,7 @@ export async function getBkuRecords(month: number, year: number) {
 }
 
 export async function addBkuRecord(data: FormData) {
+  const date = data.get('date') as string | null
   const month = Number(data.get('month'))
   const year = Number(data.get('year'))
   const code = data.get('code') as string
@@ -24,6 +25,7 @@ export async function addBkuRecord(data: FormData) {
 
   await prisma.bkuTransaction.create({
     data: {
+      date,
       month,
       year,
       code,
@@ -43,20 +45,45 @@ export async function deleteBkuRecord(id: string) {
 }
 
 export async function addBkuBulk(data: any[], month: number, year: number) {
-  const records = data.map(item => ({
-    month,
-    year,
-    code: String(item.Kode || item.code || item['Kode Rekening'] || ""),
-    description: String(item.Uraian || item.description || item.Deskripsi || "Tanpa Deskripsi"),
-    receiptTotal: Number(item.Penerimaan || item.receiptTotal || item.Terima || 0) || 0,
-    expenseTotal: Number(item.Pengeluaran || item.expenseTotal || item.Keluar || 0) || 0,
-    balance: Number(item.Saldo || item.balance || 0) || 0
-  }))
+  let newRecords = 0;
+  
+  for (const item of data) {
+    const code = String(item.code || "");
+    const description = String(item.description || "Tanpa Deskripsi");
+    const receiptTotal = Number(item.receiptTotal || 0) || 0;
+    const expenseTotal = Number(item.expenseTotal || 0) || 0;
+    const balance = Number(item.balance || 0) || 0;
+    const date = item.date ? String(item.date) : null;
 
-  await prisma.bkuTransaction.createMany({
-    data: records
-  })
+    // Lakukan pencegahan pendobelan data
+    const exists = await prisma.bkuTransaction.findFirst({
+      where: {
+        month,
+        year,
+        description,
+        receiptTotal,
+        expenseTotal
+      }
+    });
+
+    if (!exists) {
+      await prisma.bkuTransaction.create({
+        data: {
+          date,
+          month,
+          year,
+          code,
+          description,
+          receiptTotal,
+          expenseTotal,
+          balance
+        }
+      });
+      newRecords++;
+    }
+  }
 
   revalidatePath('/bku')
   revalidatePath('/')
+  return newRecords;
 }

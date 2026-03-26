@@ -26,12 +26,42 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
       const wb = read(buffer, { type: 'array' })
       const wsName = wb.SheetNames[0]
       const ws = wb.Sheets[wsName]
-      const data = utils.sheet_to_json(ws) as any[]
+      const dataRows = utils.sheet_to_json(ws, { header: 1 }) as any[][]
       
-      if (data.length > 0) {
-        await addBkuBulk(data, currentMonth, currentYear)
+      const parsedData = []
+      let currentDate = ""
+      
+      for (let i = 6; i < dataRows.length; i++) {
+        const row = dataRows[i]
+        if (!row || row.length === 0) continue
+        
+        if (row[1] && String(row[1]).trim() !== "") {
+          currentDate = String(row[1]).trim()
+        }
+        
+        const uraian = String(row[2] || "").trim()
+        const kode = String(row[3] || "").trim()
+        const terima = Number(row[4] || 0)
+        const keluar = Number(row[5] || 0)
+        const saldo = Number(row[6] || 0)
+        
+        if (uraian && (kode || terima > 0 || keluar > 0) && !uraian.toLowerCase().includes("saldo bulan lalu")) {
+          parsedData.push({
+            date: currentDate,
+            code: kode,
+            description: uraian,
+            receiptTotal: terima,
+            expenseTotal: keluar,
+            balance: saldo
+          })
+        }
+      }
+      
+      if (parsedData.length > 0) {
+        const addedCount = await addBkuBulk(parsedData, currentMonth, currentYear)
+        alert(`Berhasil mengimpor ${addedCount} data baru (Data dobel otomatis dilewati).`)
       } else {
-        alert("File Excel kosong atau format tidak sesuai.")
+        alert("Tidak ada baris data valid ditemukan di file Excel.")
       }
     } catch (error) {
       console.error(error)
@@ -61,9 +91,15 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
         </div>
       </div>
 
-      <div className="space-y-1">
-        <label className="text-xs text-slate-400">Kode Rekening</label>
-        <input name="code" required className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors" placeholder="1.2.3.4" />
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <label className="text-xs text-slate-400">Tanggal</label>
+          <input name="date" type="text" className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors" placeholder="01-01-2026" />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs text-slate-400">Kode Rekening</label>
+          <input name="code" required className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors" placeholder="1.2.3.4" />
+        </div>
       </div>
 
       <div className="space-y-1">

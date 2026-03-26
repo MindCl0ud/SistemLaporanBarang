@@ -1,11 +1,23 @@
 'use client'
 
+import { useState } from "react"
 import { format } from "date-fns"
 import { id } from "date-fns/locale"
-import { Trash2 } from "lucide-react"
+import { Trash2, Loader2 } from "lucide-react"
 import { deleteBkuRecord } from "@/app/actions/bkuActions"
 
 export default function BkuList({ initialRecords }: { initialRecords: any[] }) {
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  const handleDelete = async (recordId: string) => {
+    setDeletingId(recordId)
+    try {
+      await deleteBkuRecord(recordId)
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
   if (initialRecords.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-12 mt-4 border border-dashed border-white/10 rounded-xl bg-slate-900/30">
@@ -23,7 +35,7 @@ export default function BkuList({ initialRecords }: { initialRecords: any[] }) {
       <table className="w-full text-left text-sm text-slate-300">
         <thead className="bg-white/5 text-xs uppercase text-slate-400">
           <tr>
-            <th className="px-4 py-3 rounded-tl-xl">Tanggal Input</th>
+            <th className="px-4 py-3 rounded-tl-xl w-32">Tanggal Bukti</th>
             <th className="px-4 py-3">Kode Rek.</th>
             <th className="px-4 py-3">Uraian</th>
             <th className="px-4 py-3 text-right">Penerimaan</th>
@@ -35,7 +47,13 @@ export default function BkuList({ initialRecords }: { initialRecords: any[] }) {
           {initialRecords.map((record) => (
             <tr key={record.id} className="border-b border-white/5 hover:bg-white/5 transition-colors group">
               <td className="px-4 py-3 whitespace-nowrap">
-                {format(new Date(record.createdAt), 'dd MMM yyyy', { locale: id })}
+                {record.date ? (
+                  <span className="text-emerald-300 font-medium">{record.date}</span>
+                ) : (
+                  <span className="text-slate-500 text-xs">
+                    {format(new Date(record.createdAt), 'dd MMM yyyy', { locale: id })}
+                  </span>
+                )}
               </td>
               <td className="px-4 py-3">{record.code || '-'}</td>
               <td className="px-4 py-3 font-medium text-white max-w-[200px] truncate" title={record.description}>
@@ -49,10 +67,15 @@ export default function BkuList({ initialRecords }: { initialRecords: any[] }) {
               </td>
               <td className="px-4 py-3 text-center">
                 <button 
-                  onClick={() => deleteBkuRecord(record.id)}
-                  className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-400/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                  onClick={() => handleDelete(record.id)}
+                  disabled={deletingId === record.id}
+                  className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-400/10 rounded-lg transition-colors opacity-100 group-hover:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  {deletingId === record.id ? (
+                    <Loader2 className="w-4 h-4 text-rose-400 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-4 h-4" />
+                  )}
                 </button>
               </td>
             </tr>
