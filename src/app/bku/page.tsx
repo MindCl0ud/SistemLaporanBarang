@@ -78,6 +78,7 @@ export default async function BkuPage({
                     {isRecUp ? '+' : '-'}{recPct}%
                   </span>
                 </div>
+                <p className="text-[10px] text-slate-500 mt-1">Bulan Lalu: <span className="text-slate-400 font-medium">{formatCurrency(stats.prevReceipt)}</span></p>
               </div>
               
               <div className="space-y-1 p-3 rounded-xl bg-white/5 border border-white/5 overflow-hidden">
@@ -88,6 +89,7 @@ export default async function BkuPage({
                     {isExpUp ? '+' : '-'}{expPct}%
                   </span>
                 </div>
+                <p className="text-[10px] text-slate-500 mt-1">Bulan Lalu: <span className="text-slate-400 font-medium">{formatCurrency(stats.prevExpense)}</span></p>
               </div>
 
               <div className="space-y-1 p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 overflow-hidden">
@@ -98,6 +100,7 @@ export default async function BkuPage({
                     {isBalUp ? '+' : '-'}{balPct}%
                   </span>
                 </div>
+                <p className="text-[10px] text-indigo-300/50 mt-1">Bulan Lalu: <span className="text-indigo-300/80 font-medium">{formatCurrency(stats.prevBalance)}</span></p>
               </div>
            </div>
 
