@@ -383,167 +383,75 @@ export function extractDataFromText(rawText: string) {
     return isNaN(v) ? 0 : v
   }
 
-  // ── STRATEGY 1: Dedicated BA Table Parser ────────────────
-  // OCR layout for BA table — each column is on its own line:
-  //   "1 - stuff sarung jog"   ← description line
-  //   "2 buahx"                ← qty + unit
-  //   "200.000"                ← price
-  //   "400.000"                ← total
-  if (type === 'Berita Acara Penerimaan Barang') {
-    let tableStart = -1
-    for (let i = 0; i < lines.length; i++) {
-      const l = lines[i].toLowerCase()
-      if (l.includes('barang tersebut sebesar') || l.includes('nama barang') || l.includes('rincian')) {
-        tableStart = i; break
-      }
-    }
-    if (tableStart === -1) tableStart = 0
-
-    // Helper: normalize OCR misreads in qty/unit context
-    const fixOcrInQtyLine = (s: string) => s
-      .replace(/\bI\b/g, '1')   // capital I → 1 (most common misread)
-      .replace(/\bl\b/g, '1')   // lowercase l → 1
-      .trim()
-
-    // Description line: starts with row number (1-9) optional dash
-    const isDescLine = (l: string) => /^\s*[1-9]\s*[-.]?\s*[a-zA-Z]/.test(l)
-    // Qty+unit line: starts with 1-2 digit number followed by a unit word
-    const isQtyLine  = (l: string) => /^\s*[1-9Il]\s*(?:buah|botol|pcs|unit|ltr?|rim|set|kg|gram|dos|dus)[a-z]*[sx]?\s*$/i.test(fixOcrInQtyLine(l))
-    // A bare number line: only digits and dots (price or total)
-    const isNumLine  = (l: string) => /^\s*[\d.]+\s*$/.test(l)
-
-    let i = tableStart
-    while (i < lines.length) {
-      const line = lines[i].trim()
-
-      // Stop at JUMLAH
-      if (/^JUMLAH/i.test(line)) break
-      // Skip noise and header rows (pure numbers like "1 2 3 4 5 6")
-      if (noisePattern.test(line) || /^\s*(\d\s*){2,}\s*$/.test(line)) { i++; continue }
-
-      if (isDescLine(line)) {
-        // Extract description (strip the row number and dash)
-        const desc = line.replace(/^\s*\d+\s*[-.]?\s*/, '').trim()
-        if (!desc || !/[a-zA-Z]{2,}/.test(desc)) { i++; continue }
-
-        // Collect up to 4 subsequent lines: qty+unit, price, total
-        const remaining: string[] = []
-        let j = i + 1
-        while (j < lines.length && remaining.length < 4) {
-          const nl = lines[j].trim()
-          if (!nl || noisePattern.test(nl)) { j++; continue }
-          // Stop if next item's description line
-          if (isDescLine(nl) && remaining.length > 0) break
-          if (/^JUMLAH/i.test(nl)) break
-          remaining.push(nl)
-          j++
-        }
-
-        // Parse remaining lines
-        let qty = 1, price = 0, total = 0
-
-        for (const part of remaining) {
-          const fixed = fixOcrInQtyLine(part)
-          // Match "2 buahx" or "1 buah x" at start
-          const qtyUnitM = fixed.match(/^(\d+)\s*(?:buah|botol|pcs|unit|ltr?|rim|set|kg|gram|dos|dus)[a-z]*[sx]?\s*$/i)
-          if (qtyUnitM) {
-            qty = parseInt(qtyUnitM[1])
-            continue
-          }
-          // Match a bare number (price or total)
-          const numM = fixed.match(/^([\d.]+)$/)
-          if (numM) {
-            const v = toNum(numM[1])
-            if (v > 0) {
-              if (price === 0) price = v
-              else if (total === 0) total = v
-            }
-          }
-        }
-
-        // Fill in missing values
-        if (total === 0 && price > 0) total = price
-        if (price === 0 && total > 0) price = total
-        if (total > 0) {
-          items.push({ description: desc, quantity: qty, price, total })
-        }
-        i = j // skip consumed lines
-        continue
-      }
-
-      i++
-    }
+  // ── Item Parser: Right-anchored token strategy ─────────────
+  // Works for all document types (Kwitansi, BA, Nota).
+  // Scans tokens from right-to-left: extract total, price, then unit, then qty.
+  // Any OCR errors that survive can be corrected via the inline Edit button.
+  const isNumToken = (s: string) => /^\d{1,3}(\.\d{3})*(,\d+)?$/.test(s) || /^\d{4,}$/.test(s)
+  const isUnitToken = (s: string) => {
+    const clean = s.replace(/^[^a-zA-Z]+/, '')
+    return /^(?:buah|botol|pcs|unit|ltr?|rim|set|bu[a-z]+|kg|gram|lembar|dos|dus)[a-z]*[sx]?$/i.test(clean)
   }
 
-  // ── STRATEGY 2: Generic right-anchored token parser (Kwitansi/Nota) ──
-  // Runs only if no BA items were found
-  if (items.length === 0) {
-    const isNumToken = (s: string) => /^\d{1,3}(\.\d{3})*(,\d+)?$/.test(s) || /^\d{4,}$/.test(s)
-    const isUnitToken = (s: string) => {
-      const clean = s.replace(/^[^a-zA-Z]+/, '')
-      return /^(?:buah|botol|pcs|unit|ltr?|rim|set|bu[a-z]+|kg|gram|lembar|dos|dus)[a-z]*[sx]?$/i.test(clean)
+  function tryParseItem(mainLine: string, nextLine?: string): any | null {
+    if (noisePattern.test(mainLine)) return null
+    const combined = nextLine ? `${mainLine} ${nextLine}` : mainLine
+    const stripped = combined.replace(/^(?:\d+\s*)?[-.\s]{0,3}/, '').trim()
+    if (!stripped || !/[a-zA-Z]{2,}/.test(stripped)) return null
+    if (noisePattern.test(stripped)) return null
+
+    const tokens = stripped.split(/\s+/).filter(Boolean)
+    if (tokens.length < 3) return null
+
+    let rIdx = tokens.length - 1
+    let total = 0, price = 0
+    if (isNumToken(tokens[rIdx])) { total = toNum(tokens[rIdx]); rIdx-- }
+    if (rIdx >= 0 && isNumToken(tokens[rIdx])) { price = toNum(tokens[rIdx]); rIdx-- }
+    if (total <= 0) return null
+
+    if (rIdx >= 0 && /^x$/i.test(tokens[rIdx])) rIdx--
+
+    let qty = 0, unitIdx = -1
+    for (let k = rIdx; k >= 1; k--) {
+      if (isUnitToken(tokens[k])) { unitIdx = k; break }
     }
-
-    function tryParseItem(mainLine: string, nextLine?: string): any | null {
-      if (noisePattern.test(mainLine)) return null
-      const combined = nextLine ? `${mainLine} ${nextLine}` : mainLine
-      const stripped = combined.replace(/^(?:\d+\s*)?[-.\s]{0,3}/, '').trim()
-      if (!stripped || !/[a-zA-Z]{2,}/.test(stripped)) return null
-      if (noisePattern.test(stripped)) return null
-
-      const tokens = stripped.split(/\s+/).filter(Boolean)
-      if (tokens.length < 3) return null
-
-      let rIdx = tokens.length - 1
-      let total = 0, price = 0
-      if (isNumToken(tokens[rIdx])) { total = toNum(tokens[rIdx]); rIdx-- }
-      if (rIdx >= 0 && isNumToken(tokens[rIdx])) { price = toNum(tokens[rIdx]); rIdx-- }
-      if (total <= 0) return null
-
-      if (rIdx >= 0 && /^x$/i.test(tokens[rIdx])) rIdx--
-
-      let qty = 0, unitIdx = -1
-      for (let k = rIdx; k >= 1; k--) {
-        if (isUnitToken(tokens[k])) { unitIdx = k; break }
+    if (unitIdx > 0 && /^\d+$/.test(tokens[unitIdx - 1])) {
+      qty = parseInt(tokens[unitIdx - 1])
+      const desc = tokens.slice(0, unitIdx - 1).join(' ')
+      if (/[a-zA-Z]{2,}/.test(desc) && !noisePattern.test(desc)) {
+        const fq = (qty > 5 && Math.abs(price - total) < 0.01 * total) ? 1 : qty || 1
+        return { description: desc, quantity: fq, price: price || total, total }
       }
-      if (unitIdx > 0 && /^\d+$/.test(tokens[unitIdx - 1])) {
-        qty = parseInt(tokens[unitIdx - 1])
-        const desc = tokens.slice(0, unitIdx - 1).join(' ')
-        if (/[a-zA-Z]{2,}/.test(desc) && !noisePattern.test(desc)) {
-          const fq = (qty > 5 && Math.abs(price - total) < 0.01 * total) ? 1 : qty || 1
-          return { description: desc, quantity: fq, price: price || total, total }
-        }
-      }
-      if (rIdx >= 0 && isNumToken(tokens[rIdx]) && toNum(tokens[rIdx]) <= 10) {
-        qty = parseInt(tokens[rIdx])
-        const desc = tokens.slice(0, rIdx).join(' ')
-        if (/[a-zA-Z]{2,}/.test(desc) && !noisePattern.test(desc)) {
-          const fq = (qty > 5 && Math.abs(price - total) < 0.01 * total) ? 1 : qty || 1
-          return { description: desc, quantity: fq, price: price || total, total }
-        }
-      }
-      if (price > 0) {
-        const desc = tokens.slice(0, rIdx + 1).join(' ')
-        if (/[a-zA-Z]{2,}/.test(desc) && !noisePattern.test(desc)) {
-          return { description: desc, quantity: 1, price, total }
-        }
-      }
-      return null
     }
+    if (rIdx >= 0 && isNumToken(tokens[rIdx]) && toNum(tokens[rIdx]) <= 10) {
+      qty = parseInt(tokens[rIdx])
+      const desc = tokens.slice(0, rIdx).join(' ')
+      if (/[a-zA-Z]{2,}/.test(desc) && !noisePattern.test(desc)) {
+        const fq = (qty > 5 && Math.abs(price - total) < 0.01 * total) ? 1 : qty || 1
+        return { description: desc, quantity: fq, price: price || total, total }
+      }
+    }
+    if (price > 0) {
+      const desc = tokens.slice(0, rIdx + 1).join(' ')
+      if (/[a-zA-Z]{2,}/.test(desc) && !noisePattern.test(desc)) {
+        return { description: desc, quantity: 1, price, total }
+      }
+    }
+    return null
+  }
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i]
-      if (noisePattern.test(line) || line.length < 5) continue
-      const hasMarker = /^[-Il1]/.test(line) || /^\d+\s*[-.]/.test(line)
-      if (hasMarker) {
-        const parsed = tryParseItem(line)
-        if (parsed) { items.push(parsed); continue }
-        if (i + 1 < lines.length) {
-          const nextLine = lines[i + 1]
-          if (!noisePattern.test(nextLine) && /\d{3,}/.test(nextLine)) {
-            const parsed2 = tryParseItem(line, nextLine)
-            if (parsed2) { items.push(parsed2); i++; continue }
-          }
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    if (noisePattern.test(line) || line.length < 5) continue
+    const hasMarker = /^[-Il1]/.test(line) || /^\d+\s*[-.]/.test(line)
+    if (hasMarker) {
+      const parsed = tryParseItem(line)
+      if (parsed) { items.push(parsed); continue }
+      if (i + 1 < lines.length) {
+        const nextLine = lines[i + 1]
+        if (!noisePattern.test(nextLine) && /\d{3,}/.test(nextLine)) {
+          const parsed2 = tryParseItem(line, nextLine)
+          if (parsed2) { items.push(parsed2); i++; continue }
         }
       }
     }
