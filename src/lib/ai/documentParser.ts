@@ -39,10 +39,11 @@ export async function parseDocumentImage(fileUrl: string | File, onProgress?: (m
  * Also collapses multiple spaces and normalizes "W aikabubak" => "Waikabubak"
  */
 function normalizeText(text: string): string {
-  // Fix only the specific OCR artifact: space between digit and dot
-  // e.g. "1 .195.000" => "1.195.000"
-  let t = text.replace(/(\d)\s*\.\s*(\d)/g, '$1.$2')
-  // Normalize multiple spaces to single (but NOT within numbers to avoid breaking amounts)
+  // Fix OCR artifacts in codes and numbers:
+  // 1. Bridges spaces between digits and dots/slashes
+  let t = text.replace(/([A-Z0-9])\s*\.\s*([A-Z0-9])/gi, '$1.$2')
+  t = t.replace(/([A-Z0-9])\s*\/\s*([A-Z0-9])/gi, '$1/$2')
+  // 2. Normalize multiple spaces to single (but preserve double space for item separation)
   t = t.replace(/[ \t]{3,}/g, '  ')
   return t
 }
@@ -50,12 +51,9 @@ function normalizeText(text: string): string {
 /** Parse a formatted currency string to integer, handling OCR artifacts */
 function parseAmount(str: string): number {
   if (!str) return 0
-  // First: remove spaces that OCR inserts within numbers ("1. 19 5.000" => "1.195.000")
-  // Step 1: collapse spaces around dots (e.g. "1. 19 5" => "1.195")
+  // Step 1: collapse spaces around dots/slashes
   let s = str.replace(/(\d)\s*\.\s*(\d)/g, '$1.$2')
-  // Step 2: remove remaining spaces between digit groups
-  s = s.replace(/(\d)\s+(\d)/g, '$1$2')
-  // Step 3: remove everything except digits
+  // Step 2: remove everything except digits
   const cleaned = s.replace(/[^\d]/g, '')
   return cleaned ? parseInt(cleaned, 10) : 0
 }
@@ -65,10 +63,8 @@ function parseIndonesianDate(dateStr: string): Date | null {
   const monthMap: Record<string, number> = {
     'januari': 0, 'februari': 1, 'maret': 2, 'april': 3, 'mei': 4, 'juni': 5,
     'juli': 6, 'agustus': 7, 'september': 8, 'oktober': 9, 'november': 10, 'desember': 11,
-    // OCR can split month names
     'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'jun': 5, 'jul': 6, 'agu': 7, 'sep': 8, 'okt': 9, 'nov': 10, 'des': 11
   }
-  // Main pattern: "22 Januari 2026" or "22 Jan uari 2026" (OCR split)
   const m = dateStr.match(/(\d{1,2})\s+([a-z]+(?:\s+[a-z]+)?)\s+(\d{4})/i)
   if (m) {
     const day = parseInt(m[1])
@@ -85,7 +81,6 @@ function parseIndonesianDate(dateStr: string): Date | null {
 export function extractDataFromText(rawText: string) {
   const text = normalizeText(rawText)
   const lowerText = text.toLowerCase()
-  // Keep raw lines (some items span multiple lines)
   const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 1)
 
   // ──────────────────────────────────────────────────────────
@@ -104,22 +99,38 @@ export function extractDataFromText(rawText: string) {
 
   // ──────────────────────────────────────────────────────────
   // 2. Document Number
-  //    e.g. "BRIDA.011.7/87/BAP-BRG/2026" or "BRID A . 011.7 / 87 / BA P-BRG / 2026"
+  //    Look for the pattern: [CODE] / [NUMBER] / [CODE] / [YEAR]
+  //    e.g. "BRIDA.011.7/87/BAP-BRG/2026"
   // ──────────────────────────────────────────────────────────
   let docNumber = ''
-  // Even more aggressive regex for Nomor Dokumen
-  // Captures until a known keyword or a date or double newline
-  const docNumRegex = /(?:N\s*o\s*m\s*[oe]\s*r|N\s*o\s*\.?|B\s*R\s*I\s*D\s*A\s*\.?|N\s*u\s*m\s*b\s*e\s*r)\s*[:.]?\s*([A-Z0-9.\s/\-]{5,100})/i
-  const docNumMatch = text.match(docNumRegex)
-  if (docNumMatch) {
-    // Clean up the match: stop at keywords manually
-    const rawVal = docNumMatch[1].split(/\b(?:Dari|Pada|Kami|Dua|Kamis|Jumat|Sabtu|Minggu|Senin|Selasa|Rabu)\b/i)[0]
-    docNumber = rawVal
-      .replace(/\s*\/\s*/g, '/')
-      .replace(/\s*\.\s*/g, '.')
-      .replace(/\s+/g, '')
-      .replace(/[.;,]+$/, '')
-      .trim()
+  
+  // Strategy: search for common number prefixes, then look for a pattern with slashes and year
+  const docNumPatterns = [
+    // Pattern 1: Starts with "Nomor :" or similar. Allow spaces in content.
+    /(?:N\s*o\s*m\s*[oe]\s*r|N\s*o\s*\.?|N\s*u\s*m\s*b\s*e\s*r)\s*[:.]?\s*([A-Z0-9./\-\s\t]{5,100})/i,
+    // Pattern 2: Raw number pattern with slashes and 202x/203x year
+    /([A-Z0-9.\-\s\t]{3,}\s*\/\s*\d{1,4}\s*\/\s*[A-Z0-9.\-\s\t]{3,}\s*\/\s*(?:202[0-9]|203[0-9]))/i
+  ]
+
+  for (const pat of docNumPatterns) {
+    const match = text.match(pat)
+    if (match) {
+      let val = match[1] || match[0]
+      // Clean up: stop at keywords or boundaries (including newline)
+      const cleaned = val.split(/\r?\n|\b(?:Dari|Pada|Kami|Dua|Waikabubak|Kamis|Tanggal|Berdasarkan|Nama|Jabatan)\b/i)[0]
+      docNumber = cleaned
+        .replace(/\s+/g, '')
+        .replace(/[.;,:]+$/, '')
+        .trim()
+      
+      // If we found a good looking number (with slashes), stop
+      if (docNumber.includes('/') && docNumber.length > 8) break
+    }
+  }
+
+  // Final cleanup if we got a false positive like "VASIDAERAH"
+  if (docNumber.toUpperCase() === 'VASIDAERAH' || docNumber.toUpperCase() === 'BAPPERIDA') {
+    docNumber = ''
   }
 
   // ──────────────────────────────────────────────────────────
