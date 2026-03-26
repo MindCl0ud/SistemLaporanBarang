@@ -222,9 +222,14 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                     {/* Status */}
                     <td className={`${cellClass} text-center`} style={{ overflow: 'hidden' }}>
                       {isMatched ? (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/30">
-                          <CheckCircle2 className="w-2.5 h-2.5" />COCOK
-                        </span>
+                        <div className="flex flex-col items-center gap-0.5" title={doc.matchRecord.bkuTransaction.description}>
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[9px] font-bold border border-emerald-500/30 uppercase tracking-tighter">
+                            <CheckCircle2 className="w-2 h-2" />TERCOCOKKAN
+                          </span>
+                          <span className="text-[9px] text-slate-500 font-mono leading-none">
+                            BKU {doc.matchRecord.bkuTransaction.date}
+                          </span>
+                        </div>
                       ) : (
                         <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-700/50 text-slate-500 text-[10px] font-bold border border-slate-700">
                           <Circle className="w-2.5 h-2.5" />—

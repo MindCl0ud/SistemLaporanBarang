@@ -6,7 +6,12 @@ import { revalidatePath } from "next/cache"
 export async function getDocuments() {
   return await prisma.document.findMany({
     orderBy: { createdAt: 'desc' },
-    include: { items: true, matchRecord: true }
+    include: { 
+      items: true, 
+      matchRecord: {
+        include: { bkuTransaction: true }
+      }
+    }
   })
 }
 

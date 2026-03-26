@@ -31,9 +31,10 @@ export async function runMatchingEngine(month: number, year: number) {
       }
 
       // 2. Code String Match (Strong Indicator: Full Code)
-      const fullDocCode = doc.subKegiatan 
+      const fullDocCode = (doc.subKegiatan 
         ? `${doc.kodeRek}.${doc.subKegiatan}` 
-        : doc.kodeRek?.replace(/\s+/g, '') || ''
+        : doc.kodeRek || '')
+        .replace(/\s+/g, '')
       
       const bkuCode = bku.code?.replace(/\s+/g, '') || ''
 

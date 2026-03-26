@@ -107,14 +107,18 @@ export function extractDataFromText(rawText: string) {
   //    e.g. "BRIDA.011.7/87/BAP-BRG/2026" or "BRID A . 011.7 / 87 / BA P-BRG / 2026"
   // ──────────────────────────────────────────────────────────
   let docNumber = ''
-  const docNumRegex = /(?:Nomor|Nomo\s*r|Nomer)\s*[:.]?\s*([A-Z0-9.\s/\-]+?)(?:\r?\n|Dari|Pada|Kami|$)/i
+  // Even more aggressive regex for Nomor Dokumen
+  // Captures until a known keyword or a double newline
+  const docNumRegex = /(?:N\s*o\s*m\s*[oe]\s*r|N\s*o\s*\.?|N\s*o\s*m\s*e\s*r|N\s*u\s*m\s*b\s*e\s*r)\s*[:.]?\s*([A-Z0-9.\s/\-]{5,100})/i
   const docNumMatch = text.match(docNumRegex)
   if (docNumMatch) {
-    // Collapse spaces: "BRID A . 011.7 /  87  /  BA P-BRG  /  2026" => "BRIDA.011.7/87/BAP-BRG/2026"
-    docNumber = docNumMatch[1]
+    // Clean up the match: stop at keywords manually
+    const rawVal = docNumMatch[1].split(/\b(?:Dari|Pada|Kami|Dua|Kamis|Jumat|Sabtu|Minggu|Senin|Selasa|Rabu)\b/i)[0]
+    docNumber = rawVal
       .replace(/\s*\/\s*/g, '/')
       .replace(/\s*\.\s*/g, '.')
       .replace(/\s+/g, '')
+      .replace(/[.;,]+$/, '')
       .trim()
   }
 
