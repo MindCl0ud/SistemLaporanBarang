@@ -23,16 +23,26 @@ export async function runMatchingEngine(month: number, year: number) {
     for (const doc of documents) {
       let confidence = 0
       
-      // Compare amount
+      // 1. Compare amount (Primary Weight)
       if (bku.expenseTotal === doc.totalAmount && (doc.totalAmount || 0) > 0) {
-        confidence += 0.6
+        confidence += 0.5
       } else if (Math.abs((bku.expenseTotal || 0) - (doc.totalAmount || 0)) < 1000) {
-         confidence += 0.4
+         confidence += 0.3
       }
 
-      // Keyword match
+      // 2. Code Suffix Match (New - Very Strong Indicator)
+      // Prefix to ignore: 5.01.01.2.09.0002
+      const prefix = "5.01.01.2.09.0002"
+      const bkuSuffix = bku.code?.startsWith(prefix) ? bku.code.replace(prefix, "").replace(/^\./, "") : bku.code
+      const docSuffix = doc.subKegiatan || (doc.kodeRek?.startsWith(prefix) ? doc.kodeRek.replace(prefix, "").replace(/^\./, "") : "")
+
+      if (bkuSuffix && docSuffix && bkuSuffix === docSuffix) {
+        confidence += 0.4
+      }
+
+      // 3. Keyword match (Secondary Weight)
       if (bku.description.toLowerCase().includes(doc.vendorName?.toLowerCase() || 'xyz123')) {
-        confidence += 0.3
+        confidence += 0.2
       }
 
       if (confidence > highestConfidence) {

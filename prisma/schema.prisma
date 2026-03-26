@@ -12,6 +12,8 @@ model Document {
   id            String         @id @default(cuid())
   type          String
   docNumber     String?
+  kodeRek       String?        // New field
+  subKegiatan   String?        // New field
   vendorName    String?
   totalAmount   Float?
   date          DateTime?

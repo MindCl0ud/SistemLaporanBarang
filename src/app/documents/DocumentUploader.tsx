@@ -96,7 +96,11 @@ export default function DocumentUploader() {
         type: result.data.type,
         vendorName: result.data.vendorName,
         totalAmount: result.data.totalAmount,
-        extractedText: result.text
+        extractedText: result.text,
+        items: result.data.items || [],
+        date: result.data.date,
+        kodeRek: result.data.kodeRek,
+        subKegiatan: result.data.subKegiatan
       })
 
       setSuccess(true)

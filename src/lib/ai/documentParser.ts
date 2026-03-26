@@ -35,61 +35,91 @@ export async function parseDocumentImage(fileUrl: string | File, onProgress?: (m
 
 export function extractDataFromText(text: string) {
   const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0)
-  
-  let type = "Nota"
   const lowerText = text.toLowerCase()
+  
+  // 1. Determine Type
+  let type = "Nota"
   if (lowerText.includes('berita acara') || lowerText.includes('bap')) type = "Berita Acara"
   else if (lowerText.includes('kwitansi') || lowerText.includes('kuitansi')) type = "Kwitansi"
   else if (lowerText.includes('faktur') || lowerText.includes('invoice')) type = "Faktur"
 
-  // 1. Find the largest number in the text (often the Grand Total)
-  // Regex to find currency-like numbers: 1.000, 1,000, 1000.00 etc.
-  // Match numbers that are at least 3 digits long to avoid dates/codes
+  // 2. Extract Specific Date (Waikabubak format)
+  let docDate: Date | null = null
+  const dateRegex = /(?:Waikabubak|Tanggal)\s*,?\s*(\d{1,2}\s+[a-z]+\s+\d{4})/i
+  const dateMatch = text.match(dateRegex)
+  if (dateMatch) {
+    // Basic Indonesian month mapping if needed, but JS Date might handle some
+    const monthMap: Record<string, string> = {
+      'januari': 'Jan', 'februari': 'Feb', 'maret': 'Mar', 'april': 'Apr', 'mei': 'May', 'juni': 'Jun',
+      'juli': 'Jul', 'agustus': 'Aug', 'september': 'Sep', 'oktober': 'Oct', 'november': 'Nov', 'desember': 'Dec'
+    }
+    let dateStr = dateMatch[1].toLowerCase()
+    Object.keys(monthMap).forEach(key => {
+      dateStr = dateStr.replace(key, monthMap[key])
+    })
+    const parsedDate = new Date(dateStr)
+    if (!isNaN(parsedDate.getTime())) docDate = parsedDate
+  }
+
+  // 3. Extract Kode Rek & Sub Kegiatan
+  let kodeRek = ""
+  let subKegiatan = ""
+  // Pattern: 5.01.01.2.09.0002 followed by more numbers
+  const kodeRekRegex = /(5\.01\.01\.2\.09\.0002)(?:\.([\d.]+))?/
+  const kodeMatch = text.match(kodeRekRegex)
+  if (kodeMatch) {
+    kodeRek = kodeMatch[0]
+    subKegiatan = kodeMatch[2] || ""
+  }
+
+  // 4. Find Total Amount (Largest Number Heuristic)
   const amountRegex = /(?:Rp|IDR)?\s*([\d,.]{4,})/gi
   let match;
   let matches: number[] = []
-  
   while ((match = amountRegex.exec(text)) !== null) {
     const cleaned = match[1].replace(/[.,]/g, '')
     const val = parseInt(cleaned, 10)
-    if (!isNaN(val) && val > 100) {
-      matches.push(val)
-    }
+    if (!isNaN(val) && val > 100) matches.push(val)
   }
-
-  // Fallback direct regex for "Total" or "Jumlah"
-  const totalKeywordsRegex = /(?:Total|Jumlah|Total Bayar|Grand Total)[\s\S]*?([\d,.]{4,})/i
-  const keywordMatch = text.match(totalKeywordsRegex)
-  if (keywordMatch) {
-    const val = parseInt(keywordMatch[1].replace(/[.,]/g, ''), 10)
-    if (!isNaN(val)) matches.push(val)
-  }
-
-  // Pick the largest one (Heuristic: The total is usually the biggest number)
   const totalAmount = matches.length > 0 ? Math.max(...matches) : 0
 
-  // 2. Find Vendor Name (Searching first 10 significant lines)
+  // 5. Extract Vendor Name
   let vendorName = "Toko/Penyedia Tidak Diketahui"
   const vendorKeywords = ['toko', 'cv.', 'pt.', 'market', 'jaya', 'abadi', 'sentosa', 'koperasi', 'ud.']
-  
   const scanLimit = Math.min(lines.length, 12)
   for (let i = 0; i < scanLimit; i++) {
     const line = lines[i].toLowerCase()
-    const hasKeyword = vendorKeywords.some(k => line.includes(k))
-    
-    // Heuristic: If it has "JL." (address) or is very short, skip
-    if (hasKeyword && !line.includes('jl.') && line.length > 3) {
+    if (vendorKeywords.some(k => line.includes(k)) && !line.includes('jl.') && line.length > 3) {
       vendorName = lines[i].replace(/[:=]/g, '').trim()
       break
     }
   }
 
-  // If still not found, just take first line if it looks like a name (not date/header)
-  if (vendorName.startsWith("Toko/Penyedia") && lines.length > 0) {
-    if (!lines[0].match(/\d{2}[-/]\d{2}[-/]\d{4}/)) { // not a date
-        vendorName = lines[0]
+  // 6. Extract Line Items (Rincian Item)
+  // Look for lines containing numbers that might specify Qty and Price
+  // Typical: [Item Name] [Qty] [Unit] [Price] [Total]
+  const items: any[] = []
+  const itemLineRegex = /^(.+?)\s+(\d+)\s+(?:pcs|rim|dus|buah|unit|set|liter|kg)?\s*([\d,.]{4,})\s+([\d,.]{4,})$/i
+  
+  for (const line of lines) {
+    const m = line.match(itemLineRegex)
+    if (m) {
+      items.push({
+        description: m[1].trim(),
+        quantity: parseFloat(m[2]),
+        price: parseFloat(m[3].replace(/[.,]/g, '')),
+        total: parseFloat(m[4].replace(/[.,]/g, ''))
+      })
     }
   }
 
-  return { type, vendorName, totalAmount }
+  return { 
+    type, 
+    vendorName, 
+    totalAmount, 
+    date: docDate, 
+    kodeRek, 
+    subKegiatan,
+    items 
+  }
 }

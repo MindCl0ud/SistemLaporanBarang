@@ -11,12 +11,14 @@ export async function getDocuments() {
 }
 
 export async function saveDocument(data: any) {
-  const { type, docNumber, vendorName, totalAmount, date, extractedText, items } = data
+  const { type, docNumber, vendorName, totalAmount, date, extractedText, items, kodeRek, subKegiatan } = data
 
   const doc = await prisma.document.create({
     data: {
       type: type || "Nota",
       docNumber: docNumber || "",
+      kodeRek: kodeRek || "",
+      subKegiatan: subKegiatan || "",
       vendorName: vendorName || "Tidak Diketahui",
       totalAmount: Number(totalAmount) || 0,
       date: date ? new Date(date) : new Date(),

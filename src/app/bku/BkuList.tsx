@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { format } from "date-fns"
 import { id } from "date-fns/locale"
-import { Trash2, Loader2, ArrowUpDown } from "lucide-react"
+import { Trash2, Loader2, ArrowUpDown, CheckCircle2 } from "lucide-react"
 import { deleteBkuRecord } from "@/app/actions/bkuActions"
 
 export default function BkuList({ initialRecords, openingBalance = 0 }: { initialRecords: any[], openingBalance: number }) {
@@ -79,6 +79,7 @@ export default function BkuList({ initialRecords, openingBalance = 0 }: { initia
               <th className="px-4 py-3 bg-slate-900/95 border-b border-white/10 backdrop-blur-sm text-right font-semibold">
                 <div className="resize-x overflow-auto min-w-[80px] hover:border-x border-indigo-500/50 px-2 whitespace-nowrap ml-auto">Saldo</div>
               </th>
+              <th className="px-4 py-3 bg-slate-900/95 border-b border-white/10 backdrop-blur-sm text-center font-semibold">Status</th>
               <th className="px-2 py-3 bg-slate-900/95 border-b border-white/10 backdrop-blur-sm text-center font-semibold w-16">Aksi</th>
             </tr>
           </thead>
@@ -119,6 +120,20 @@ export default function BkuList({ initialRecords, openingBalance = 0 }: { initia
               </td>
               <td className="px-4 py-3 text-right text-blue-300 font-semibold border-b border-white/5">
                 {formatCurrency(record.calculatedBalance)}
+              </td>
+              <td className="px-4 py-3 text-center border-b border-white/5">
+                {record.matchRecord ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/30" title="Dokumen Ditemukan">
+                    <CheckCircle2 className="w-2.5 h-2.5" />
+                    COCOK
+                  </span>
+                ) : (
+                  record.expenseTotal > 0 && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-500/20 text-slate-500 text-[10px] font-bold border border-white/5" title="Belum ada dokumen">
+                      -
+                    </span>
+                  )
+                )}
               </td>
               <td className="px-4 py-3 text-center border-b border-white/5">
                 <button 
