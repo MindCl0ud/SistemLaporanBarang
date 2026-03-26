@@ -15,15 +15,112 @@
  *  - JUMLAH is on its own line and total on next line in some pages
  */
 
-import Tesseract from 'tesseract.js'
+/**
+ * Preprocess an image URL/File for best Tesseract OCR quality:
+ *  1. Draw on canvas at 1.5× scale (more pixels = better OCR)
+ *  2. Convert to grayscale
+ *  3. Auto-contrast stretch (normalize darkest/lightest pixel to 0-255)
+ *  4. Adaptive threshold → pure black & white
+ * Returns a new base64 PNG data URL.
+ */
+async function preprocessImage(src: string | File): Promise<string> {
+  // Resolve File → data URL
+  let dataUrl: string
+  if (src instanceof File) {
+    dataUrl = await new Promise<string>((res, rej) => {
+      const reader = new FileReader()
+      reader.onload = () => res(reader.result as string)
+      reader.onerror = rej
+      reader.readAsDataURL(src)
+    })
+  } else {
+    dataUrl = src
+  }
+
+  return new Promise<string>((resolve) => {
+    const img = new window.Image()
+    img.onload = () => {
+      const SCALE = 1.5
+      const w = img.width * SCALE
+      const h = img.height * SCALE
+
+      const canvas = document.createElement('canvas')
+      canvas.width = w
+      canvas.height = h
+      const ctx = canvas.getContext('2d')!
+      ctx.drawImage(img, 0, 0, w, h)
+
+      const imageData = ctx.getImageData(0, 0, w, h)
+      const d = imageData.data
+
+      // Step 1: Grayscale (ITU-R BT.601)
+      const gray = new Uint8Array(w * h)
+      for (let i = 0; i < w * h; i++) {
+        gray[i] = Math.round(0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2])
+      }
+
+      // Step 2: Auto-contrast (stretch histogram to 0-255)
+      let minG = 255, maxG = 0
+      for (let v of gray) { if (v < minG) minG = v; if (v > maxG) maxG = v }
+      const range = maxG - minG || 1
+      const stretched = gray.map(v => Math.round(((v - minG) / range) * 255))
+
+      // Step 3: Otsu threshold (adaptive black & white)
+      // Compute histogram
+      const hist = new Array(256).fill(0)
+      for (const v of stretched) hist[v]++
+      const total = stretched.length
+      let sumB = 0, wB = 0, sum = 0
+      for (let i = 0; i < 256; i++) sum += i * hist[i]
+      let maxVar = 0, threshold = 128
+      for (let t = 0; t < 256; t++) {
+        wB += hist[t]; if (!wB) continue
+        const wF = total - wB; if (!wF) break
+        sumB += t * hist[t]
+        const mB = sumB / wB
+        const mF = (sum - sumB) / wF
+        const bv = wB * wF * (mB - mF) ** 2
+        if (bv > maxVar) { maxVar = bv; threshold = t }
+      }
+
+      // Apply threshold
+      for (let i = 0; i < w * h; i++) {
+        const val = stretched[i] >= threshold ? 255 : 0
+        d[i * 4] = val
+        d[i * 4 + 1] = val
+        d[i * 4 + 2] = val
+        d[i * 4 + 3] = 255
+      }
+
+      ctx.putImageData(imageData, 0, 0)
+      resolve(canvas.toDataURL('image/png'))
+    }
+    img.src = dataUrl
+  })
+}
 
 export async function parseDocumentImage(fileUrl: string | File, onProgress?: (msg: string) => void) {
   try {
+    if (onProgress) onProgress('Meningkatkan Kualitas Gambar...')
+    
+    // Preprocess image for much better OCR accuracy
+    const enhanced = typeof window !== 'undefined'
+      ? await preprocessImage(fileUrl)
+      : fileUrl
+
     if (onProgress) onProgress('Memulai OCR (Membaca Teks)...')
-    const worker = await Tesseract.createWorker('ind')
-    const ret = await worker.recognize(fileUrl)
+    
+    const worker = await Tesseract.createWorker('ind', 1, {
+      // Use LSTM engine (OEM 1) + assume a single uniform block (PSM 6)
+    })
+    await worker.setParameters({
+      tessedit_pageseg_mode: '6' as any,  // PSM 6: uniform block of text
+      tessedit_ocr_engine_mode: '1' as any, // OEM 1: LSTM
+    })
+    const ret = await worker.recognize(enhanced)
     const text = ret.data.text
     await worker.terminate()
+
     if (onProgress) onProgress('Menyusun Data...')
     const parsedData = extractDataFromText(text)
     if (onProgress) onProgress('Selesai')
