@@ -241,9 +241,9 @@ export function extractDataFromText(rawText: string) {
       /Terima Dari\s*[:]\s*([A-Z\s.,]{3,50})/i,
     ]
     for (const pat of vendorPatterns) {
-      const m = text.match(pat)
-      if (m) {
-        vendorName = m[1]?.trim() || m[0].trim()
+      const match = text.match(pat)
+      if (match) {
+        vendorName = match[1]?.trim() || match[0].trim()
         break
       }
     }
@@ -268,84 +268,69 @@ export function extractDataFromText(rawText: string) {
 
   // ──────────────────────────────────────────────────────────
   // 6. Line Items
-  //    Resilient Segment-based Parsing
+  //    Resilient but STRICT Segment-based Parsing
   // ──────────────────────────────────────────────────────────
   const items: any[] = []
-  const unitPattern = new RegExp('(?:bu[a-z]{1,3}\\s*[hx]?|bot[a-z]{0,2}\\s*[lx]?|lt[a-z]?|li[a-z]+|rim|dos|dus|set|pcs|unit|lembar|kg|gram)', 'i')
   
+  // Exclusion patterns for non-item lines (doc noise)
+  const noisePattern = /\b(?:JUMLAH|Terbilang|NIP|Nama|Jabatan|Alamat|Waikabubak|BAPPERIDA|BRIDA|DAERAH|Tanda\s+Tangan|Pihak|Pertama|Kedua|Nomor|Terima|Uang|Jalan|Jl\.)\b/i
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
-    if (line.includes('JUMLAH') || line.includes('Terima dari') || line.includes('Untuk Pembayaran')) continue
+    
+    // Skip if noise or too short
+    if (noisePattern.test(line) || line.length < 5) continue
 
-    // Strategy 1: Look for numeric patterns in the line
-    // e.g. name... [qty] [unit] [x] [price] [total]
+    // MUST start with a bullet/dash marker to be an item in these documents
+    // e.g. "- stuff" or "1 - stuff" or "1. stuff"
+    if (!/^[-Il1]|^\d+\s*[-.]/.test(line)) continue
+
     const segments = line.split(/[ \t]{2,}/).filter(s => s.length > 0)
     
-    // An item line usually has at least: description, quantity+unit, price, total
-    // But sometimes quantity and unit are separate segments or merged.
     if (segments.length >= 2) {
-      // Find the segments that look like prices/totals (ending segments usually)
       const lastSegment = segments[segments.length - 1]
       const prevSegment = segments[segments.length - 2]
       
       const total = parseAmount(lastSegment)
       const price = parseAmount(prevSegment)
       
-      // If we found a valid total and price (or just a total)
       if (total > 0) {
-        // Find quantity + unit
         let qty = 0
         let description = segments[0]
         
-        // Try to find a segment with "digit + unit"
+        // Find quantity + unit segment
         for (let j = 1; j < segments.length - 1; j++) {
-          const seg = segments[j]
-          const m = seg.match(/(\d+(?:\.\d+)?)\s*(?:buah|botol|pcs|unit|lt|rim|set|bu[a-z]+)/i)
+          const seg = segments[j].toLowerCase()
+          // Look for digit + unit
+          const m = seg.match(/(\d+(?:\.\d+)?)\s*(?:buah|botol|pcs|unit|lt|rim|set|bu[a-z]+|kg|gram|lembar|dos|dus)/i)
           if (m) {
             qty = parseFloat(m[1])
-            // Description is everything before this segment
             description = segments.slice(0, j).join(' ')
             break
           }
         }
         
-        // If still no qty, maybe it's the 2nd segment
+        // Final sanity check: if qty is 0, try to find a standalone number segment for qty (segment 1 usually)
         if (qty === 0 && segments.length >= 3) {
           const m = segments[1].match(/^\d+$/)
-          if (m) {
-            qty = parseFloat(segments[1])
-            description = segments[0]
-          }
+          if (m) qty = parseFloat(segments[1])
         }
 
-        // Clean up description (remove leading #, dash, etc.)
-        description = description.replace(/^(?:\d+\s*)?-?\s*/, '').trim()
+        // Clean up description: remove the leading marker "1 - " or "- "
+        description = description.replace(/^(?:\d+\s*)?[-.]?\s*/, '').trim()
         
-        if (description.length > 2 && (qty > 0 || total > 0)) {
+        // Final validity check: description must be alphabetical mainly
+        const isLegitDesc = /[a-zA-Z]{3,}/.test(description)
+        
+        if (isLegitDesc && (total > 0 || price > 0)) {
           items.push({
             description,
             quantity: qty || 1,
             price: price || total,
             total
           })
-          continue
         }
       }
-    }
-
-    // Strategy 2: Fallback to existing Pattern B (Two-line items)
-    if (/^-\s+\w/.test(line) && i + 1 < lines.length) {
-       const nextLine = lines[i+1]
-       const matchB = nextLine.match(/^[Il1]?\s*(\d+)\s+(?:buah|botol|lt|rim|set|pcs)\s*x?\s+([\d.,\s]+)\s+([\d.,]+)\s*$/i)
-       if (matchB) {
-         items.push({
-           description: line.replace(/^-\s*/, '').trim(),
-           quantity: parseFloat(matchB[1]),
-           price: parseAmount(matchB[2]),
-           total: parseAmount(matchB[3])
-         })
-         i++ // skip next line
-       }
     }
   }
 
