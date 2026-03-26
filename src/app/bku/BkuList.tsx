@@ -31,8 +31,21 @@ export default function BkuList({ initialRecords }: { initialRecords: any[] }) {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount)
   }
 
-  // initialRecords is DESC (from DB orderBy createdAt: 'desc')
-  const displayedRecords = sortDesc ? [...initialRecords] : [...initialRecords].reverse()
+  const parseDateString = (d: string | null) => {
+    if (!d) return 0
+    const parts = d.split(/[-/]/)
+    if (parts.length === 3) {
+      // DD-MM-YYYY -> YYYY, MM-1, DD
+      return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])).getTime()
+    }
+    return 0
+  }
+
+  const displayedRecords = [...initialRecords].sort((a, b) => {
+    const timeA = parseDateString(a.date) || new Date(a.createdAt).getTime()
+    const timeB = parseDateString(b.date) || new Date(b.createdAt).getTime()
+    return sortDesc ? timeB - timeA : timeA - timeB
+  })
 
   return (
     <div className="space-y-4">
