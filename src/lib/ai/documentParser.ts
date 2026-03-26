@@ -384,64 +384,94 @@ export function extractDataFromText(rawText: string) {
   }
 
   // ── STRATEGY 1: Dedicated BA Table Parser ────────────────
-  // Activates when document type is Berita Acara.
-  // Looks for table start then parses "1 - description qty unit x price total" rows.
+  // OCR layout for BA table — each column is on its own line:
+  //   "1 - stuff sarung jog"   ← description line
+  //   "2 buahx"                ← qty + unit
+  //   "200.000"                ← price
+  //   "400.000"                ← total
   if (type === 'Berita Acara Penerimaan Barang') {
-    // Find the table start line index
     let tableStart = -1
     for (let i = 0; i < lines.length; i++) {
       const l = lines[i].toLowerCase()
       if (l.includes('barang tersebut sebesar') || l.includes('nama barang') || l.includes('rincian')) {
-        tableStart = i
-        break
+        tableStart = i; break
       }
     }
-    if (tableStart === -1) tableStart = 0 // fallback to beginning
+    if (tableStart === -1) tableStart = 0
 
-    // BA item row pattern: starts with 1-2 digit row number, optional dash, desc, qty, unit, optional x, price, total
-    const NUM_PAT = '(\\d{1,3}(?:\\.\\d{3})*)'
-    const UNIT_PAT = '(buah|botol|pcs|unit|ltr?|rim|set|kg|gram|lembar|dos|dus|[a-z]+)'
-    const rowRegex = new RegExp(
-      `^\\s*(\\d{1,2})\\s*[-.]?\\s*(.+?)\\s+(\\d{1,2})\\s+${UNIT_PAT}\\s*x?\\s*${NUM_PAT}\\s+${NUM_PAT}\\s*$`, 'i'
-    )
-    // Simpler fallback: desc + qty + price + total (no unit captured)
-    const rowRegex2 = new RegExp(
-      `^\\s*(\\d{1,2})\\s*[-.]?\\s*(.+?)\\s+(\\d{1,2})\\s+${NUM_PAT}\\s+${NUM_PAT}\\s*$`
-    )
+    // Helper: normalize OCR misreads in qty/unit context
+    const fixOcrInQtyLine = (s: string) => s
+      .replace(/\bI\b/g, '1')   // capital I → 1 (most common misread)
+      .replace(/\bl\b/g, '1')   // lowercase l → 1
+      .trim()
 
-    for (let i = tableStart; i < lines.length; i++) {
-      const line = lines[i]
-      if (noisePattern.test(line)) continue
-      if (/^JUMLAH/i.test(line.trim())) break // end of table
+    // Description line: starts with row number (1-9) optional dash
+    const isDescLine = (l: string) => /^\s*[1-9]\s*[-.]?\s*[a-zA-Z]/.test(l)
+    // Qty+unit line: starts with 1-2 digit number followed by a unit word
+    const isQtyLine  = (l: string) => /^\s*[1-9Il]\s*(?:buah|botol|pcs|unit|ltr?|rim|set|kg|gram|dos|dus)[a-z]*[sx]?\s*$/i.test(fixOcrInQtyLine(l))
+    // A bare number line: only digits and dots (price or total)
+    const isNumLine  = (l: string) => /^\s*[\d.]+\s*$/.test(l)
 
-      // Try joining with next line for two-line item rows
-      const nextLine = i + 1 < lines.length ? lines[i + 1] : ''
-      const combined = /\d{3,}/.test(line) ? line : `${line} ${nextLine}`
+    let i = tableStart
+    while (i < lines.length) {
+      const line = lines[i].trim()
 
-      let m = combined.match(rowRegex)
-      if (m) {
-        const desc  = m[2].replace(/^[-\s]+/, '').trim()
-        const qty   = parseInt(m[3])
-        const price = toNum(m[5])
-        const total = toNum(m[6])
-        if (/[a-zA-Z]{2,}/.test(desc) && total > 0) {
-          items.push({ description: desc, quantity: qty || 1, price: price || total, total })
-          if (combined !== line) i++ // consumed nextLine
-          continue
+      // Stop at JUMLAH
+      if (/^JUMLAH/i.test(line)) break
+      // Skip noise and header rows (pure numbers like "1 2 3 4 5 6")
+      if (noisePattern.test(line) || /^\s*(\d\s*){2,}\s*$/.test(line)) { i++; continue }
+
+      if (isDescLine(line)) {
+        // Extract description (strip the row number and dash)
+        const desc = line.replace(/^\s*\d+\s*[-.]?\s*/, '').trim()
+        if (!desc || !/[a-zA-Z]{2,}/.test(desc)) { i++; continue }
+
+        // Collect up to 4 subsequent lines: qty+unit, price, total
+        const remaining: string[] = []
+        let j = i + 1
+        while (j < lines.length && remaining.length < 4) {
+          const nl = lines[j].trim()
+          if (!nl || noisePattern.test(nl)) { j++; continue }
+          // Stop if next item's description line
+          if (isDescLine(nl) && remaining.length > 0) break
+          if (/^JUMLAH/i.test(nl)) break
+          remaining.push(nl)
+          j++
         }
+
+        // Parse remaining lines
+        let qty = 1, price = 0, total = 0
+
+        for (const part of remaining) {
+          const fixed = fixOcrInQtyLine(part)
+          // Match "2 buahx" or "1 buah x" at start
+          const qtyUnitM = fixed.match(/^(\d+)\s*(?:buah|botol|pcs|unit|ltr?|rim|set|kg|gram|dos|dus)[a-z]*[sx]?\s*$/i)
+          if (qtyUnitM) {
+            qty = parseInt(qtyUnitM[1])
+            continue
+          }
+          // Match a bare number (price or total)
+          const numM = fixed.match(/^([\d.]+)$/)
+          if (numM) {
+            const v = toNum(numM[1])
+            if (v > 0) {
+              if (price === 0) price = v
+              else if (total === 0) total = v
+            }
+          }
+        }
+
+        // Fill in missing values
+        if (total === 0 && price > 0) total = price
+        if (price === 0 && total > 0) price = total
+        if (total > 0) {
+          items.push({ description: desc, quantity: qty, price, total })
+        }
+        i = j // skip consumed lines
+        continue
       }
 
-      m = combined.match(rowRegex2)
-      if (m) {
-        const desc  = m[2].replace(/^[-\s]+/, '').trim()
-        const qty   = parseInt(m[3])
-        const price = toNum(m[4])
-        const total = toNum(m[5])
-        if (/[a-zA-Z]{2,}/.test(desc) && total > 0) {
-          items.push({ description: desc, quantity: qty || 1, price: price || total, total })
-          if (combined !== line) i++
-        }
-      }
+      i++
     }
   }
 
