@@ -24,53 +24,54 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
       const { read, utils } = await import('xlsx')
       const buffer = await file.arrayBuffer()
       const wb = read(buffer, { type: 'array' })
-      const wsName = wb.SheetNames[0]
-      const ws = wb.Sheets[wsName]
-      const dataRows = utils.sheet_to_json(ws, { header: 1 }) as any[][]
-      
       const parsedData = []
-      let currentDate = ""
       
-      for (let i = 6; i < dataRows.length; i++) {
-        const row = dataRows[i]
-        if (!row || row.length === 0) continue
+      for (const wsName of wb.SheetNames) {
+        const ws = wb.Sheets[wsName]
+        const dataRows = utils.sheet_to_json(ws, { header: 1 }) as any[][]
+        let currentDate = ""
         
-        if (row[1] && String(row[1]).trim() !== "") {
-          currentDate = String(row[1]).trim()
-        }
-        
-        const uraian = String(row[2] || "").trim()
-        const kode = String(row[3] || "").trim()
-        const terima = Number(row[4] || 0)
-        const keluar = Number(row[5] || 0)
-        const saldo = Number(row[6] || 0)
-        
-        if (uraian && (kode || terima > 0 || keluar > 0) && !uraian.toLowerCase().includes("saldo bulan lalu")) {
-          // Extract month and year from currentDate (format: DD-MM-YYYY)
-          let itemMonth = currentMonth
-          let itemYear = currentYear
+        for (let i = 0; i < dataRows.length; i++) {
+          const row = dataRows[i]
+          if (!row || row.length === 0) continue
           
-          if (currentDate.includes('-') || currentDate.includes('/')) {
-            const separator = currentDate.includes('-') ? '-' : '/'
-            const parts = currentDate.split(separator)
-            if (parts.length === 3) {
-              const m = parseInt(parts[1], 10)
-              const y = parseInt(parts[2], 10)
-              if (!isNaN(m)) itemMonth = m
-              if (!isNaN(y)) itemYear = y
-            }
+          if (row[1] && String(row[1]).trim() !== "" && /^\d{2}[-/]\d{2}[-/]\d{4}/.test(String(row[1]))) {
+            currentDate = String(row[1]).trim()
           }
+          
+          const uraian = String(row[2] || "").trim()
+          const kode = String(row[3] || "").trim()
+          const terima = Number(row[4] || 0)
+          const keluar = Number(row[5] || 0)
+          const saldo = Number(row[6] || 0)
+          
+          if (uraian && (kode || terima > 0 || keluar > 0) && !uraian.toLowerCase().includes("saldo bulan lalu") && !uraian.toLowerCase().includes("uraian")) {
+            // Extract month and year from currentDate
+            let itemMonth = currentMonth
+            let itemYear = currentYear
+            
+            if (currentDate.includes('-') || currentDate.includes('/')) {
+              const separator = currentDate.includes('-') ? '-' : '/'
+              const parts = currentDate.split(separator)
+              if (parts.length === 3) {
+                const m = parseInt(parts[1], 10)
+                const y = parseInt(parts[2], 10)
+                if (!isNaN(m)) itemMonth = m
+                if (!isNaN(y)) itemYear = y
+              }
+            }
 
-          parsedData.push({
-            date: currentDate,
-            month: itemMonth,
-            year: itemYear,
-            code: kode,
-            description: uraian,
-            receiptTotal: terima,
-            expenseTotal: keluar,
-            balance: saldo
-          })
+            parsedData.push({
+              date: currentDate,
+              month: itemMonth,
+              year: itemYear,
+              code: kode,
+              description: uraian,
+              receiptTotal: terima,
+              expenseTotal: keluar,
+              balance: saldo
+            })
+          }
         }
       }
       

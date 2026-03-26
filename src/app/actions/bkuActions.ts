@@ -14,6 +14,7 @@ export async function getBkuRecords(month: number, year: number) {
 export async function getBkuComparison(month: number, year: number) {
   const currentRecords = await prisma.bkuTransaction.findMany({ where: { month, year } })
   const currentExpense = currentRecords.reduce((sum, r) => sum + (r.expenseTotal || 0), 0)
+  const currentReceipt = currentRecords.reduce((sum, r) => sum + (r.receiptTotal || 0), 0)
   
   let prevMonth = month - 1
   let prevYear = year
@@ -24,8 +25,16 @@ export async function getBkuComparison(month: number, year: number) {
   
   const prevRecords = await prisma.bkuTransaction.findMany({ where: { month: prevMonth, year: prevYear } })
   const prevExpense = prevRecords.reduce((sum, r) => sum + (r.expenseTotal || 0), 0)
+  const prevReceipt = prevRecords.reduce((sum, r) => sum + (r.receiptTotal || 0), 0)
 
-  return { currentExpense, prevExpense }
+  return { 
+    currentExpense, 
+    currentReceipt, 
+    currentBalance: currentReceipt - currentExpense,
+    prevExpense, 
+    prevReceipt,
+    prevBalance: prevReceipt - prevExpense
+  }
 }
 
 export async function addBkuRecord(data: FormData) {
