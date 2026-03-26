@@ -299,38 +299,52 @@ export function extractDataFromText(rawText: string) {
     if (total <= 0) return null
 
     let qty = 0
-    let description = segments[0]
+    let descEndIdx = 0 // the last segment index that is part of the description
 
-    // Find quantity + unit segment
-    for (let j = 1; j < segments.length - 1; j++) {
-      const seg = segments[j].toLowerCase()
-      const m = seg.match(/^(\d+(?:\.\d+)?)\s*(?:buah|botol|pcs|unit|lt|ltr|rim|set|bu[a-z]+|kg|gram|lembar|dos|dus|x\b)/i)
-      if (m) {
-        qty = parseFloat(m[1])
-        description = segments.slice(0, j).join(' ')
+    const unitPattern = /^(?:buah|botol|pcs|unit|lt|ltr|rim|set|bu[a-z]+|kg|gram|lembar|dos|dus)/i
+
+    // Scan middle segments (not first, not last two which are price+total)
+    for (let j = 1; j < segments.length - 2; j++) {
+      const seg = segments[j]
+
+      // Case A: "2 buah x" or "2buah" — digit+unit in ONE segment
+      const mCombined = seg.match(/^(\d+(?:\.\d+)?)\s*(?:buah|botol|pcs|unit|lt|ltr|rim|set|bu[a-z]+|kg|gram|lembar|dos|dus)/i)
+      if (mCombined) {
+        qty = parseFloat(mCombined[1])
+        descEndIdx = j - 1
         break
       }
+
+      // Case B: "2" followed by "buah x" in the NEXT segment — the Kwitansi OCR pattern
+      if (/^\d+$/.test(seg) && j + 1 < segments.length - 2) {
+        const nextSeg = segments[j + 1]
+        if (unitPattern.test(nextSeg)) {
+          qty = parseFloat(seg)
+          descEndIdx = j - 1
+          break
+        }
+      }
+
+      // Case C: Segment starting with "x" (multiplier only) — skip, not part of description
+      if (/^x\s*$/i.test(seg)) break
     }
 
-    // Fallback: standalone number 2 positions before the rightmost price  
-    if (qty === 0 && segments.length >= 4) {
-      const possibleQty = segments[segments.length - 3]
-      if (/^\d+$/.test(possibleQty) && parseFloat(possibleQty) < 100) {
-        qty = parseFloat(possibleQty)
-        description = segments.slice(0, segments.length - 3).join(' ')
-      }
-    }
+    // Build description from the first segment up to descEndIdx
+    let description = segments.slice(0, descEndIdx + 1).join('  ')
+    if (!description) description = segments[0]
 
     // Clean leading marker: "1. ", "- ", "1 - "
-    description = description.replace(/^(?:\d+\s*)?[-.]?\s*/, '').trim()
+    description = description.replace(/^(?:\d+\s*)?[-.\s]{0,2}/, '').trim()
 
     if (!/[a-zA-Z]{2,}/.test(description)) return null
+    if (noisePattern.test(description)) return null
 
     let finalQty   = qty || 1
     let finalPrice = price || total
     let finalTotal = total
 
-    // Fix OCR misread: if price≈total and qty>5, qty was likely a description number
+    // Fix OCR misread weight: if price first matches total and qty is suspiciously high, 
+    // the number was a description fragment (e.g. "gardan 90")
     if (Math.abs(finalPrice - finalTotal) < 0.01 * finalTotal && finalQty > 5) {
       finalQty = 1
     }
