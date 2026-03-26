@@ -103,13 +103,13 @@ export function extractDataFromText(rawText: string) {
   // ──────────────────────────────────────────────────────────
   let type = 'Nota Pesanan'
   const isBA = lowerText.includes('berita acara') || /ba\s*p-br\s*g/i.test(text) || /penerimaan\s*barang/i.test(text)
-  const isKwitansi = lowerText.includes('kwitansi') || lowerText.includes('kuitansi') || /pembayaran\s*sejumlah/i.test(text)
+  const isKwitansi = lowerText.includes('kwitansi') || lowerText.includes('kuitansi') || /pembayaran\s*sejumlah/i.test(text) || lowerText.includes('bukti pembayaran')
   const isNota = lowerText.includes('nota pesanan') || /np\.br\s*g/i.test(text) || /pesanan\s*barang/i.test(text)
 
-  if (isBA) {
-    type = 'Berita Acara Penerimaan Barang'
-  } else if (isKwitansi) {
+  if (isKwitansi) {
     type = 'Kwitansi'
+  } else if (isBA) {
+    type = 'Berita Acara Penerimaan Barang'
   } else if (isNota) {
     type = 'Nota Pesanan'
   } else if (lowerText.includes('faktur') || lowerText.includes('invoice')) {
@@ -329,14 +329,31 @@ export function extractDataFromText(rawText: string) {
         description = description.replace(/^(?:\d+\s*)?[-.]?\s*/, '').trim()
         
         // Final validity check: description must be alphabetical mainly
-        const isLegitDesc = /[a-zA-Z]{3,}/.test(description)
+        const isLegitDesc = /[a-zA-Z]{2,}/.test(description)
         
         if (isLegitDesc && (total > 0 || price > 0)) {
+          // ────────────────────────────────────────────────────────
+          // NEW: MATHEMATICAL VALIDATION
+          // Check if Qty * Price = Total. Fix OCR artifacts if not.
+          // ────────────────────────────────────────────────────────
+          let finalQty = qty || 1
+          let finalPrice = price || total
+          let finalTotal = total || (finalQty * finalPrice)
+
+          // Case: Qty is very high (90) but price * 1 matches total
+          if (Math.abs(finalPrice - finalTotal) < (0.01 * finalTotal) && finalQty > 5) {
+            finalQty = 1 // Likely an OCR misread of the description number
+          }
+          // Case: Total is 0, infer from qty/price
+          if (finalTotal === 0 && finalQty > 0 && finalPrice > 0) {
+            finalTotal = finalQty * finalPrice
+          }
+          
           items.push({
             description,
-            quantity: qty || 1,
-            price: price || total,
-            total
+            quantity: finalQty,
+            price: finalPrice,
+            total: finalTotal
           })
         }
       }

@@ -142,32 +142,45 @@ export default function DocumentUploader() {
           pdfResults.forEach(res => processPageResult(res))
         }
 
-        // Final Consolidation & Deduplication for Combined PDF
-        setStatusText('Membersihkan Data Item (Deduplikasi)...')
+        // Final Consolidation & Deduplication
+        setStatusText('Membersihkan Data Item (Eksklusif Kuitansi)...')
         
-        let finalItems = Array.from(masterData.itemsMap.values() as any[])
+        // 1. Identify Priority: KWITANSI > NOTA PESANAN
+        const kwitansiPages = masterData.pageItems.filter((p: any) => p.type === 'Kwitansi')
+        const notaPages = masterData.pageItems.filter((p: any) => p.type === 'Nota Pesanan')
         
-        // 1. Semantic Deduplication: Remove fragments (e.g., 'stuff' vs 'stuff sarung jog')
-        // Sort by description length (descending) to prefer longer names
+        let targetItems: any[] = []
+        if (kwitansiPages.length > 0) {
+          // EXCLUSIVE: If Kwitansi exists, take ONLY from Kwitansi pages
+          targetItems = kwitansiPages.flatMap((p: any) => p.items)
+        } else if (notaPages.length > 0) {
+          // Fallback to Nota Pesanan
+          targetItems = notaPages.flatMap((p: any) => p.items)
+        } else {
+          // Final fallback: all items found
+          targetItems = masterData.pageItems.flatMap((p: any) => p.items)
+        }
+
+        // 2. Semantic Deduplication for the isolated source
+        const finalMap = new Map<string, any>()
+        targetItems.forEach(it => {
+          const fuzzyKey = it.description.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/[a-z]$/, '')
+          if (!finalMap.has(fuzzyKey)) finalMap.set(fuzzyKey, it)
+        })
+
+        let finalItems = Array.from(finalMap.values())
         finalItems.sort((a, b) => b.description.length - a.description.length)
         
         const cleanedItems: any[] = []
         for (const item of finalItems) {
           const descVal = item.description.toLowerCase().replace(/\s+/g, '')
-          // Check if this item is a substring of ANY already accepted (longer) item
           const isFragment = cleanedItems.some(existing => {
             const existingDesc = existing.description.toLowerCase().replace(/\s+/g, '')
-            // If descriptions overlap and prices/totals are same or zero
-            const samePrice = (item.price === existing.price || item.total === existing.total || item.price === 0)
-            return existingDesc.includes(descVal) && samePrice
+            return existingDesc.includes(descVal) && (item.price === existing.price || item.total === existing.total)
           })
-          
-          if (!isFragment) {
-            cleanedItems.push(item)
-          }
+          if (!isFragment) cleanedItems.push(item)
         }
 
-        // 2. Total Amount Guard (Optional: help user catch gross errors)
         const itemsTotalSum = cleanedItems.reduce((acc, it) => acc + (it.total || 0), 0)
         let finalTotal = masterData.totalAmount
         if (finalTotal === 0 && itemsTotalSum > 0) finalTotal = itemsTotalSum
