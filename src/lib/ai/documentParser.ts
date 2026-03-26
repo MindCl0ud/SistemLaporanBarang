@@ -1,7 +1,18 @@
 /**
  * documentParser.ts
  * Manages the native browser AI logic for parsing documents using Tesseract.js
- * and Transformers.js (for structured json extraction if doing browser ML).
+ *
+ * Extraction logic is tuned for BAPPERIDA Sumba Barat financial documents:
+ *   - Kwitansi (receipts)
+ *   - Nota Pesanan (purchase orders)
+ *   - Berita Acara Penerimaan Barang (goods receipt records)
+ *
+ * Key observations from actual PDF OCR output:
+ *  - "Waikabubak" is often split as "W aikabubak" or "Waika bubak"
+ *  - Numbers like "1.195.000" are OCR'd as "1. 19 5.000" or "1.19 5.000"
+ *  - Item lines have lots of spaces: "- stuff sarung jog   2   buah x   200.000   400.000"
+ *  - Berita Acara items may span two lines (name, then qty+price+total)
+ *  - JUMLAH is on its own line and total on next line in some pages
  */
 
 import Tesseract from 'tesseract.js'
@@ -9,22 +20,12 @@ import Tesseract from 'tesseract.js'
 export async function parseDocumentImage(fileUrl: string | File, onProgress?: (msg: string) => void) {
   try {
     if (onProgress) onProgress('Memulai OCR (Membaca Teks)...')
-    
-    // Step 1: Optical Character Recognition
-    const worker = await Tesseract.createWorker('ind') // Indonesian
+    const worker = await Tesseract.createWorker('ind')
     const ret = await worker.recognize(fileUrl)
     const text = ret.data.text
     await worker.terminate()
-
     if (onProgress) onProgress('Menyusun Data...')
-    
-    // Step 2: Native AI Structuring (Transformers.js or Regex Fallback for speed)
-    // NOTE: Transformers.js is very heavy for client-side LLM JSON parsing. 
-    // For V1 "Native AI", we will use regex + simple heuristics first, 
-    // and provide the Transformers.js pipeline as an optional heavy load.
-    
     const parsedData = extractDataFromText(text)
-    
     if (onProgress) onProgress('Selesai')
     return { text, data: parsedData }
   } catch (error: any) {
@@ -33,93 +34,259 @@ export async function parseDocumentImage(fileUrl: string | File, onProgress?: (m
   }
 }
 
-export function extractDataFromText(text: string) {
-  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0)
-  const lowerText = text.toLowerCase()
-  
-  // 1. Determine Type
-  let type = "Nota"
-  if (lowerText.includes('berita acara') || lowerText.includes('bap')) type = "Berita Acara"
-  else if (lowerText.includes('kwitansi') || lowerText.includes('kuitansi')) type = "Kwitansi"
-  else if (lowerText.includes('faktur') || lowerText.includes('invoice')) type = "Faktur"
+/**
+ * Remove internal spaces within numbers: "1. 19 5.000" => "1.195.000"
+ * Also collapses multiple spaces and normalizes "W aikabubak" => "Waikabubak"
+ */
+function normalizeText(text: string): string {
+  // Fix only the specific OCR artifact: space between digit and dot
+  // e.g. "1 .195.000" => "1.195.000"
+  let t = text.replace(/(\d)\s*\.\s*(\d)/g, '$1.$2')
+  // Normalize multiple spaces to single (but NOT within numbers to avoid breaking amounts)
+  t = t.replace(/[ \t]{3,}/g, '  ')
+  return t
+}
 
-  // 2. Extract Specific Date (Waikabubak format)
-  let docDate: Date | null = null
-  const dateRegex = /(?:Waikabubak|Tanggal)\s*,?\s*(\d{1,2}\s+[a-z]+\s+\d{4})/i
-  const dateMatch = text.match(dateRegex)
-  if (dateMatch) {
-    // Basic Indonesian month mapping if needed, but JS Date might handle some
-    const monthMap: Record<string, string> = {
-      'januari': 'Jan', 'februari': 'Feb', 'maret': 'Mar', 'april': 'Apr', 'mei': 'May', 'juni': 'Jun',
-      'juli': 'Jul', 'agustus': 'Aug', 'september': 'Sep', 'oktober': 'Oct', 'november': 'Nov', 'desember': 'Dec'
+/** Parse a formatted currency string to integer, handling OCR artifacts */
+function parseAmount(str: string): number {
+  if (!str) return 0
+  // First: remove spaces that OCR inserts within numbers ("1. 19 5.000" => "1.195.000")
+  // Step 1: collapse spaces around dots (e.g. "1. 19 5" => "1.195")
+  let s = str.replace(/(\d)\s*\.\s*(\d)/g, '$1.$2')
+  // Step 2: remove remaining spaces between digit groups
+  s = s.replace(/(\d)\s+(\d)/g, '$1$2')
+  // Step 3: remove everything except digits
+  const cleaned = s.replace(/[^\d]/g, '')
+  return cleaned ? parseInt(cleaned, 10) : 0
+}
+
+/** Parse Indonesian date string "22 Januari 2026" to Date */
+function parseIndonesianDate(dateStr: string): Date | null {
+  const monthMap: Record<string, number> = {
+    'januari': 0, 'februari': 1, 'maret': 2, 'april': 3, 'mei': 4, 'juni': 5,
+    'juli': 6, 'agustus': 7, 'september': 8, 'oktober': 9, 'november': 10, 'desember': 11,
+    // OCR can split month names
+    'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'jun': 5, 'jul': 6, 'agu': 7, 'sep': 8, 'okt': 9, 'nov': 10, 'des': 11
+  }
+  // Main pattern: "22 Januari 2026" or "22 Jan uari 2026" (OCR split)
+  const m = dateStr.match(/(\d{1,2})\s+([a-z]+(?:\s+[a-z]+)?)\s+(\d{4})/i)
+  if (m) {
+    const day = parseInt(m[1])
+    const monthRaw = m[2].toLowerCase().replace(/\s+/g, '').substring(0, 3)
+    const year = parseInt(m[3])
+    const monthNum = monthMap[monthRaw] ?? monthMap[m[2].toLowerCase().split(' ')[0]]
+    if (monthNum !== undefined && !isNaN(day) && !isNaN(year)) {
+      return new Date(year, monthNum, day)
     }
-    let dateStr = dateMatch[1].toLowerCase()
-    Object.keys(monthMap).forEach(key => {
-      dateStr = dateStr.replace(key, monthMap[key])
-    })
-    const parsedDate = new Date(dateStr)
-    if (!isNaN(parsedDate.getTime())) docDate = parsedDate
+  }
+  return null
+}
+
+export function extractDataFromText(rawText: string) {
+  const text = normalizeText(rawText)
+  const lowerText = text.toLowerCase()
+  // Keep raw lines (some items span multiple lines)
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 1)
+
+  // ──────────────────────────────────────────────────────────
+  // 1. Document Type
+  // ──────────────────────────────────────────────────────────
+  let type = 'Nota Pesanan'
+  if (lowerText.includes('berita acara penerimaan') || /ba\s*p-br\s*g/i.test(text)) {
+    type = 'Berita Acara Penerimaan Barang'
+  } else if (lowerText.includes('kwitansi') || lowerText.includes('kuitansi')) {
+    type = 'Kwitansi'
+  } else if (lowerText.includes('nota pesanan') || /np\.br\s*g/i.test(text)) {
+    type = 'Nota Pesanan'
+  } else if (lowerText.includes('faktur') || lowerText.includes('invoice')) {
+    type = 'Faktur'
   }
 
-  // 3. Extract Kode Rek & Sub Kegiatan
-  let kodeRek = ""
-  let subKegiatan = ""
-  // Pattern: 5.01.01.2.09.0002 followed by more numbers
-  const kodeRekRegex = /(5\.01\.01\.2\.09\.0002)(?:\.([\d.]+))?/
-  const kodeMatch = text.match(kodeRekRegex)
+  // ──────────────────────────────────────────────────────────
+  // 2. Document Number
+  //    e.g. "BRIDA.011.7/87/BAP-BRG/2026" or "BRID A . 011.7 / 87 / BA P-BRG / 2026"
+  // ──────────────────────────────────────────────────────────
+  let docNumber = ''
+  const docNumRegex = /(?:Nomor|Nomo\s*r|Nomer)\s*[:.]?\s*([A-Z0-9.\s/\-]+?)(?:\r?\n|Dari|Pada|Kami|$)/i
+  const docNumMatch = text.match(docNumRegex)
+  if (docNumMatch) {
+    // Collapse spaces: "BRID A . 011.7 /  87  /  BA P-BRG  /  2026" => "BRIDA.011.7/87/BAP-BRG/2026"
+    docNumber = docNumMatch[1]
+      .replace(/\s*\/\s*/g, '/')
+      .replace(/\s*\.\s*/g, '.')
+      .replace(/\s+/g, '')
+      .trim()
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // 3. Date
+  //    Prioritize "Waikabubak, [date]" — look for LAST occurrence (signature)
+  //    e.g. "W aikabubak, 21 Januari 2026" or "Waikab ubak, 22 Jan uari  2026"
+  // ──────────────────────────────────────────────────────────
+  let docDate: Date | null = null
+
+  // Find all "Waikabubak" date occurrences (handles OCR splits)
+  const waikabubakPattern = /[Ww]\s*aika\s*b\s*ubak\s*,?\s*(\d{1,2}\s+[a-z]+(?:\s+[a-z]+)?\s+\d{4})/gi
+  const waiMatches = [...text.matchAll(waikabubakPattern)]
+  if (waiMatches.length > 0) {
+    // Use LAST occurrence (typically the signature date)
+    const lastDate = waiMatches[waiMatches.length - 1][1]
+    docDate = parseIndonesianDate(lastDate)
+  }
+
+  // Fallback: "Tanggal X Bulan Y Tahun Z" pattern in Berita Acara
+  if (!docDate) {
+    const writtenDateMatch = text.match(/\d{1,2}\s+[Jj]anuari\s+\d{4}|\d{1,2}\s+[Ff]ebruari\s+\d{4}|\d{1,2}\s+[Mm]aret\s+\d{4}/)
+    if (writtenDateMatch) {
+      docDate = parseIndonesianDate(writtenDateMatch[0])
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // 4. Kode Rekening & Sub Kegiatan
+  //    Base code always: 5.01.01.2.09.0002
+  //    Sub-kegiatan = everything after this code in the full code string
+  //    OCR may insert spaces: "5 .01 .0 1.2.09.0002"
+  // ──────────────────────────────────────────────────────────
+  let kodeRek = ''
+  let subKegiatan = ''
+
+  // Flexible pattern that allows spaces between digits and dots
+  const kodePattern = /(5\s*\.\s*01\s*\.\s*0[1lI]\s*\.\s*2\s*\.\s*09\s*\.\s*0002)((?:\s*[\.\d\s]+)?)/i
+  const kodeMatch = text.match(kodePattern)
   if (kodeMatch) {
-    kodeRek = kodeMatch[0]
-    subKegiatan = kodeMatch[2] || ""
+    kodeRek = '5.01.01.2.09.0002'
+    if (kodeMatch[2]) {
+      subKegiatan = kodeMatch[2].replace(/\s+/g, '').replace(/^\./, '').trim()
+    }
   }
 
-  // 4. Find Total Amount (Largest Number Heuristic)
-  const amountRegex = /(?:Rp|IDR)?\s*([\d,.]{4,})/gi
-  let match;
-  let matches: number[] = []
-  while ((match = amountRegex.exec(text)) !== null) {
-    const cleaned = match[1].replace(/[.,]/g, '')
-    const val = parseInt(cleaned, 10)
-    if (!isNaN(val) && val > 100) matches.push(val)
-  }
-  const totalAmount = matches.length > 0 ? Math.max(...matches) : 0
+  // ──────────────────────────────────────────────────────────
+  // 5. Vendor / Penyedia
+  // ──────────────────────────────────────────────────────────
+  let vendorName = 'Tidak Diketahui'
 
-  // 5. Extract Vendor Name
-  let vendorName = "Toko/Penyedia Tidak Diketahui"
-  const vendorKeywords = ['toko', 'cv.', 'pt.', 'market', 'jaya', 'abadi', 'sentosa', 'koperasi', 'ud.']
-  const scanLimit = Math.min(lines.length, 12)
-  for (let i = 0; i < scanLimit; i++) {
-    const line = lines[i].toLowerCase()
-    if (vendorKeywords.some(k => line.includes(k)) && !line.includes('jl.') && line.length > 3) {
-      vendorName = lines[i].replace(/[:=]/g, '').trim()
+  // Look for "Pengusaha CV. Sumber Mas" or "Pengusaha Toko Sumber Mas"
+  const vendorPatterns = [
+    /(?:Pengusaha\s+)?CV\.\s+([A-Z][A-Za-z\s]+?)(?:\r?\n|Alam|Jabat|;|,)/,
+    /(?:Pengusaha\s+)?Toko\s+([A-Za-z\s]+?)(?:\r?\n|Alam|Jabat|;|,)/,
+    /(?:UD\.|PT\.)\s+([A-Z][A-Za-z\s]+?)(?:\r?\n|Alam|Jabat|;|,)/
+  ]
+  for (const pat of vendorPatterns) {
+    const m = text.match(pat)
+    if (m) {
+      vendorName = m[0].split(/\r?\n/)[0].replace(/[;,]$/, '').trim()
       break
     }
   }
 
-  // 6. Extract Line Items (Rincian Item)
-  // Look for lines containing numbers that might specify Qty and Price
-  // Typical: [Item Name] [Qty] [Unit] [Price] [Total]
+  // ──────────────────────────────────────────────────────────
+  // 6. Line Items
+  //    Three formats observed:
+  //    A) Nota Pesanan: "- name   qty buah x   price   total" (all on one line with lots of spaces)
+  //    B) Berita Acara: name on one line, "qty buahx   price   total" on the NEXT line
+  //    C) Kwitansi: multi-line variant similar to B
+  // ──────────────────────────────────────────────────────────
   const items: any[] = []
-  const itemLineRegex = /^(.+?)\s+(\d+)\s+(?:pcs|rim|dus|buah|unit|set|liter|kg)?\s*([\d,.]{4,})\s+([\d,.]{4,})$/i
-  
-  for (const line of lines) {
-    const m = line.match(itemLineRegex)
-    if (m) {
-      items.push({
-        description: m[1].trim(),
-        quantity: parseFloat(m[2]),
-        price: parseFloat(m[3].replace(/[.,]/g, '')),
-        total: parseFloat(m[4].replace(/[.,]/g, ''))
-      })
+  // Unit pattern handles OCR splits: "bua h", "bot ol", "bua hx", etc.
+  const unitPattern = '(?:bu[a-z]{1,3}\\s*[hx]?|bot[a-z]{0,2}\\s*[lx]?|lt[a-z]?|li[a-z]+|rim|dos|dus|set|pcs|unit|lembar|kg|gram)'
+  // Pattern A: "- name   2 buah x   200.000   400.000" (single line, lots of spaces)
+  const itemPatternA = new RegExp(
+    '^-?\\s*(.+?)\\s+(\\d+)\\s+' + unitPattern + '\\s*x?\\s+([\\d.,]+)\\s+([\\d.,]+)\\s*$',
+    'i'
+  )
+  // Pattern B-qty: next line after "- name" has "qty unit [x] price total"
+  const itemPatternBqty = new RegExp(
+    '^[Il1]?\\s*(\\d+)\\s+' + unitPattern + '\\s*x?\\s+([\\d.,]+)\\s+([\\d.,]+)\\s*$',
+    'i'
+  )
+
+  let idx = 0
+  while (idx < lines.length) {
+    const line = lines[idx]
+
+    // Try Pattern A first (single-line)
+    const matchA = line.match(itemPatternA)
+    if (matchA) {
+      const price = parseAmount(matchA[3])
+      const total = parseAmount(matchA[4])
+      if (price > 0 && total > 0) {
+        items.push({
+          description: matchA[1].replace(/^-?\s*/, '').trim(),
+          quantity: parseFloat(matchA[2]),
+          price,
+          total
+        })
+      }
+      idx++
+      continue
+    }
+
+    // Try Pattern B: "- name" on this line, quantities on next
+    if (/^-\s+\w/.test(line) && idx + 1 < lines.length) {
+      const nextLine = lines[idx + 1]
+      const matchB = nextLine.match(itemPatternBqty)
+      if (matchB) {
+        const price = parseAmount(matchB[2])
+        const total = parseAmount(matchB[3])
+        if (price > 0 && total > 0) {
+          items.push({
+            description: line.replace(/^-\s*/, '').replace(/^\d+\s+/, '').trim(),
+            quantity: parseFloat(matchB[1]),
+            price,
+            total
+          })
+          idx += 2
+          continue
+        }
+      }
+    }
+
+    idx++
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // 7. Total Amount  
+  //    "JUMLAH" is an all-caps row with total. "Jumlah" (mixed case) is a column header — skip it.
+  //    Total may appear:
+  //      A) Same line: "JUMLAH                 1. 19 5.000" (Nota Pesanan)
+  //      B) Next line: "JUMLAH\r\n1.19 5.000"              (Berita Acara)
+  // ──────────────────────────────────────────────────────────
+  let totalAmount = 0
+
+  // Find JUMLAH lines (must be all uppercase to exclude column headers like "Jumlah")
+  for (let j = 0; j < lines.length; j++) {
+    const jumlahLine = lines[j]
+    if (!/^JUMLAH\b/.test(jumlahLine)) continue  // case-sensitive: skip "Jumlah" headers
+
+    // Case A: amount on same line after whitespace "JUMLAH   1. 19 5.000"
+    const sameLineMatch = jumlahLine.match(/^JUMLAH\s+([\d.,\s]+)$/i)
+    if (sameLineMatch && sameLineMatch[1].trim()) {
+      const amt = parseAmount(sameLineMatch[1])
+      if (amt > 1000) { totalAmount = amt; break }
+    }
+
+    // Case B: amount on next line
+    const nextLine = (lines[j + 1] || '').trim()
+    if (/^[\d.,\s]+$/.test(nextLine) && nextLine.replace(/\D/g, '').length > 3) {
+      const amt = parseAmount(nextLine)
+      if (amt > 1000) { totalAmount = amt; break }
     }
   }
 
-  return { 
-    type, 
-    vendorName, 
-    totalAmount, 
-    date: docDate, 
-    kodeRek, 
+  // Fallback: sum items
+  if (totalAmount === 0 && items.length > 0) {
+    totalAmount = items.reduce((s, it) => s + (it.total || 0), 0)
+  }
+
+  return {
+    type,
+    docNumber,
+    vendorName,
+    totalAmount,
+    date: docDate,
+    kodeRek,
     subKegiatan,
-    items 
+    items
   }
 }
