@@ -79,7 +79,7 @@ export default async function BkuPage({
                 <div className="grid grid-cols-1 gap-3">
                   <div className="flex justify-between items-center p-3.5 rounded-xl bg-white/5 border border-white/5">
                     <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Total Penerimaan</span>
-                    <p className="text-lg font-bold text-emerald-400">{formatCurrency(stats.currentReceipt)}</p>
+                    <p className="text-lg font-bold text-emerald-400">{formatCurrency(stats.currentReceipt + stats.openingBalance)}</p>
                   </div>
                   <div className="flex justify-between items-center p-3.5 rounded-xl bg-white/5 border border-white/5">
                     <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Total Pengeluaran</span>
@@ -88,10 +88,6 @@ export default async function BkuPage({
                   <div className="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-xs text-indigo-300 font-bold uppercase tracking-wider">Total Saldo</span>
-                      <div className="text-right">
-                        <span className="text-[9px] text-indigo-400 opacity-60 uppercase font-bold tracking-widest block">Kas Tersedia</span>
-                        <span className="text-xs font-bold text-indigo-300">{formatCurrency(stats.openingBalance + stats.currentReceipt)}</span>
-                      </div>
                     </div>
                     <p className="text-2xl font-black text-white">{formatCurrency(stats.closingBalance)}</p>
                   </div>
@@ -107,7 +103,7 @@ export default async function BkuPage({
                 <div className="grid grid-cols-1 gap-3 opacity-70">
                   <div className="flex justify-between items-center p-3.5 rounded-xl bg-white/5 border border-white/5 border-dashed">
                     <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">Total Penerimaan</span>
-                    <p className="text-lg font-semibold text-slate-400">{formatCurrency(stats.prevReceipt)}</p>
+                    <p className="text-lg font-semibold text-slate-400">{formatCurrency(stats.prevReceipt + (stats.prevOpeningBalance || 0))}</p>
                   </div>
                   <div className="flex justify-between items-center p-3.5 rounded-xl bg-white/5 border border-white/5 border-dashed">
                     <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">Total Pengeluaran</span>
@@ -116,7 +112,6 @@ export default async function BkuPage({
                   <div className="p-4 rounded-xl bg-slate-800/40 border border-white/5">
                     <span className="text-xs text-slate-500 font-bold uppercase tracking-wider block mb-1">Total Saldo</span>
                     <p className="text-xl font-bold text-slate-300">{formatCurrency(stats.openingBalance)}</p>
-                    <p className="text-[9px] text-slate-500 italic mt-2">* Saldo Bulan Lalu</p>
                   </div>
                 </div>
               </div>

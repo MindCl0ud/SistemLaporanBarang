@@ -40,6 +40,17 @@ export async function getBkuComparison(month: number, year: number) {
   const prevExpense = prevRecords.reduce((sum, r) => sum + (r.expenseTotal || 0), 0)
   const prevReceipt = prevRecords.reduce((sum, r) => sum + (r.receiptTotal || 0), 0)
 
+  // Calculate Opening Balance for Previous Month
+  const allPastRecordsBeforePrev = await prisma.bkuTransaction.findMany({
+    where: {
+      OR: [
+        { year: { lt: prevYear } },
+        { AND: [{ year: prevYear }, { month: { lt: prevMonth } }] }
+      ]
+    }
+  })
+  const prevOpeningBalance = allPastRecordsBeforePrev.reduce((sum, r) => sum + (r.receiptTotal || 0) - (r.expenseTotal || 0), 0)
+
   return { 
     currentExpense, 
     currentReceipt, 
@@ -48,7 +59,9 @@ export async function getBkuComparison(month: number, year: number) {
     closingBalance: openingBalance + currentNet,
     prevExpense, 
     prevReceipt,
-    prevBalance: prevReceipt - prevExpense
+    prevOpeningBalance,
+    prevBalance: prevReceipt - prevExpense,
+    prevClosingBalance: prevOpeningBalance + (prevReceipt - prevExpense)
   }
 }
 
