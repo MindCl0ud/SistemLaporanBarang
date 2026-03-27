@@ -104,7 +104,7 @@ function StatCard({ title, value, icon, trend }: { title: string, value: string,
     <div className="p-6 rounded-2xl bg-card border border-border backdrop-blur-sm hover:bg-input/50 transition-all relative overflow-hidden group shadow-sm">
       <div className="absolute -right-4 -top-4 w-24 h-24 bg-card rounded-full blur-2xl group-hover:bg-input transition-all duration-500 -z-10"></div>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-bold text-foreground/50 uppercase tracking-widest">{title}</h3>
+        <h3 className="text-sm font-bold text-foreground/70 uppercase tracking-widest">{title}</h3>
         <div className="p-2 rounded-lg bg-input border border-border shadow-inner">
           {icon}
         </div>
@@ -112,7 +112,7 @@ function StatCard({ title, value, icon, trend }: { title: string, value: string,
       <div className="flex items-baseline gap-2">
         <h2 className="text-3xl font-black text-foreground tracking-tight">{value}</h2>
       </div>
-      <p className="text-[10px] text-foreground/50 mt-2 font-bold uppercase tracking-widest">{trend}</p>
+      <p className="text-[10px] text-foreground/70 mt-2 font-bold uppercase tracking-widest">{trend}</p>
     </div>
   )
 }

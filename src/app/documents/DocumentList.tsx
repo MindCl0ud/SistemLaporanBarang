@@ -17,9 +17,9 @@ const DEFAULT_WIDTHS: Record<string, number> = {
   kodeRek: 160,
   subKegiatan: 160,
   tipe: 110,
-  vendor: 450, // Increased
+  vendor: 280, // Reduced from 450
   total: 130,
-  items: 800, // Increased
+  items: 500, // Reduced from 800
   aksi: 72,
 }
 
@@ -301,7 +301,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                     <td className={cellClass}>{doc.vendorName}</td>
 
                     {/* Total */}
-                    <td className={`${cellClass} text-right font-mono font-black text-slate-900 dark:text-white text-sm`}>
+                    <td className={`${cellClass} text-right font-mono font-black text-foreground text-sm`}>
                       Rp {formatCurrency(doc.totalAmount)}
                     </td>
 
