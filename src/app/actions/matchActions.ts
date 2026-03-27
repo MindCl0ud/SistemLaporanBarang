@@ -17,47 +17,62 @@ export async function runMatchingEngine(month: number, year: number) {
   let matchCount = 0
   
   const normalizeCode = (c: string | null) => c ? c.replace(/[^0-9]/g, '') : ''
+  
+  const parseBkuDate = (dStr: string | null) => {
+    if (!dStr) return null
+    const parts = dStr.split(/[-/]/)
+    if (parts.length === 3) {
+      if (parts[0].length === 4) return new Date(dStr)
+      return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`)
+    }
+    return new Date(dStr)
+  }
 
   for (const bku of bkuEntries) {
-    let bestMatchDoc = null
+    let bestMatchDoc: any = null
     let highestConfidence = 0
 
     const bkuCodeNorm = normalizeCode(bku.code)
+    const bkuDate = parseBkuDate(bku.date)
 
     for (const doc of documents) {
       let confidence = 0
       
-      // 1. Compare amount (60% Weight - Increased priority)
       const bkuAmount = bku.expenseTotal || 0
       const docAmount = doc.totalAmount || 0
       const amountDiff = Math.abs(bkuAmount - docAmount)
       
       if (bkuAmount === docAmount && bkuAmount > 0) {
-        confidence += 0.6 // Exact match
+        confidence += 0.6
       } else if (bkuAmount > 0 && amountDiff > 0) {
         const diffPercentage = (amountDiff / bkuAmount) * 100
-        if (diffPercentage <= 1) { // 1% Tolerance
-          confidence += 0.4
-        } else if (amountDiff < 1000) { // Small fixed difference
-          confidence += 0.2
+        if (diffPercentage <= 1) confidence += 0.4
+        else if (amountDiff < 1000) confidence += 0.2
+      }
+
+      const docKodeRekNorm = normalizeCode(doc.kodeRek)
+      const docSubKegNorm = normalizeCode(doc.subKegiatan)
+      let codeScore = 0
+      if (docKodeRekNorm && bkuCodeNorm.includes(docKodeRekNorm)) codeScore += 0.2
+      if (docSubKegNorm && bkuCodeNorm.includes(docSubKegNorm)) codeScore += 0.2
+      
+      if (codeScore === 0.4) {
+        const combinedDoc = normalizeCode(`${doc.subKegiatan}${doc.kodeRek}`)
+        if (bkuCodeNorm.includes(combinedDoc)) codeScore += 0.05
+      }
+      confidence += Math.min(0.4, codeScore)
+
+      if (bkuDate && doc.date) {
+        const diffDays = Math.abs(bkuDate.getTime() - doc.date.getTime()) / (1000 * 60 * 60 * 24)
+        if (diffDays <= 0.5) confidence += 0.2
+        else if (diffDays <= 3) confidence += 0.15
+        else if (diffDays <= 7) confidence += 0.1
+      }
+
+      if (doc.vendorName && doc.vendorName !== "Tidak Diketahui") {
+        if (bku.description.toLowerCase().includes(doc.vendorName.toLowerCase())) {
+          confidence += 0.15
         }
-      }
-
-      // 2. Code String Match (40% Weight)
-      const fullDocCode = (doc.subKegiatan ? `${doc.kodeRek}${doc.subKegiatan}` : (doc.kodeRek || ''))
-      const docCodeNorm = normalizeCode(fullDocCode)
-
-      if (bkuCodeNorm && docCodeNorm && bkuCodeNorm === docCodeNorm) {
-        confidence += 0.4
-      } else if (bkuCodeNorm && docCodeNorm && (bkuCodeNorm.includes(docCodeNorm) || docCodeNorm.includes(bkuCodeNorm))) {
-        confidence += 0.2
-      } else if (bkuCodeNorm.startsWith('50101') && docCodeNorm.startsWith('50101')) {
-        confidence += 0.05
-      }
-
-      // 3. Keyword match (Secondary/Bonus Weight)
-      if (doc.vendorName && bku.description.toLowerCase().includes(doc.vendorName.toLowerCase())) {
-        confidence += 0.15
       }
 
       if (confidence > highestConfidence) {
@@ -66,11 +81,10 @@ export async function runMatchingEngine(month: number, year: number) {
       }
     }
 
-      if (bestMatchDoc && highestConfidence >= 0.5) {
-      // Create match record
+    if (bestMatchDoc && highestConfidence >= 0.45) {
       const reason = highestConfidence >= 0.8 
-        ? 'Cocok Sempurna (Kode Rekening & Nominal sama persis).'
-        : 'Cocok berdasarkan kesamaan nominal dan sebagian kode rekening.';
+        ? 'Cocok Sempurna (Nominal & Kode Rekening sesuai).'
+        : `Cocok Tinggi (${(highestConfidence * 100).toFixed(0)}%) berdasarkan kesamaan data.`;
 
       await prisma.matchRecord.create({
         data: {
@@ -82,7 +96,6 @@ export async function runMatchingEngine(month: number, year: number) {
         }
       })
       matchCount++
-      // Remove doc from array to prevent double matching
       const index = documents.findIndex(d => d.id === bestMatchDoc.id)
       if (index > -1) documents.splice(index, 1)
     }
