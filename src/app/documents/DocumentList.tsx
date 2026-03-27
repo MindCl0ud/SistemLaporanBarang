@@ -10,17 +10,17 @@ import { deleteDocument, updateDocumentItem, deleteDocumentItem } from "@/app/ac
 // Column definitions
 // ──────────────────────────────────────────────────────────
 const DEFAULT_WIDTHS: Record<string, number> = {
-  no: 55,
-  status: 100,
-  tanggal: 110,
-  docNumber: 180, // New Column
-  kodeRek: 160,
-  subKegiatan: 160,
-  tipe: 110,
-  vendor: 220,
+  no: 45,
+  status: 95,
+  tanggal: 115,
+  docNumber: 150,
+  kodeRek: 140,
+  subKegiatan: 140,
+  tipe: 95,
+  vendor: 210,
   total: 130,
-  items: 380,
-  aksi: 72,
+  items: 345,
+  aksi: 70,
 }
 
 const COL_KEYS = Object.keys(DEFAULT_WIDTHS)
@@ -164,7 +164,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
            }}>
         <table
           className="border-collapse text-sm w-full"
-          style={{ minWidth: '100%', tableLayout: 'fixed' }}
+          style={{ minWidth: totalWidth, tableLayout: 'fixed' }}
         >
           {/* ── Column sizing ── */}
           <colgroup>
