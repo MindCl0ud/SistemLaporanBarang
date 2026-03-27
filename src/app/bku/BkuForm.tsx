@@ -140,39 +140,39 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
                 style={{ width: `${uploadProgress}%` }}
               ></div>
             </div>
-            <p className="text-[10px] text-slate-500 text-center uppercase tracking-widest font-bold">Proses Unggah: {uploadProgress}%</p>
+            <p className="text-[10px] text-foreground/50 text-center uppercase tracking-widest font-bold">Proses Unggah: {uploadProgress}%</p>
           </div>
         )}
         <div className="relative flex items-center py-2">
           <div className="flex-grow border-t border-border"></div>
-          <span className="flex-shrink-0 mx-4 text-slate-500 text-[10px] font-bold uppercase tracking-widest">atau isi manual</span>
+          <span className="flex-shrink-0 mx-4 text-foreground/50 text-[10px] font-bold uppercase tracking-widest">atau isi manual</span>
           <div className="flex-grow border-t border-border"></div>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
-          <label className="text-[10px] font-bold text-slate-500 uppercase">Tanggal</label>
-          <input name="date" type="text" className="w-full bg-input border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="01-01-2026" />
+          <label className="text-[10px] font-bold text-foreground/60 uppercase">Tanggal</label>
+          <input name="date" type="text" className="w-full bg-input border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono" placeholder="01-01-2026" />
         </div>
         <div className="space-y-1">
-          <label className="text-[10px] font-bold text-slate-500 uppercase">Kode Rekening</label>
-          <input name="code" required className="w-full bg-input border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="1.2.3.4" />
+          <label className="text-[10px] font-bold text-foreground/60 uppercase">Kode Rekening</label>
+          <input name="code" required className="w-full bg-input border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono" placeholder="1.2.3.4" />
         </div>
       </div>
 
       <div className="space-y-1">
-        <label className="text-[10px] font-bold text-slate-500 uppercase">Uraian / Deskripsi</label>
-        <textarea name="description" required rows={3} className="w-full bg-input border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="Belanja Makan Minum Rapat..." />
+        <label className="text-[10px] font-bold text-foreground/60 uppercase">Uraian / Deskripsi</label>
+        <textarea name="description" required rows={3} className="w-full bg-input border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="Belanja Makan Minum Rapat..." />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
-          <label className="text-[10px] font-bold text-slate-500 uppercase">Penerimaan (Rp)</label>
+          <label className="text-[10px] font-bold text-foreground/60 uppercase">Penerimaan (Rp)</label>
           <input name="receiptTotal" type="number" className="w-full bg-emerald-500/10 border border-emerald-500/20 dark:border-emerald-500/30 rounded-xl px-3 py-2 text-sm text-emerald-700 dark:text-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all" placeholder="0" />
         </div>
         <div className="space-y-1">
-          <label className="text-[10px] font-bold text-slate-500 uppercase">Pengeluaran (Rp)</label>
+          <label className="text-[10px] font-bold text-foreground/60 uppercase">Pengeluaran (Rp)</label>
           <input name="expenseTotal" type="number" className="w-full bg-rose-500/10 border border-rose-500/20 dark:border-rose-500/30 rounded-xl px-3 py-2 text-sm text-rose-700 dark:text-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-500 transition-all" placeholder="0" />
         </div>
       </div>

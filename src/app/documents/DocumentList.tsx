@@ -81,7 +81,7 @@ function ResizableHeader({
   return (
     <th
       style={{ width, minWidth: 48 }}
-      className="relative bg-input border-r border-b border-border text-left text-[11px] font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide select-none"
+      className="relative bg-input border-r border-b border-border text-left text-[11px] font-semibold text-foreground/70 uppercase tracking-wide select-none"
     >
       <div className="px-2 py-2 truncate">{label}</div>
       {!isLast && (
@@ -152,7 +152,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
           <AlignJustify className="w-3.5 h-3.5" />
           Reset Lebar
         </button>
-        <span className="text-slate-600 text-xs ml-auto">
+        <span className="text-foreground/60 text-xs ml-auto font-medium">
           {initialDocuments.length} dokumen · Seret batas kolom untuk mengubah lebar
         </span>
       </div>
@@ -211,7 +211,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                 : '—'
 
               const rowBg = rowIdx % 2 === 0 ? 'bg-card' : 'bg-input/20'
-              const cellClass = `border-r border-b border-border px-2 py-1.5 align-top text-slate-700 dark:text-slate-200 text-[12px] ${
+              const cellClass = `border-r border-b border-border px-2 py-1.5 align-top text-foreground text-[12px] ${
                 wrapText ? 'whitespace-pre-wrap break-words' : 'truncate'
               }`
 
@@ -223,11 +223,11 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                     onClick={() => setExpandedId(isExpanded ? null : doc.id)}
                   >
                     {/* No */}
-                    <td className={`${cellClass} text-slate-500 text-center font-mono border-slate-200 dark:border-slate-800`}>
+                    <td className={`${cellClass} text-foreground/50 text-center font-mono border-slate-200 dark:border-slate-800`}>
                       <div className="flex items-center justify-center gap-1.5">
                         {isExpanded
                           ? <ChevronDown className="w-3.5 h-3.5 text-indigo-400" />
-                          : <ChevronRight className="w-3.5 h-3.5 text-slate-400 dark:text-slate-600 group-hover:text-amber-500 transition-colors" />
+                          : <ChevronRight className="w-3.5 h-3.5 text-foreground/40 group-hover:text-amber-500 transition-colors" />
                         }
                         <span className="text-[11px] min-w-[12px]">{rowIdx + 1}</span>
                       </div>
@@ -240,7 +240,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[9px] font-bold border border-emerald-200 dark:border-emerald-500/30 uppercase tracking-tighter shadow-sm shadow-emerald-500/10">
                             <CheckCircle2 className="w-2 h-2" />TERCOCOKKAN
                           </span>
-                          <span className="text-[9px] text-slate-500 font-mono leading-none">
+                          <span className="text-[9px] text-foreground/50 font-mono leading-none">
                             BKU {doc.matchRecord.bkuTransaction.date}
                           </span>
                         </div>
@@ -306,7 +306,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                     </td>
 
                     {/* Items */}
-                    <td className={cellClass + ' text-slate-600 dark:text-slate-400 text-[11px]'}>
+                    <td className={cellClass + ' text-foreground/60 text-[11px]'}>
                       {itemsText}
                     </td>
 
@@ -335,7 +335,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                         <div className="flex flex-col gap-6">
                           {/* Items detail table (Full Width) */}
                           <div className="w-full">
-                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                            <p className="text-[10px] font-bold text-foreground/50 uppercase tracking-widest mb-3 flex items-center gap-2">
                               <AlignJustify className="w-3 h-3 text-indigo-400" /> Rincian Item Dokumen
                             </p>
                             {doc.items && doc.items.length > 0 ? (
@@ -343,11 +343,11 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                                 <table className="w-full text-xs border-collapse">
                                   <thead>
                                     <tr className="bg-input/80">
-                                      <th className="text-left px-3 py-2 text-slate-500 dark:text-slate-400 font-semibold border-b border-border">Uraian / Deskripsi</th>
-                                      <th className="text-center px-3 py-2 text-slate-500 dark:text-slate-400 font-semibold border-b border-border w-16">Qty</th>
-                                      <th className="text-right px-3 py-2 text-slate-500 dark:text-slate-400 font-semibold border-b border-border w-32">Harga Satuan</th>
-                                      <th className="text-right px-3 py-2 text-slate-500 dark:text-slate-400 font-semibold border-b border-border w-32">Jumlah</th>
-                                      <th className="text-center px-3 py-2 text-slate-500 dark:text-slate-400 font-semibold border-b border-border w-14">Aksi</th>
+                                      <th className="text-left px-3 py-2 text-foreground/60 font-semibold border-b border-border">Uraian / Deskripsi</th>
+                                      <th className="text-center px-3 py-2 text-foreground/60 font-semibold border-b border-border w-16">Qty</th>
+                                      <th className="text-right px-3 py-2 text-foreground/60 font-semibold border-b border-border w-32">Harga Satuan</th>
+                                      <th className="text-right px-3 py-2 text-foreground/60 font-semibold border-b border-border w-32">Jumlah</th>
+                                      <th className="text-center px-3 py-2 text-foreground/60 font-semibold border-b border-border w-14">Aksi</th>
                                     </tr>
                                   </thead>
                                   <tbody>
@@ -418,8 +418,8 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                                           ) : (
                                             <>
                                               <td className="px-3 py-1.5 text-foreground border-b border-border">{item.description}</td>
-                                              <td className="px-3 py-1.5 text-slate-600 dark:text-slate-300 text-center border-b border-border">{item.quantity}</td>
-                                              <td className="px-3 py-1.5 text-slate-500 dark:text-slate-400 text-right font-mono border-b border-border">Rp {formatCurrency(item.price)}</td>
+                                              <td className="px-3 py-1.5 text-foreground/70 text-center border-b border-border">{item.quantity}</td>
+                                              <td className="px-3 py-1.5 text-foreground/60 text-right font-mono border-b border-border">Rp {formatCurrency(item.price)}</td>
                                               <td className="px-3 py-1.5 text-emerald-600 dark:text-emerald-400 text-right font-mono font-bold border-b border-border tracking-tight">Rp {formatCurrency(item.total)}</td>
                                               <td className="px-3 py-1.5 text-center border-b border-slate-800 w-24">
                                                 <div className="flex items-center justify-center gap-1">
@@ -452,7 +452,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                                       )
                                     })}
                                     <tr className="bg-input/10">
-                                      <td colSpan={3} className="px-4 py-2.5 text-right font-bold text-slate-500 dark:text-slate-400 text-[10px] uppercase tracking-widest border-t border-border">Total Keseluruhan</td>
+                                      <td colSpan={3} className="px-4 py-2.5 text-right font-bold text-foreground/50 text-[10px] uppercase tracking-widest border-t border-border">Total Keseluruhan</td>
                                       <td className="px-3 py-2.5 text-right font-black text-emerald-600 dark:text-emerald-400 font-mono border-t border-border text-sm">
                                         Rp {formatCurrency(doc.totalAmount)}
                                       </td>
@@ -481,8 +481,8 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                                 { label: 'Sub Kegiatan', value: doc.subKegiatan || '—' },
                               ].map(({ label, value }) => (
                                 <div key={label} className="flex flex-col gap-1 group">
-                                  <span className="text-[9px] text-slate-500 uppercase font-bold tracking-tight group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{label}</span>
-                                  <span className={`text-[11px] text-slate-900 dark:text-white font-mono bg-slate-100 dark:bg-slate-900/80 px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 group-hover:border-indigo-300 dark:group-hover:border-indigo-500/30 transition-all ${label.includes('BA') ? 'text-amber-600 dark:text-amber-300/90' : ''}`}>{value}</span>
+                                  <span className="text-[9px] text-foreground/50 uppercase font-bold tracking-tight group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{label}</span>
+                                  <span className={`text-[11px] text-foreground font-mono bg-input/40 px-2 py-1.5 rounded-lg border border-border group-hover:border-indigo-300 dark:group-hover:border-indigo-500/30 transition-all ${label.includes('BA') ? 'text-amber-600 dark:text-amber-300/90' : ''}`}>{value}</span>
                                 </div>
                               ))}
                             </div>
@@ -506,7 +506,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between px-1 text-xs text-slate-600">
+      <div className="flex items-center justify-between px-1 text-xs text-foreground/60 font-medium">
         <span>{initialDocuments.length} baris · {COL_KEYS.length} kolom</span>
         <span>💡 Klik baris untuk melihat detail · Seret batas kolom untuk resize</span>
       </div>

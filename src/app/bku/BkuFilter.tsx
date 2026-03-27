@@ -25,7 +25,7 @@ export default function BkuFilter({ currentMonth, currentYear }: { currentMonth:
     <div className="flex flex-wrap items-center gap-4 bg-card border border-border p-4 rounded-3xl backdrop-blur-md shadow-sm">
       <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
         <Calendar className="w-5 h-5" />
-        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Periode</span>
+        <span className="text-[10px] font-black uppercase tracking-widest text-foreground/50">Periode</span>
       </div>
       
       <div className="flex items-center gap-2">

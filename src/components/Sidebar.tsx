@@ -55,12 +55,12 @@ export default function Sidebar() {
             <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-500 bg-clip-text text-transparent tracking-tight whitespace-nowrap">
               DocuMatch AI
             </h1>
-            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 whitespace-nowrap tracking-wider">SISTEM LAPORAN BARANG</p>
+            <p className="text-[10px] text-foreground/50 dark:text-foreground/40 mt-1 whitespace-nowrap tracking-wider font-bold">SISTEM LAPORAN BARANG</p>
           </div>
         )}
         <button 
           onClick={toggleSidebar} 
-          className="p-1.5 rounded-lg bg-input hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 hover:text-foreground transition-all border border-border active:scale-95"
+          className="p-1.5 rounded-lg bg-input hover:bg-slate-200 dark:hover:bg-white/10 text-foreground/50 hover:text-foreground transition-all border border-border active:scale-95 transition-all duration-200"
         >
           {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
@@ -74,7 +74,7 @@ export default function Sidebar() {
               key={item.name}
               href={item.href}
               className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-300 relative group ${
-                isActive ? "text-indigo-600 dark:text-white font-semibold" : "text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white"
+                isActive ? "text-indigo-600 dark:text-white font-semibold" : "text-foreground/50 hover:text-indigo-600 dark:hover:text-white"
               }`}
             >
               {isActive && (
@@ -103,10 +103,10 @@ export default function Sidebar() {
           {theme === "dark" ? (
             <Sun className="w-5 h-5 text-amber-400 group-hover:rotate-45 transition-transform" />
           ) : (
-            <Moon className="w-5 h-5 text-slate-600 group-hover:-rotate-12 transition-transform" />
+            <Moon className="w-5 h-5 text-foreground/60 group-hover:-rotate-12 transition-transform" />
           )}
           {!isCollapsed && (
-            <span className="text-sm font-medium text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white">
+            <span className="text-sm font-medium text-foreground/60 group-hover:text-foreground transition-colors">
               {theme === "dark" ? "Mode Terang" : "Mode Gelap"}
             </span>
           )}
@@ -119,7 +119,7 @@ export default function Sidebar() {
             <h4 className="text-[10px] font-bold text-indigo-500 dark:text-indigo-300 mb-1 uppercase tracking-widest">Status Sistem</h4>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.3)] shrink-0"></div>
-              <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium">AI Engine Ready</p>
+              <p className="text-[11px] text-foreground/60 font-medium tracking-tight">AI Engine Ready</p>
             </div>
           </div>
         </div>

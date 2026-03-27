@@ -41,7 +41,7 @@ export default function MatchRunner() {
       {result !== null && (
         <div className="mt-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2 animate-in fade-in">
           <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-          <p className="text-xs text-emerald-200">Selesai! {result} dokumen baru tercocokkan dengan BKU.</p>
+          <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium italic">Selesai! {result} dokumen baru tercocokkan dengan BKU.</p>
         </div>
       )}
     </div>
