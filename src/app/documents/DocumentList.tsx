@@ -332,156 +332,165 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                   {isExpanded && (
                     <tr className="bg-[#0c1220]">
                       <td colSpan={COL_KEYS.length} className="px-6 py-5 border-b border-slate-800">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                          {/* Items detail table */}
-                          <div className="md:col-span-2">
-                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Rincian Item</p>
+                        <div className="flex flex-col gap-6">
+                          {/* Items detail table (Full Width) */}
+                          <div className="w-full">
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                              <AlignJustify className="w-3 h-3 text-indigo-400" /> Rincian Item Dokumen
+                            </p>
                             {doc.items && doc.items.length > 0 ? (
-                              <table className="w-full text-xs border-collapse">
-                                <thead>
-                                  <tr className="bg-slate-800/80">
-                                    <th className="text-left px-3 py-2 text-slate-400 font-semibold border border-slate-700">Uraian / Deskripsi</th>
-                                    <th className="text-center px-3 py-2 text-slate-400 font-semibold border border-slate-700 w-16">Qty</th>
-                                    <th className="text-right px-3 py-2 text-slate-400 font-semibold border border-slate-700 w-32">Harga Satuan</th>
-                                    <th className="text-right px-3 py-2 text-slate-400 font-semibold border border-slate-700 w-32">Jumlah</th>
-                                    <th className="text-center px-3 py-2 text-slate-400 font-semibold border border-slate-700 w-14">Aksi</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                   {doc.items.map((item: any, idx: number) => {
-                                     const editing = editingItems[item.id]
-                                     const isSaving = savingItemId === item.id
-                                     const rowBgC = idx % 2 === 0 ? 'bg-slate-900/60' : 'bg-slate-900/30'
-                                     return (
-                                       <tr key={item.id ?? idx} className={rowBgC}>
-                                         {editing ? (
-                                           <>
-                                             <td className="px-2 py-1 border border-slate-700">
-                                               <input
-                                                 className="w-full bg-slate-800 text-white text-xs px-2 py-1 rounded border border-indigo-500 outline-none"
-                                                 value={editing.description}
-                                                 onChange={e => setEditingItems(p => ({ ...p, [item.id]: { ...p[item.id], description: e.target.value } }))}
-                                               />
-                                             </td>
-                                             <td className="px-2 py-1 border border-slate-700 w-16">
-                                               <input
-                                                 type="number" min={1}
-                                                 className="w-full bg-slate-800 text-white text-xs px-2 py-1 rounded border border-indigo-500 outline-none text-center"
-                                                 value={editing.quantity}
-                                                 onChange={e => setEditingItems(p => ({ ...p, [item.id]: { ...p[item.id], quantity: Number(e.target.value) } }))}
-                                               />
-                                             </td>
-                                             <td className="px-2 py-1 border border-slate-700 w-32">
-                                               <input
-                                                 type="number" min={0}
-                                                 className="w-full bg-slate-800 text-white text-xs px-2 py-1 rounded border border-indigo-500 outline-none text-right font-mono"
-                                                 value={editing.price}
-                                                 onChange={e => setEditingItems(p => ({ ...p, [item.id]: { ...p[item.id], price: Number(e.target.value) } }))}
-                                               />
-                                             </td>
-                                             <td className="px-2 py-1 border border-slate-700 w-32">
-                                               <input
-                                                 type="number" min={0}
-                                                 className="w-full bg-slate-800 text-white text-xs px-2 py-1 rounded border border-indigo-500 outline-none text-right font-mono"
-                                                 value={editing.total}
-                                                 onChange={e => setEditingItems(p => ({ ...p, [item.id]: { ...p[item.id], total: Number(e.target.value) } }))}
-                                               />
-                                             </td>
-                                             <td className="px-2 py-1 border border-slate-700 text-center w-14">
-                                               <div className="flex gap-1 justify-center">
-                                                 <button
-                                                   disabled={isSaving}
-                                                   onClick={async () => {
-                                                     setSavingItemId(item.id)
-                                                     await updateDocumentItem(item.id, editing)
-                                                     setSavingItemId(null)
-                                                     setEditingItems(p => { const n = { ...p }; delete n[item.id]; return n })
-                                                   }}
-                                                   className="p-1 text-emerald-400 hover:bg-emerald-400/20 rounded transition-colors disabled:opacity-40"
-                                                   title="Simpan"
-                                                 >
-                                                   {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-                                                 </button>
-                                                 <button
-                                                   onClick={() => setEditingItems(p => { const n = { ...p }; delete n[item.id]; return n })}
-                                                   className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-400/10 rounded transition-colors"
-                                                   title="Batal"
-                                                 >
-                                                   <X className="w-3 h-3" />
-                                                 </button>
-                                               </div>
-                                             </td>
-                                           </>
-                                         ) : (
-                                           <>
-                                             <td className="px-3 py-1.5 text-white border border-slate-800">{item.description}</td>
-                                             <td className="px-3 py-1.5 text-slate-300 text-center border border-slate-800">{item.quantity}</td>
-                                             <td className="px-3 py-1.5 text-slate-300 text-right font-mono border border-slate-800">Rp {formatCurrency(item.price)}</td>
-                                             <td className="px-3 py-1.5 text-indigo-300 text-right font-mono font-bold border border-slate-800">Rp {formatCurrency(item.total)}</td>
-                                             <td className="px-3 py-1.5 text-center border border-slate-200 dark:border-slate-800 w-24">
-                                               <div className="flex items-center justify-center gap-1">
-                                                 <button
-                                                   onClick={() => setEditingItems(p => ({ ...p, [item.id]: { description: item.description, quantity: item.quantity, price: item.price, total: item.total } }))}
-                                                   className="p-1 text-slate-400 hover:text-indigo-400 hover:bg-indigo-400/10 rounded transition-colors"
-                                                   title="Edit item"
-                                                 >
-                                                   <Pencil className="w-3 h-3" />
-                                                 </button>
-                                                 <button
-                                                   onClick={async () => {
-                                                     if (confirm('Hapus item ini?')) {
-                                                       setDeletingItemId(item.id)
-                                                       await deleteDocumentItem(item.id)
-                                                       setDeletingItemId(null)
-                                                     }
-                                                   }}
-                                                   disabled={deletingItemId === item.id}
-                                                   className="p-1 text-slate-400 hover:text-rose-400 hover:bg-rose-400/10 rounded transition-colors disabled:opacity-40"
-                                                   title="Hapus item"
-                                                 >
-                                                   {deletingItemId === item.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
-                                                 </button>
-                                               </div>
-                                             </td>
-                                           </>
-                                         )}
-                                       </tr>
-                                     )
-                                   })}
-                                  <tr className="bg-slate-800">
-                                    <td colSpan={4} className="px-3 py-2 text-right font-bold text-white border border-slate-700 text-xs uppercase">Total</td>
-                                    <td className="px-3 py-2 text-right font-bold text-emerald-400 font-mono border border-slate-700">
-                                      Rp {formatCurrency(doc.totalAmount)}
-                                    </td>
-                                    <td className="px-3 py-2 border border-slate-700"></td> {/* Empty cell for the action column */}
-                                  </tr>
-                                </tbody>
-                              </table>
+                              <div className="overflow-hidden rounded-xl border border-slate-800 shadow-sm">
+                                <table className="w-full text-xs border-collapse">
+                                  <thead>
+                                    <tr className="bg-slate-800/80">
+                                      <th className="text-left px-3 py-2 text-slate-400 font-semibold border-b border-slate-700">Uraian / Deskripsi</th>
+                                      <th className="text-center px-3 py-2 text-slate-400 font-semibold border-b border-slate-700 w-16">Qty</th>
+                                      <th className="text-right px-3 py-2 text-slate-400 font-semibold border-b border-slate-700 w-32">Harga Satuan</th>
+                                      <th className="text-right px-3 py-2 text-slate-400 font-semibold border-b border-slate-700 w-32">Jumlah</th>
+                                      <th className="text-center px-3 py-2 text-slate-400 font-semibold border-b border-slate-700 w-14">Aksi</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {doc.items.map((item: any, idx: number) => {
+                                      const editing = editingItems[item.id]
+                                      const isSaving = savingItemId === item.id
+                                      const rowBgC = idx % 2 === 0 ? 'bg-slate-900/60' : 'bg-slate-900/30'
+                                      return (
+                                        <tr key={item.id ?? idx} className={rowBgC + " hover:bg-indigo-500/5 transition-colors"}>
+                                          {editing ? (
+                                            <>
+                                              <td className="px-2 py-1 border-b border-slate-800">
+                                                <input
+                                                  className="w-full bg-slate-800 text-white text-xs px-2 py-1 rounded border border-indigo-500 outline-none"
+                                                  value={editing.description}
+                                                  onChange={e => setEditingItems(p => ({ ...p, [item.id]: { ...p[item.id], description: e.target.value } }))}
+                                                />
+                                              </td>
+                                              <td className="px-2 py-1 border-b border-slate-800 w-16">
+                                                <input
+                                                  type="number" min={1}
+                                                  className="w-full bg-slate-800 text-white text-xs px-2 py-1 rounded border border-indigo-500 outline-none text-center"
+                                                  value={editing.quantity}
+                                                  onChange={e => setEditingItems(p => ({ ...p, [item.id]: { ...p[item.id], quantity: Number(e.target.value) } }))}
+                                                />
+                                              </td>
+                                              <td className="px-2 py-1 border-b border-slate-800 w-32">
+                                                <input
+                                                  type="number" min={0}
+                                                  className="w-full bg-slate-800 text-white text-xs px-2 py-1 rounded border border-indigo-500 outline-none text-right font-mono"
+                                                  value={editing.price}
+                                                  onChange={e => setEditingItems(p => ({ ...p, [item.id]: { ...p[item.id], price: Number(e.target.value) } }))}
+                                                />
+                                              </td>
+                                              <td className="px-2 py-1 border-b border-slate-800 w-32">
+                                                <input
+                                                  type="number" min={0}
+                                                  className="w-full bg-slate-800 text-white text-xs px-2 py-1 rounded border border-indigo-500 outline-none text-right font-mono"
+                                                  value={editing.total}
+                                                  onChange={e => setEditingItems(p => ({ ...p, [item.id]: { ...p[item.id], total: Number(e.target.value) } }))}
+                                                />
+                                              </td>
+                                              <td className="px-2 py-1 border-b border-slate-800 text-center w-14">
+                                                <div className="flex gap-1 justify-center">
+                                                  <button
+                                                    disabled={isSaving}
+                                                    onClick={async () => {
+                                                      setSavingItemId(item.id)
+                                                      await updateDocumentItem(item.id, editing)
+                                                      setSavingItemId(null)
+                                                      setEditingItems(p => { const n = { ...p }; delete n[item.id]; return n })
+                                                    }}
+                                                    className="p-1 text-emerald-400 hover:bg-emerald-400/20 rounded transition-colors disabled:opacity-40"
+                                                    title="Simpan"
+                                                  >
+                                                    {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                                                  </button>
+                                                  <button
+                                                    onClick={() => setEditingItems(p => { const n = { ...p }; delete n[item.id]; return n })}
+                                                    className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-400/10 rounded transition-colors"
+                                                    title="Batal"
+                                                  >
+                                                    <X className="w-3 h-3" />
+                                                  </button>
+                                                </div>
+                                              </td>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <td className="px-3 py-1.5 text-white border-b border-slate-800">{item.description}</td>
+                                              <td className="px-3 py-1.5 text-slate-300 text-center border-b border-slate-800">{item.quantity}</td>
+                                              <td className="px-3 py-1.5 text-slate-400 text-right font-mono border-b border-slate-800">Rp {formatCurrency(item.price)}</td>
+                                              <td className="px-3 py-1.5 text-emerald-400 text-right font-mono font-bold border-b border-slate-800 tracking-tight">Rp {formatCurrency(item.total)}</td>
+                                              <td className="px-3 py-1.5 text-center border-b border-slate-800 w-24">
+                                                <div className="flex items-center justify-center gap-1">
+                                                  <button
+                                                    onClick={() => setEditingItems(p => ({ ...p, [item.id]: { description: item.description, quantity: item.quantity, price: item.price, total: item.total } }))}
+                                                    className="p-1 text-slate-500 hover:text-indigo-400 hover:bg-indigo-400/10 rounded transition-colors"
+                                                    title="Edit item"
+                                                  >
+                                                    <Pencil className="w-3 h-3" />
+                                                  </button>
+                                                  <button
+                                                    onClick={async () => {
+                                                      if (confirm('Hapus item ini?')) {
+                                                        setDeletingItemId(item.id)
+                                                        await deleteDocumentItem(item.id)
+                                                        setDeletingItemId(null)
+                                                      }
+                                                    }}
+                                                    disabled={deletingItemId === item.id}
+                                                    className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-400/10 rounded transition-colors disabled:opacity-40"
+                                                    title="Hapus item"
+                                                  >
+                                                    {deletingItemId === item.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                                                  </button>
+                                                </div>
+                                              </td>
+                                            </>
+                                          )}
+                                        </tr>
+                                      )
+                                    })}
+                                    <tr className="bg-slate-800/40">
+                                      <td colSpan={3} className="px-4 py-2.5 text-right font-bold text-slate-400 text-[10px] uppercase tracking-widest border-t border-slate-700">Total Keseluruhan</td>
+                                      <td className="px-3 py-2.5 text-right font-black text-emerald-400 font-mono border-t border-slate-700 text-sm">
+                                        Rp {formatCurrency(doc.totalAmount)}
+                                      </td>
+                                      <td className="px-3 py-2.5 border-t border-slate-700"></td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
                             ) : (
-                              <p className="text-slate-600 text-xs italic">Tidak ada rincian item terdeteksi dari dokumen ini.</p>
+                              <p className="text-slate-600 text-xs italic p-4 bg-slate-900/40 rounded-xl border border-dashed border-slate-800">Tidak ada rincian item terdeteksi dari dokumen ini.</p>
                             )}
                           </div>
 
-                          {/* Meta info */}
-                          <div className="space-y-3">
-                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Info Dokumen</p>
-                            {[
-                              { label: 'Nomor Kwitansi/Nota', value: doc.docNumber || '—' },
-                              { label: 'Nomor Berita Acara (BA)', value: doc.baNumber || '—' },
-                              { label: 'Tanggal Kwitansi', value: kwatDate },
-                              { label: 'Tanggal Berita Acara', value: baDateStr || '—' },
-                              { label: 'Kode Rekening', value: doc.kodeRek || '—' },
-                              { label: 'Sub Kegiatan', value: doc.subKegiatan || '—' },
-                            ].map(({ label, value }) => (
-                              <div key={label} className="flex flex-col gap-0.5">
-                                <span className="text-[10px] text-slate-600 uppercase font-semibold">{label}</span>
-                                <span className={`text-xs text-white font-mono bg-slate-800/60 px-2 py-1 rounded border border-slate-700 ${label.includes('BA') ? 'text-amber-300/90' : ''}`}>{value}</span>
-                              </div>
-                            ))}
+                          {/* Meta info (Horizontal Grid at Bottom) */}
+                          <div className="pt-4 border-t border-slate-800/60">
+                            <p className="text-[10px] font-bold text-indigo-400/80 uppercase tracking-widest mb-4 flex items-center gap-2">
+                              <Bot className="w-3 h-3" /> Informasi Metadata Dokumen
+                            </p>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                              {[
+                                { label: 'Nomor Kwitansi', value: doc.docNumber || '—' },
+                                { label: 'Nomor BA', value: doc.baNumber || '—' },
+                                { label: 'Tgl Kwitansi', value: kwatDate },
+                                { label: 'Tgl Berita Acara', value: baDateStr || '—' },
+                                { label: 'Kode Rekening', value: doc.kodeRek || '—' },
+                                { label: 'Sub Kegiatan', value: doc.subKegiatan || '—' },
+                              ].map(({ label, value }) => (
+                                <div key={label} className="flex flex-col gap-1 group">
+                                  <span className="text-[9px] text-slate-500 uppercase font-bold tracking-tight group-hover:text-indigo-400 transition-colors">{label}</span>
+                                  <span className={`text-[11px] text-white font-mono bg-slate-900/80 px-2 py-1.5 rounded-lg border border-slate-800 group-hover:border-indigo-500/30 transition-all ${label.includes('BA') ? 'text-amber-300/90' : ''}`}>{value}</span>
+                                </div>
+                              ))}
+                            </div>
+                            
                             {doc.matchRecord && (
-                              <div className="pt-2 border-t border-slate-800">
-                                <p className="text-[10px] font-bold text-emerald-500 uppercase mb-1">BKU Tercocokkan</p>
-                                <p className="text-xs text-emerald-300/80">{doc.matchRecord.reasoning}</p>
+                              <div className="mt-6 p-3 bg-emerald-500/5 rounded-xl border border-emerald-500/10 flex items-center gap-3">
+                                <div className="p-1 px-2 rounded bg-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-tighter">Matched</div>
+                                <p className="text-xs text-emerald-200/60 italic leading-none">{doc.matchRecord.reasoning}</p>
                               </div>
                             )}
                           </div>
