@@ -81,7 +81,7 @@ function ResizableHeader({
   return (
     <th
       style={{ width, minWidth: 48 }}
-      className="relative bg-[#1e293b] border-r border-b border-slate-700 text-left text-[11px] font-semibold text-slate-300 uppercase tracking-wide select-none"
+      className="relative bg-input border-r border-b border-border text-left text-[11px] font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide select-none"
     >
       <div className="px-2 py-2 truncate">{label}</div>
       {!isLast && (
@@ -124,8 +124,8 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
 
   if (initialDocuments.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 mt-4 border border-dashed border-white/10 rounded-xl bg-slate-900/30">
-        <p className="text-slate-400 text-sm">Belum ada dokumen yang diproses AI.</p>
+      <div className="flex flex-col items-center justify-center p-12 mt-4 border border-dashed border-slate-200 dark:border-white/10 rounded-2xl bg-slate-50 dark:bg-slate-900/30">
+        <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Belum ada dokumen yang diproses AI.</p>
       </div>
     )
   }
@@ -138,8 +138,8 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
           onClick={() => setWrapText(w => !w)}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
             wrapText
-              ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
-              : 'bg-white/5 text-slate-400 border-white/10 hover:border-white/20 hover:text-white'
+              ? 'bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/40 shadow-sm'
+              : 'bg-card text-slate-500 dark:text-slate-400 border border-border hover:border-slate-300 dark:hover:border-white/20 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
           <WrapText className="w-3.5 h-3.5" />
@@ -147,7 +147,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
         </button>
         <button
           onClick={() => setColWidths(DEFAULT_WIDTHS)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 text-slate-400 border border-white/10 hover:border-white/20 hover:text-white transition-all"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-card text-slate-500 dark:text-slate-400 border border-border hover:border-slate-300 dark:hover:border-white/20 hover:text-slate-900 dark:hover:text-white transition-all shadow-sm"
         >
           <AlignJustify className="w-3.5 h-3.5" />
           Reset Lebar
@@ -175,7 +175,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
           {/* ── Sticky Header ── */}
           <thead className="sticky top-0 z-20">
             {/* Row letters (Excel row 1) */}
-            <tr className="bg-slate-100 dark:bg-slate-800">
+            <tr className="bg-input">
               {COL_KEYS.map((k, i) => (
                 <ResizableHeader
                   key={k}
@@ -210,8 +210,8 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                   ).join(' | ')
                 : '—'
 
-              const rowBg = rowIdx % 2 === 0 ? 'bg-[#0f172a]' : 'bg-[#111827]'
-              const cellClass = `border-r border-b border-slate-800 px-2 py-1.5 align-top text-slate-200 text-[12px] ${
+              const rowBg = rowIdx % 2 === 0 ? 'bg-card' : 'bg-input/20'
+              const cellClass = `border-r border-b border-border px-2 py-1.5 align-top text-slate-700 dark:text-slate-200 text-[12px] ${
                 wrapText ? 'whitespace-pre-wrap break-words' : 'truncate'
               }`
 
@@ -237,7 +237,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                     <td className={`${cellClass} text-center`} style={{ overflow: 'hidden' }}>
                       {isMatched ? (
                         <div className="flex flex-col items-center gap-0.5" title={doc.matchRecord.bkuTransaction.description}>
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[9px] font-bold border border-emerald-500/30 uppercase tracking-tighter shadow-sm shadow-emerald-500/10">
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[9px] font-bold border border-emerald-200 dark:border-emerald-500/30 uppercase tracking-tighter shadow-sm shadow-emerald-500/10">
                             <CheckCircle2 className="w-2 h-2" />TERCOCOKKAN
                           </span>
                           <span className="text-[9px] text-slate-500 font-mono leading-none">
@@ -275,12 +275,12 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                     </td>
 
                     {/* Kode Rek */}
-                    <td className={cellClass + ' font-mono text-indigo-300 text-[11px]'}>
+                    <td className={cellClass + ' font-mono text-indigo-600 dark:text-indigo-300 text-[11px]'}>
                       {doc.kodeRek || '—'}
                     </td>
 
                     {/* Sub Kegiatan */}
-                    <td className={cellClass + ' font-mono text-indigo-200 text-[11px] font-bold'}>
+                    <td className={cellClass + ' font-mono text-indigo-700 dark:text-indigo-200 text-[11px] font-bold'}>
                       {doc.subKegiatan || '—'}
                     </td>
 
@@ -301,12 +301,12 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                     <td className={cellClass}>{doc.vendorName}</td>
 
                     {/* Total */}
-                    <td className={`${cellClass} text-right font-mono font-semibold text-white`}>
+                    <td className={`${cellClass} text-right font-mono font-black text-slate-900 dark:text-white text-sm`}>
                       Rp {formatCurrency(doc.totalAmount)}
                     </td>
 
                     {/* Items */}
-                    <td className={cellClass + ' text-slate-400 text-[11px]'}>
+                    <td className={cellClass + ' text-slate-600 dark:text-slate-400 text-[11px]'}>
                       {itemsText}
                     </td>
 
@@ -330,8 +330,8 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
 
                   {/* ── Expanded detail row ── */}
                   {isExpanded && (
-                    <tr className="bg-[#0c1220]">
-                      <td colSpan={COL_KEYS.length} className="px-6 py-5 border-b border-slate-800">
+                    <tr className="bg-input/10">
+                      <td colSpan={COL_KEYS.length} className="px-6 py-5 border-b border-border">
                         <div className="flex flex-col gap-6">
                           {/* Items detail table (Full Width) */}
                           <div className="w-full">
@@ -339,22 +339,22 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                               <AlignJustify className="w-3 h-3 text-indigo-400" /> Rincian Item Dokumen
                             </p>
                             {doc.items && doc.items.length > 0 ? (
-                              <div className="overflow-hidden rounded-xl border border-slate-800 shadow-sm">
+                              <div className="overflow-hidden rounded-xl border border-border shadow-sm">
                                 <table className="w-full text-xs border-collapse">
                                   <thead>
-                                    <tr className="bg-slate-800/80">
-                                      <th className="text-left px-3 py-2 text-slate-400 font-semibold border-b border-slate-700">Uraian / Deskripsi</th>
-                                      <th className="text-center px-3 py-2 text-slate-400 font-semibold border-b border-slate-700 w-16">Qty</th>
-                                      <th className="text-right px-3 py-2 text-slate-400 font-semibold border-b border-slate-700 w-32">Harga Satuan</th>
-                                      <th className="text-right px-3 py-2 text-slate-400 font-semibold border-b border-slate-700 w-32">Jumlah</th>
-                                      <th className="text-center px-3 py-2 text-slate-400 font-semibold border-b border-slate-700 w-14">Aksi</th>
+                                    <tr className="bg-input/80">
+                                      <th className="text-left px-3 py-2 text-slate-500 dark:text-slate-400 font-semibold border-b border-border">Uraian / Deskripsi</th>
+                                      <th className="text-center px-3 py-2 text-slate-500 dark:text-slate-400 font-semibold border-b border-border w-16">Qty</th>
+                                      <th className="text-right px-3 py-2 text-slate-500 dark:text-slate-400 font-semibold border-b border-border w-32">Harga Satuan</th>
+                                      <th className="text-right px-3 py-2 text-slate-500 dark:text-slate-400 font-semibold border-b border-border w-32">Jumlah</th>
+                                      <th className="text-center px-3 py-2 text-slate-500 dark:text-slate-400 font-semibold border-b border-border w-14">Aksi</th>
                                     </tr>
                                   </thead>
                                   <tbody>
                                     {doc.items.map((item: any, idx: number) => {
                                       const editing = editingItems[item.id]
                                       const isSaving = savingItemId === item.id
-                                      const rowBgC = idx % 2 === 0 ? 'bg-slate-900/60' : 'bg-slate-900/30'
+                                      const rowBgC = idx % 2 === 0 ? 'bg-card' : 'bg-input/30'
                                       return (
                                         <tr key={item.id ?? idx} className={rowBgC + " hover:bg-indigo-500/5 transition-colors"}>
                                           {editing ? (
@@ -417,10 +417,10 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                                             </>
                                           ) : (
                                             <>
-                                              <td className="px-3 py-1.5 text-white border-b border-slate-800">{item.description}</td>
-                                              <td className="px-3 py-1.5 text-slate-300 text-center border-b border-slate-800">{item.quantity}</td>
-                                              <td className="px-3 py-1.5 text-slate-400 text-right font-mono border-b border-slate-800">Rp {formatCurrency(item.price)}</td>
-                                              <td className="px-3 py-1.5 text-emerald-400 text-right font-mono font-bold border-b border-slate-800 tracking-tight">Rp {formatCurrency(item.total)}</td>
+                                              <td className="px-3 py-1.5 text-foreground border-b border-border">{item.description}</td>
+                                              <td className="px-3 py-1.5 text-slate-600 dark:text-slate-300 text-center border-b border-border">{item.quantity}</td>
+                                              <td className="px-3 py-1.5 text-slate-500 dark:text-slate-400 text-right font-mono border-b border-border">Rp {formatCurrency(item.price)}</td>
+                                              <td className="px-3 py-1.5 text-emerald-600 dark:text-emerald-400 text-right font-mono font-bold border-b border-border tracking-tight">Rp {formatCurrency(item.total)}</td>
                                               <td className="px-3 py-1.5 text-center border-b border-slate-800 w-24">
                                                 <div className="flex items-center justify-center gap-1">
                                                   <button
@@ -451,12 +451,12 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                                         </tr>
                                       )
                                     })}
-                                    <tr className="bg-slate-800/40">
-                                      <td colSpan={3} className="px-4 py-2.5 text-right font-bold text-slate-400 text-[10px] uppercase tracking-widest border-t border-slate-700">Total Keseluruhan</td>
-                                      <td className="px-3 py-2.5 text-right font-black text-emerald-400 font-mono border-t border-slate-700 text-sm">
+                                    <tr className="bg-slate-100 dark:bg-slate-800/40">
+                                      <td colSpan={3} className="px-4 py-2.5 text-right font-bold text-slate-500 dark:text-slate-400 text-[10px] uppercase tracking-widest border-t border-slate-200 dark:border-slate-700">Total Keseluruhan</td>
+                                      <td className="px-3 py-2.5 text-right font-black text-emerald-600 dark:text-emerald-400 font-mono border-t border-slate-200 dark:border-slate-700 text-sm">
                                         Rp {formatCurrency(doc.totalAmount)}
                                       </td>
-                                      <td className="px-3 py-2.5 border-t border-slate-700"></td>
+                                      <td className="px-3 py-2.5 border-t border-slate-200 dark:border-slate-700"></td>
                                     </tr>
                                   </tbody>
                                 </table>
@@ -481,8 +481,8 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                                 { label: 'Sub Kegiatan', value: doc.subKegiatan || '—' },
                               ].map(({ label, value }) => (
                                 <div key={label} className="flex flex-col gap-1 group">
-                                  <span className="text-[9px] text-slate-500 uppercase font-bold tracking-tight group-hover:text-indigo-400 transition-colors">{label}</span>
-                                  <span className={`text-[11px] text-white font-mono bg-slate-900/80 px-2 py-1.5 rounded-lg border border-slate-800 group-hover:border-indigo-500/30 transition-all ${label.includes('BA') ? 'text-amber-300/90' : ''}`}>{value}</span>
+                                  <span className="text-[9px] text-slate-500 uppercase font-bold tracking-tight group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{label}</span>
+                                  <span className={`text-[11px] text-slate-900 dark:text-white font-mono bg-slate-100 dark:bg-slate-900/80 px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 group-hover:border-indigo-300 dark:group-hover:border-indigo-500/30 transition-all ${label.includes('BA') ? 'text-amber-600 dark:text-amber-300/90' : ''}`}>{value}</span>
                                 </div>
                               ))}
                             </div>

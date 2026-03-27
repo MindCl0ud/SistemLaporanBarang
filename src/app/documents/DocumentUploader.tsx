@@ -232,9 +232,9 @@ export default function DocumentUploader() {
   })
 
   return (
-    <div className="p-6 rounded-2xl bg-white dark:bg-card border border-border shadow-sm">
+    <div className="p-6 rounded-2xl bg-card border border-border shadow-sm">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-medium text-slate-900 dark:text-white flex items-center gap-2">
+        <h2 className="text-lg font-medium text-foreground flex items-center gap-2">
            Unggah Dokumen
         </h2>
         <button
@@ -249,12 +249,12 @@ export default function DocumentUploader() {
 
         <div
           {...getRootProps()}
-          className={`relative overflow-hidden border-2 border-dashed rounded-2xl p-12 text-center transition-all cursor-pointer bg-slate-50 dark:bg-slate-900/40 duration-300 flex flex-col items-center justify-center min-h-[250px] ${isDragActive ? 'border-indigo-400 bg-indigo-500/10 scale-[1.02]' : 'border-slate-200 dark:border-indigo-500/30 hover:border-indigo-400 hover:bg-slate-100 dark:hover:bg-black/40'}`}
+          className={`relative overflow-hidden border-2 border-dashed rounded-2xl p-12 text-center transition-all cursor-pointer bg-input/20 duration-300 flex flex-col items-center justify-center min-h-[250px] ${isDragActive ? 'border-indigo-400 bg-indigo-500/10 scale-[1.02]' : 'border-border dark:border-indigo-500/30 hover:border-indigo-400 hover:bg-input/40 dark:hover:bg-black/40'}`}
         >
           <input {...getInputProps()} />
-          <Upload className={`w-16 h-16 mb-4 transition-colors ${isDragActive ? 'text-indigo-400' : 'text-slate-400'}`} />
+          <Upload className={`w-16 h-16 mb-4 transition-colors ${isDragActive ? 'text-indigo-500' : 'text-slate-300 dark:text-slate-400'}`} />
           <div className="space-y-1">
-            <p className="text-base font-bold text-slate-700 dark:text-slate-200">
+            <p className="text-base font-bold text-foreground opacity-90">
               {isDragActive ? "Lepaskan file di sini..." : "Tarik & Lepas Gambar Dokumen atau PDF"}
             </p>
             <p className="text-sm text-slate-500 dark:text-slate-400">Mendukung JPG, PNG, WEBP, dan PDF</p>
@@ -263,24 +263,24 @@ export default function DocumentUploader() {
 
         {loading && (
           <div className="mt-6 p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center gap-3">
-            <Loader2 className="w-5 h-5 text-indigo-400 animate-spin" />
-            <p className="text-sm text-indigo-200 font-medium">{statusText}</p>
+            <Loader2 className="w-5 h-5 text-indigo-500 dark:text-indigo-400 animate-spin" />
+            <p className="text-sm text-indigo-700 dark:text-indigo-200 font-medium">{statusText}</p>
           </div>
         )}
 
         {error && (
           <div className="mt-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
-            <p className="text-sm text-rose-200">{error}</p>
+            <AlertCircle className="w-5 h-5 text-rose-500 dark:text-rose-400 shrink-0" />
+            <p className="text-sm text-rose-700 dark:text-rose-200">{error}</p>
           </div>
         )}
 
         {success && !loading && (
           <div className="mt-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2">
-            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+            <CheckCircle2 className="w-5 h-5 text-emerald-500 dark:text-emerald-400 shrink-0" />
             <div>
-              <p className="text-sm font-medium text-emerald-200">Dokumen berhasil diekstrak!</p>
-              <p className="text-xs text-emerald-400/80 mt-1">Data telah disimpan ke database tersinkronisasi AI.</p>
+              <p className="text-sm font-medium text-emerald-700 dark:text-emerald-200">Dokumen berhasil diekstrak!</p>
+              <p className="text-xs text-emerald-600 dark:text-emerald-400/80 mt-1">Data telah disimpan ke database tersinkronisasi AI.</p>
             </div>
           </div>
         )}

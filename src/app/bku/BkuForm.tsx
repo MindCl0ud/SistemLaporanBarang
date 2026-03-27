@@ -126,7 +126,7 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
       <input type="hidden" name="year" value={currentYear} />
       
       <div className="flex flex-col gap-2 mb-4">
-        <label className={`w-full py-2.5 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-200 rounded-xl text-sm font-medium transition-colors flex justify-center items-center gap-2 cursor-pointer ${(loading || isUploading) ? 'opacity-50 cursor-not-allowed' : ''}`}>
+        <label className={`w-full py-2.5 bg-input border border-border text-indigo-600 dark:text-indigo-400 hover:bg-input/80 rounded-xl text-sm font-bold transition-colors flex justify-center items-center gap-2 cursor-pointer ${(loading || isUploading) ? 'opacity-50 cursor-not-allowed' : ''}`}>
           {(loading || isUploading) ? <Loader2 className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
           {isUploading ? `Mengunggah... (${uploadProgress}%)` : loading ? 'Memproses Excel...' : 'Impor dari Excel (.xlsx)'}
           <input type="file" accept=".xlsx, .xls, .csv" className="hidden" onChange={handleExcelUpload} disabled={loading || isUploading} />
@@ -134,7 +134,7 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
 
         {isUploading && (
           <div className="mt-2 space-y-1.5">
-            <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+            <div className="w-full h-1.5 bg-input rounded-full overflow-hidden">
               <div 
                 className="h-full bg-blue-500 transition-all duration-300 ease-out"
                 style={{ width: `${uploadProgress}%` }}
@@ -144,36 +144,36 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
           </div>
         )}
         <div className="relative flex items-center py-2">
-          <div className="flex-grow border-t border-white/10"></div>
-          <span className="flex-shrink-0 mx-4 text-slate-500 text-xs uppercase">atau isi manual</span>
-          <div className="flex-grow border-t border-white/10"></div>
+          <div className="flex-grow border-t border-border"></div>
+          <span className="flex-shrink-0 mx-4 text-slate-500 text-[10px] font-bold uppercase tracking-widest">atau isi manual</span>
+          <div className="flex-grow border-t border-border"></div>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
-          <label className="text-xs text-slate-400">Tanggal</label>
-          <input name="date" type="text" className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors" placeholder="01-01-2026" />
+          <label className="text-[10px] font-bold text-slate-500 uppercase">Tanggal</label>
+          <input name="date" type="text" className="w-full bg-input border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="01-01-2026" />
         </div>
         <div className="space-y-1">
-          <label className="text-xs text-slate-400">Kode Rekening</label>
-          <input name="code" required className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors" placeholder="1.2.3.4" />
+          <label className="text-[10px] font-bold text-slate-500 uppercase">Kode Rekening</label>
+          <input name="code" required className="w-full bg-input border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="1.2.3.4" />
         </div>
       </div>
 
       <div className="space-y-1">
-        <label className="text-xs text-slate-400">Uraian / Deskripsi</label>
-        <textarea name="description" required rows={3} className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors" placeholder="Belanja Makan Minum Rapat..." />
+        <label className="text-[10px] font-bold text-slate-500 uppercase">Uraian / Deskripsi</label>
+        <textarea name="description" required rows={3} className="w-full bg-input border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="Belanja Makan Minum Rapat..." />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
-          <label className="text-xs text-slate-400">Penerimaan (Rp)</label>
-          <input name="receiptTotal" type="number" className="w-full bg-emerald-500/5 border border-emerald-500/20 rounded-xl px-3 py-2 text-sm text-emerald-100 focus:outline-none focus:border-emerald-500 transition-colors" placeholder="0" />
+          <label className="text-[10px] font-bold text-slate-500 uppercase">Penerimaan (Rp)</label>
+          <input name="receiptTotal" type="number" className="w-full bg-emerald-500/10 border border-emerald-500/20 dark:border-emerald-500/30 rounded-xl px-3 py-2 text-sm text-emerald-700 dark:text-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all" placeholder="0" />
         </div>
         <div className="space-y-1">
-          <label className="text-xs text-slate-400">Pengeluaran (Rp)</label>
-          <input name="expenseTotal" type="number" className="w-full bg-rose-500/5 border border-rose-500/20 rounded-xl px-3 py-2 text-sm text-rose-100 focus:outline-none focus:border-rose-500 transition-colors" placeholder="0" />
+          <label className="text-[10px] font-bold text-slate-500 uppercase">Pengeluaran (Rp)</label>
+          <input name="expenseTotal" type="number" className="w-full bg-rose-500/10 border border-rose-500/20 dark:border-rose-500/30 rounded-xl px-3 py-2 text-sm text-rose-700 dark:text-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-500 transition-all" placeholder="0" />
         </div>
       </div>
 

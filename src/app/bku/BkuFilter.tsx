@@ -22,17 +22,17 @@ export default function BkuFilter({ currentMonth, currentYear }: { currentMonth:
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-4 bg-white/5 border border-white/10 p-4 rounded-2xl backdrop-blur-md">
-      <div className="flex items-center gap-2 text-blue-400">
+    <div className="flex flex-wrap items-center gap-4 bg-card border border-border p-4 rounded-3xl backdrop-blur-md shadow-sm">
+      <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
         <Calendar className="w-5 h-5" />
-        <span className="text-sm font-semibold uppercase tracking-wider text-slate-400">Periode</span>
+        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Periode</span>
       </div>
       
       <div className="flex items-center gap-2">
         <select 
           value={currentMonth} 
           onChange={(e) => updateFilter(parseInt(e.target.value), currentYear)}
-          className="bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors cursor-pointer"
+          className="bg-input border border-border rounded-xl px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
         >
           {months.map((m, i) => (
             <option key={m} value={i + 1}>{m}</option>
@@ -42,7 +42,7 @@ export default function BkuFilter({ currentMonth, currentYear }: { currentMonth:
         <select 
           value={currentYear} 
           onChange={(e) => updateFilter(currentMonth, parseInt(e.target.value))}
-          className="bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors cursor-pointer"
+          className="bg-input border border-border rounded-xl px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
         >
           {years.map((y) => (
             <option key={y} value={y}>{y}</option>

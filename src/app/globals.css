@@ -4,8 +4,10 @@
   --background: #f8fafc;
   --foreground: #020617;
   --card-bg: #ffffff;
-  --card-border: rgba(0,0,0,0.05);
-  --sidebar-width: 256px;
+  --card-border: rgba(0,0,0,0.1);
+  --input-bg: #f1f5f9;
+  --primary: #4f46e5;
+  --sidebar-width: 260px;
   --sidebar-collapsed: 80px;
 }
 
@@ -13,13 +15,16 @@
   --background: #020617;
   --foreground: #f8fafc;
   --card-bg: #0f172a;
-  --card-border: rgba(255,255,255,0.05);
+  --card-border: rgba(255,255,255,0.08);
+  --input-bg: #1e293b;
+  --primary: #6366f1;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card-bg);
+  --color-input: var(--input-bg);
   --color-border: var(--card-border);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);

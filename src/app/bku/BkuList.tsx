@@ -67,12 +67,12 @@ function ResizableHeader({ colKey, width, label, onResize, isLast }: {
 
   return (
     <th style={{ width, minWidth: 40 }}
-      className="relative bg-[#1e293b] border-r border-b border-slate-700 text-left text-[11px] font-semibold text-slate-300 uppercase tracking-wide select-none">
+      className="relative bg-input border-r border-b border-border text-left text-[11px] font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide select-none">
       <div className="px-2 py-2 truncate">{label}</div>
       {!isLast && (
         <div onMouseDown={onMouseDown}
           className="absolute right-0 top-0 h-full w-2 cursor-col-resize flex items-center justify-center group z-10">
-          <div className="w-0.5 h-4 bg-slate-600 group-hover:bg-indigo-400 rounded-full transition-colors" />
+          <div className="w-0.5 h-4 bg-slate-400 dark:bg-slate-600 group-hover:bg-indigo-500 dark:group-hover:bg-indigo-400 rounded-full transition-colors" />
         </div>
       )}
     </th>
@@ -101,8 +101,8 @@ export default function BkuList({ initialRecords, openingBalance = 0 }: {
 
   if (initialRecords.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 mt-4 border border-dashed border-white/10 rounded-xl bg-slate-900/30">
-        <p className="text-slate-400 text-sm">Belum ada data BKU untuk bulan ini.</p>
+      <div className="flex flex-col items-center justify-center p-12 mt-4 border border-dashed border-slate-200 dark:border-white/10 rounded-2xl bg-slate-50 dark:bg-slate-900/30">
+        <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Belum ada data BKU untuk bulan ini.</p>
       </div>
     )
   }
@@ -119,26 +119,26 @@ export default function BkuList({ initialRecords, openingBalance = 0 }: {
   const displayed = sortDesc ? [...withBalance].reverse() : withBalance
 
   const totalWidth = COL_KEYS.reduce((s, k) => s + colWidths[k], 0)
-  const cellBase = `border-r border-b border-slate-800 px-2 py-1.5 align-top text-[12px] ${wrapText ? 'whitespace-pre-wrap break-words' : 'truncate'}`
+  const cellBase = `border-r border-b border-border px-2 py-1.5 align-top text-[12px] ${wrapText ? 'whitespace-pre-wrap break-words' : 'truncate'}`
 
   return (
     <div className="flex flex-col gap-2">
       {/* Toolbar */}
       <div className="flex items-center gap-2 px-1">
         <button onClick={() => setSortDesc(d => !d)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 text-slate-400 border border-white/10 hover:border-white/20 hover:text-white transition-all">
-          <ArrowUpDown className="w-3.5 h-3.5 text-indigo-400" />
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-input text-slate-500 dark:text-slate-400 border border-border hover:border-slate-300 dark:hover:border-white/20 hover:text-foreground transition-all shadow-sm">
+          <ArrowUpDown className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
           {sortDesc ? 'Dari Terbaru' : 'Dari Awal'}
         </button>
         <button onClick={() => setWrapText(w => !w)}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
-            wrapText ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
-                     : 'bg-white/5 text-slate-400 border-white/10 hover:border-white/20 hover:text-white'}`}>
+            wrapText ? 'bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/40 shadow-sm'
+                     : 'bg-input text-slate-500 dark:text-slate-400 border border-border hover:border-slate-300 dark:hover:border-white/20 hover:text-foreground transition-all shadow-sm'}`}>
           <WrapText className="w-3.5 h-3.5" />
           Wrap Text
         </button>
         <button onClick={() => setColWidths(DEFAULT_WIDTHS)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 text-slate-400 border border-white/10 hover:border-white/20 hover:text-white transition-all">
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-input text-slate-500 dark:text-slate-400 border border-border hover:border-slate-300 dark:hover:border-white/20 hover:text-foreground transition-all shadow-sm">
           <AlignJustify className="w-3.5 h-3.5" />
           Reset Lebar
         </button>
@@ -148,7 +148,7 @@ export default function BkuList({ initialRecords, openingBalance = 0 }: {
       </div>
 
       {/* Spreadsheet */}
-      <div className="overflow-auto rounded-xl border border-slate-700/60 shadow-2xl" style={{ maxHeight: '68vh' }}>
+      <div className="overflow-auto rounded-xl border border-border shadow-2xl bg-card" style={{ maxHeight: '68vh' }}>
         <table className="border-collapse text-sm min-w-full" style={{ width: '100%', minWidth: totalWidth, tableLayout: 'fixed' }}>
           <colgroup>
             {COL_KEYS.map(k => <col key={k} style={{ width: colWidths[k] }} />)}
@@ -164,70 +164,70 @@ export default function BkuList({ initialRecords, openingBalance = 0 }: {
           <tbody>
             {/* Saldo Bulan Lalu row */}
             {!sortDesc && (
-              <tr className="bg-indigo-950/40 italic">
-                <td className={`${cellBase} text-slate-500 text-center`}>—</td>
-                <td className={`${cellBase} text-slate-500 text-center`}>—</td>
-                <td className={`${cellBase} text-slate-500`}>—</td>
-                <td className={`${cellBase} text-indigo-300 font-bold uppercase tracking-wider`}>
+              <tr className="bg-indigo-500/5 dark:bg-indigo-500/10 italic">
+                <td className={`${cellBase} text-slate-400 dark:text-slate-500 text-center`}>—</td>
+                <td className={`${cellBase} text-slate-400 dark:text-slate-500 text-center`}>—</td>
+                <td className={`${cellBase} text-slate-400 dark:text-slate-500`}>—</td>
+                <td className={`${cellBase} text-indigo-600 dark:text-indigo-300 font-bold uppercase tracking-wider`}>
                   Saldo Bulan Lalu
                 </td>
-                <td className={`${cellBase} text-right text-emerald-400 font-bold font-mono`}>
+                <td className={`${cellBase} text-right text-emerald-600 dark:text-emerald-400 font-bold font-mono`}>
                   {formatNum(openingBalance)}
                 </td>
-                <td className={`${cellBase} text-slate-500 text-right`}>—</td>
-                <td className={`${cellBase} text-right text-indigo-300 font-bold font-mono`}>
+                <td className={`${cellBase} text-slate-400 dark:text-slate-500 text-right`}>—</td>
+                <td className={`${cellBase} text-right text-indigo-600 dark:text-indigo-300 font-bold font-mono`}>
                   {formatNum(openingBalance)}
                 </td>
-                <td className={`${cellBase} text-center`}>—</td>
+                <td className={`${cellBase} text-center font-bold text-slate-400`}>—</td>
                 <td className={`${cellBase} text-center`}></td>
               </tr>
             )}
 
             {displayed.map((record, rowIdx) => {
-              const rowBg = rowIdx % 2 === 0 ? 'bg-[#0f172a]' : 'bg-[#111827]'
+              const rowBg = rowIdx % 2 === 0 ? 'bg-card' : 'bg-input/20'
               return (
                 <tr key={record.id} className={`${rowBg} hover:bg-indigo-950/40 transition-colors group`}>
                   {/* No */}
                   <td className={`${cellBase} text-slate-500 text-center font-mono`}>{rowIdx + 1}</td>
 
                   {/* Tanggal */}
-                  <td className={`${cellBase} font-mono text-emerald-300`}>
+                  <td className={`${cellBase} font-mono text-emerald-600 dark:text-emerald-300`}>
                     {record.date || format(new Date(record.createdAt), 'dd/MM/yyyy', { locale: id })}
                   </td>
 
                   {/* Kode */}
-                  <td className={`${cellBase} font-mono text-indigo-300 text-[11px]`}>
+                  <td className={`${cellBase} font-mono text-indigo-600 dark:text-indigo-300 text-[11px]`}>
                     {record.code || '—'}
                   </td>
 
                   {/* Uraian */}
-                  <td className={`${cellBase} text-white`} title={record.description}>
+                  <td className={`${cellBase} text-slate-900 dark:text-white font-medium`} title={record.description}>
                     {record.description}
                   </td>
 
                   {/* Penerimaan */}
-                  <td className={`${cellBase} text-right text-emerald-400 font-mono font-semibold`}>
+                  <td className={`${cellBase} text-right text-emerald-600 dark:text-emerald-400 font-mono font-bold`}>
                     {record.receiptTotal > 0 ? formatNum(record.receiptTotal) : ''}
                   </td>
 
                   {/* Pengeluaran */}
-                  <td className={`${cellBase} text-right text-rose-400 font-mono font-semibold`}>
+                  <td className={`${cellBase} text-right text-rose-600 dark:text-rose-400 font-mono font-bold`}>
                     {record.expenseTotal > 0 ? formatNum(record.expenseTotal) : ''}
                   </td>
 
                   {/* Saldo */}
-                  <td className={`${cellBase} text-right text-blue-300 font-mono font-bold`}>
+                  <td className={`${cellBase} text-right text-blue-600 dark:text-blue-300 font-mono font-black`}>
                     {formatNum(record.calculatedBalance)}
                   </td>
 
                   {/* Status */}
                   <td className={`${cellBase} text-center`}>
                     {record.matchRecord ? (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/30">
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-black border border-emerald-200 dark:border-emerald-500/30">
                         <CheckCircle2 className="w-2.5 h-2.5" />COCOK
                       </span>
                     ) : record.expenseTotal > 0 ? (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-700/50 text-slate-500 text-[10px] font-bold border border-slate-700">
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-input/50 text-slate-400 dark:text-slate-500 text-[10px] font-bold border border-border">
                         <Circle className="w-2.5 h-2.5" />—
                       </span>
                     ) : null}

@@ -10,9 +10,12 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
+import { useTheme } from "next-themes";
 
 const navItems = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -26,6 +29,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     setMounted(true);
@@ -37,29 +41,28 @@ export default function Sidebar() {
     const newVal = !isCollapsed;
     setIsCollapsed(newVal);
     localStorage.setItem("sidebarCollapsed", JSON.stringify(newVal));
-    document.documentElement.style.setProperty('--sidebar-current-width', newVal ? 'var(--sidebar-collapsed)' : 'var(--sidebar-width)');
   };
 
-  useEffect(() => {
-    document.documentElement.style.setProperty('--sidebar-current-width', isCollapsed ? 'var(--sidebar-collapsed)' : 'var(--sidebar-width)');
-  }, [isCollapsed]);
+  const toggleTheme = () => {
+    setTheme(theme === "dark" ? "light" : "dark");
+  };
 
   return (
-    <aside className={`h-screen sticky top-0 bg-[#0a0f1c]/80 dark:bg-card/80 backdrop-blur-xl border-r border-border flex flex-col py-6 text-white transition-all duration-300 z-50 ${isCollapsed ? 'w-[var(--sidebar-collapsed)]' : 'w-[var(--sidebar-width)]'}`}>
+    <aside className={`h-screen sticky top-0 bg-card backdrop-blur-xl border-r border-border flex flex-col py-6 text-foreground transition-all duration-300 z-50 ${isCollapsed ? 'w-[var(--sidebar-collapsed)]' : 'w-[var(--sidebar-width)]'}`}>
       <div className="px-6 mb-8 flex items-center justify-between">
         {!isCollapsed && (
           <div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent tracking-tight whitespace-nowrap">
+            <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-500 bg-clip-text text-transparent tracking-tight whitespace-nowrap">
               DocuMatch AI
             </h1>
-            <p className="text-[10px] text-slate-400 mt-1 whitespace-nowrap">Sistem Laporan Barang</p>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 whitespace-nowrap tracking-wider">SISTEM LAPORAN BARANG</p>
           </div>
         )}
         <button 
           onClick={toggleSidebar} 
-          className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors border border-white/5"
+          className="p-1.5 rounded-lg bg-input hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 hover:text-foreground transition-all border border-border active:scale-95"
         >
-          {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+          {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
       </div>
 
@@ -71,19 +74,19 @@ export default function Sidebar() {
               key={item.name}
               href={item.href}
               className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-300 relative group ${
-                isActive ? "text-white font-medium" : "text-slate-400 hover:text-white"
+                isActive ? "text-indigo-600 dark:text-white font-semibold" : "text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white"
               }`}
             >
               {isActive && (
                 <motion.div
                   layoutId="sidebar-active"
-                  className="absolute inset-0 bg-white/10 border border-white/10 rounded-2xl -z-10"
+                  className="absolute inset-0 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl -z-10"
                   transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 />
               )}
               <item.icon
                 className={`w-5 h-5 shrink-0 transition-transform duration-300 ${
-                  isActive ? "text-blue-400" : "group-hover:text-blue-300 group-hover:scale-110"
+                  isActive ? "text-indigo-600 dark:text-blue-400" : "group-hover:text-indigo-500 dark:group-hover:text-blue-300 group-hover:scale-110"
                 } ${isCollapsed ? 'mx-auto' : ''}`}
               />
               {!isCollapsed && <span className="text-sm font-medium whitespace-nowrap transition-opacity duration-300">{item.name}</span>}
@@ -92,20 +95,38 @@ export default function Sidebar() {
         })}
       </nav>
 
+      <div className="px-4 mt-auto mb-4">
+        <button
+          onClick={toggleTheme}
+          className={`flex items-center gap-3 w-full px-4 py-3 rounded-2xl transition-all duration-300 hover:bg-input border border-transparent hover:border-border group ${isCollapsed ? 'justify-center' : ''}`}
+        >
+          {theme === "dark" ? (
+            <Sun className="w-5 h-5 text-amber-400 group-hover:rotate-45 transition-transform" />
+          ) : (
+            <Moon className="w-5 h-5 text-slate-600 group-hover:-rotate-12 transition-transform" />
+          )}
+          {!isCollapsed && (
+            <span className="text-sm font-medium text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white">
+              {theme === "dark" ? "Mode Terang" : "Mode Gelap"}
+            </span>
+          )}
+        </button>
+      </div>
+
       {mounted && !isCollapsed && (
-        <div className="px-6 mt-auto">
-          <div className="p-4 rounded-xl bg-gradient-to-br from-indigo-500/10 to-blue-500/10 border border-indigo-500/20 backdrop-blur-md">
-            <h4 className="text-xs font-semibold text-indigo-300 mb-1">Status Sistem</h4>
+        <div className="px-6">
+          <div className="p-4 rounded-xl bg-input border border-border backdrop-blur-md">
+            <h4 className="text-[10px] font-bold text-indigo-500 dark:text-indigo-300 mb-1 uppercase tracking-widest">Status Sistem</h4>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.5)] shrink-0"></div>
-              <p className="text-[11px] text-slate-300">AI Engine: Ready</p>
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.3)] shrink-0"></div>
+              <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium">AI Engine Ready</p>
             </div>
           </div>
         </div>
       )}
       {mounted && isCollapsed && (
-        <div className="px-4 mt-auto flex justify-center">
-            <div className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_10px_rgba(52,211,153,0.8)]" title="AI Engine: Ready"></div>
+        <div className="px-4 flex justify-center">
+            <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]" title="AI Engine: Ready"></div>
         </div>
       )}
     </aside>

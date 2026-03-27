@@ -42,8 +42,8 @@ export default function MatchTrigger() {
 
       {result && (
         <div className="flex items-center gap-2 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl animate-in zoom-in-95">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-          <p className="text-xs font-semibold text-emerald-200">
+          <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+          <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-200">
             Ditemukan {result.count} kecocokan baru untuk periode ini!
           </p>
         </div>
@@ -51,8 +51,8 @@ export default function MatchTrigger() {
 
       {error && (
         <div className="flex items-center gap-2 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl animate-in shake">
-          <AlertCircle className="w-4 h-4 text-rose-400" />
-          <p className="text-xs font-medium text-rose-200">{error}</p>
+          <AlertCircle className="w-4 h-4 text-rose-500 dark:text-rose-400" />
+          <p className="text-xs font-medium text-rose-700 dark:text-rose-200">{error}</p>
         </div>
       )}
     </div>
