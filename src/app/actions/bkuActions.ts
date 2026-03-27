@@ -12,7 +12,6 @@ export async function getBkuRecords(month: number, year: number) {
 }
 
 export async function getBkuComparison(month: number, year: number) {
-  // Calculate Opening Balance (all records before this month/year)
   const allPastRecords = await prisma.bkuTransaction.findMany({
     where: {
       OR: [
@@ -40,7 +39,6 @@ export async function getBkuComparison(month: number, year: number) {
   const prevExpense = prevRecords.reduce((sum, r) => sum + (r.expenseTotal || 0), 0)
   const prevReceipt = prevRecords.reduce((sum, r) => sum + (r.receiptTotal || 0), 0)
 
-  // Calculate Opening Balance for Previous Month
   const allPastRecordsBeforePrev = await prisma.bkuTransaction.findMany({
     where: {
       OR: [
@@ -85,7 +83,6 @@ export async function addBkuRecord(data: FormData) {
   const description = data.get('description') as string
   const receiptTotal = Number(data.get('receiptTotal')) || 0
   const expenseTotal = Number(data.get('expenseTotal')) || 0
-  
   const balance = Number(data.get('balance')) || 0
 
   await prisma.bkuTransaction.create({
@@ -112,54 +109,24 @@ export async function deleteBkuRecord(id: string) {
 }
 
 export async function addBkuBulk(data: any[], month: number, year: number) {
-  let newRecords = 0;
-  
-  for (const item of data) {
-    // Normalisasi kode: string kosong → null agar konsisten di DB
-    const rawCode = item.code ? String(item.code).trim() : "";
-    const code = rawCode || null;
+  // Tidak ada pengecekan duplikat sama sekali.
+  // Komponen gaji (Gaji Pokok, Tunjangan Keluarga, Iuran Askes, JKK, dst)
+  // menggunakan kode rekening yang SAMA di Gaji Reguler, Gaji 13, dan THR,
+  // sehingga semua baris harus masuk apa adanya tanpa diblokir.
+  const rows = data.map((item: any) => ({
+    date:         item.date        ? String(item.date)                  : null,
+    month:        Number(item.month  || month),
+    year:         Number(item.year   || year),
+    code:         item.code        ? String(item.code).trim()           : null,
+    description:  item.description ? String(item.description).trim()   : "Tanpa Deskripsi",
+    receiptTotal: Number(item.receiptTotal || 0) || 0,
+    expenseTotal: Number(item.expenseTotal || 0) || 0,
+    balance:      Number(item.balance      || 0) || 0,
+  }))
 
-    const description = String(item.description || "Tanpa Deskripsi").trim();
-    const receiptTotal = Number(item.receiptTotal || 0) || 0;
-    const expenseTotal = Number(item.expenseTotal || 0) || 0;
-    const balance = Number(item.balance || 0) || 0;
-    const date = item.date ? String(item.date) : null;
-    const itemMonth = item.month || month;
-    const itemYear = item.year || year;
-
-    // Pengecekan duplikat yang benar:
-    // Sertakan `code` agar baris dengan uraian sama tapi kode rekening
-    // berbeda TIDAK dianggap duplikat (misal: "Gaji Pokok" dengan kode
-    // 5.1.01.01.01.0001 berbeda dengan "Gaji Pokok" tanpa kode)
-    const exists = await prisma.bkuTransaction.findFirst({
-      where: {
-        month: itemMonth,
-        year: itemYear,
-        code: code,
-        description,
-        receiptTotal,
-        expenseTotal
-      }
-    });
-
-    if (!exists) {
-      await prisma.bkuTransaction.create({
-        data: {
-          date,
-          month: itemMonth,
-          year: itemYear,
-          code: code ?? undefined,
-          description,
-          receiptTotal,
-          expenseTotal,
-          balance
-        }
-      });
-      newRecords++;
-    }
-  }
+  const result = await prisma.bkuTransaction.createMany({ data: rows })
 
   revalidatePath('/bku')
   revalidatePath('/')
-  return newRecords;
+  return result.count
 }

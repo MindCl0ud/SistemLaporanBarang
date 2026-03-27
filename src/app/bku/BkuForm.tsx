@@ -105,7 +105,7 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
           setUploadProgress(progress)
         }
         
-        alert(`Berhasil mengimpor ${addedTotal} data baru dari total ${parsedData.length} baris.\n(Baris yang identik — uraian, kode rekening, dan nominal sama — secara otomatis dilewati untuk mencegah duplikat).`)
+        alert(`Berhasil mengimpor ${addedTotal} data dari ${parsedData.length} baris.`)
       } else {
         alert("Tidak ada baris data valid ditemukan di file Excel.")
       }
