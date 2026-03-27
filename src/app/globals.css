@@ -1,11 +1,11 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
-  --foreground: #020617;
+  --background: #f1f5f9;
+  --foreground: #0f172a;
   --card-bg: #ffffff;
-  --card-border: rgba(0,0,0,0.1);
-  --input-bg: #f1f5f9;
+  --card-border: rgba(0,0,0,0.08);
+  --input-bg: #e2e8f0;
   --primary: #4f46e5;
   --sidebar-width: 260px;
   --sidebar-collapsed: 80px;

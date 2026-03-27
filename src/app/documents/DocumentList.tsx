@@ -17,9 +17,9 @@ const DEFAULT_WIDTHS: Record<string, number> = {
   kodeRek: 160,
   subKegiatan: 160,
   tipe: 110,
-  vendor: 220,
+  vendor: 450, // Increased
   total: 130,
-  items: 380,
+  items: 800, // Increased
   aksi: 72,
 }
 
@@ -158,14 +158,14 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
       </div>
 
       {/* ── Spreadsheet wrapper ── */}
-      <div className="overflow-auto rounded-xl border border-border bg-card shadow-2xl custom-scrollbar"
+      <div className="overflow-auto rounded-xl border border-border bg-card shadow-sm custom-scrollbar"
            style={{ 
              maxHeight: '75vh',
              maxWidth: 'calc(100vw - var(--sidebar-current-width, 256px) - 4rem)' 
            }}>
         <table
-          className="border-collapse text-sm min-w-full"
-          style={{ width: '100%', minWidth: totalWidth, tableLayout: 'fixed' }}
+          className="border-collapse text-sm min-w-full w-full"
+          style={{ minWidth: totalWidth, tableLayout: 'fixed' }}
         >
           {/* ── Column sizing ── */}
           <colgroup>
@@ -359,33 +359,33 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                                         <tr key={item.id ?? idx} className={rowBgC + " hover:bg-indigo-500/5 transition-colors"}>
                                           {editing ? (
                                             <>
-                                              <td className="px-2 py-1 border-b border-slate-800">
+                                              <td className="px-2 py-1 border-b border-border">
                                                 <input
-                                                  className="w-full bg-slate-800 text-white text-xs px-2 py-1 rounded border border-indigo-500 outline-none"
+                                                  className="w-full bg-input text-foreground text-xs px-2 py-1 rounded border border-indigo-500 outline-none"
                                                   value={editing.description}
                                                   onChange={e => setEditingItems(p => ({ ...p, [item.id]: { ...p[item.id], description: e.target.value } }))}
                                                 />
                                               </td>
-                                              <td className="px-2 py-1 border-b border-slate-800 w-16">
+                                              <td className="px-2 py-1 border-b border-border w-16">
                                                 <input
                                                   type="number" min={1}
-                                                  className="w-full bg-slate-800 text-white text-xs px-2 py-1 rounded border border-indigo-500 outline-none text-center"
+                                                  className="w-full bg-input text-foreground text-xs px-2 py-1 rounded border border-indigo-500 outline-none text-center"
                                                   value={editing.quantity}
                                                   onChange={e => setEditingItems(p => ({ ...p, [item.id]: { ...p[item.id], quantity: Number(e.target.value) } }))}
                                                 />
                                               </td>
-                                              <td className="px-2 py-1 border-b border-slate-800 w-32">
+                                              <td className="px-2 py-1 border-b border-border w-32">
                                                 <input
                                                   type="number" min={0}
-                                                  className="w-full bg-slate-800 text-white text-xs px-2 py-1 rounded border border-indigo-500 outline-none text-right font-mono"
+                                                  className="w-full bg-input text-foreground text-xs px-2 py-1 rounded border border-indigo-500 outline-none text-right font-mono"
                                                   value={editing.price}
                                                   onChange={e => setEditingItems(p => ({ ...p, [item.id]: { ...p[item.id], price: Number(e.target.value) } }))}
                                                 />
                                               </td>
-                                              <td className="px-2 py-1 border-b border-slate-800 w-32">
+                                              <td className="px-2 py-1 border-b border-border w-32">
                                                 <input
                                                   type="number" min={0}
-                                                  className="w-full bg-slate-800 text-white text-xs px-2 py-1 rounded border border-indigo-500 outline-none text-right font-mono"
+                                                  className="w-full bg-input text-foreground text-xs px-2 py-1 rounded border border-indigo-500 outline-none text-right font-mono"
                                                   value={editing.total}
                                                   onChange={e => setEditingItems(p => ({ ...p, [item.id]: { ...p[item.id], total: Number(e.target.value) } }))}
                                                 />
@@ -451,12 +451,12 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                                         </tr>
                                       )
                                     })}
-                                    <tr className="bg-slate-100 dark:bg-slate-800/40">
-                                      <td colSpan={3} className="px-4 py-2.5 text-right font-bold text-slate-500 dark:text-slate-400 text-[10px] uppercase tracking-widest border-t border-slate-200 dark:border-slate-700">Total Keseluruhan</td>
-                                      <td className="px-3 py-2.5 text-right font-black text-emerald-600 dark:text-emerald-400 font-mono border-t border-slate-200 dark:border-slate-700 text-sm">
+                                    <tr className="bg-input/10">
+                                      <td colSpan={3} className="px-4 py-2.5 text-right font-bold text-slate-500 dark:text-slate-400 text-[10px] uppercase tracking-widest border-t border-border">Total Keseluruhan</td>
+                                      <td className="px-3 py-2.5 text-right font-black text-emerald-600 dark:text-emerald-400 font-mono border-t border-border text-sm">
                                         Rp {formatCurrency(doc.totalAmount)}
                                       </td>
-                                      <td className="px-3 py-2.5 border-t border-slate-200 dark:border-slate-700"></td>
+                                      <td className="px-3 py-2.5 border-t border-border"></td>
                                     </tr>
                                   </tbody>
                                 </table>

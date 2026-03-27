@@ -13,7 +13,7 @@ const DEFAULT_WIDTHS: Record<string, number> = {
   no:           55,
   tanggal:     120,
   kode:        220,
-  uraian:      450,
+  uraian:      800, // Increased for dynamic look
   penerimaan:  150,
   pengeluaran: 150,
   saldo:       160,
@@ -148,8 +148,8 @@ export default function BkuList({ initialRecords, openingBalance = 0 }: {
       </div>
 
       {/* Spreadsheet */}
-      <div className="overflow-auto rounded-xl border border-border shadow-2xl bg-card" style={{ maxHeight: '68vh' }}>
-        <table className="border-collapse text-sm min-w-full" style={{ width: '100%', minWidth: totalWidth, tableLayout: 'fixed' }}>
+      <div className="overflow-auto rounded-xl border border-border bg-card custom-scrollbar shadow-sm" style={{ maxHeight: '68vh' }}>
+        <table className="border-collapse text-sm min-w-full w-full" style={{ minWidth: totalWidth, tableLayout: 'fixed' }}>
           <colgroup>
             {COL_KEYS.map(k => <col key={k} style={{ width: colWidths[k] }} />)}
           </colgroup>
