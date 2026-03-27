@@ -17,9 +17,9 @@ const DEFAULT_WIDTHS: Record<string, number> = {
   kodeRek: 160,
   subKegiatan: 160,
   tipe: 110,
-  vendor: 280, // Reduced from 450
+  vendor: 220,
   total: 130,
-  items: 500, // Reduced from 800
+  items: 380,
   aksi: 72,
 }
 
@@ -158,14 +158,13 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
       </div>
 
       {/* ── Spreadsheet wrapper ── */}
-      <div className="overflow-auto rounded-xl border border-border bg-card shadow-sm custom-scrollbar"
+      <div className="overflow-auto rounded-xl border border-border bg-card shadow-sm custom-scrollbar w-full max-w-full"
            style={{ 
-             maxHeight: '75vh',
-             maxWidth: 'calc(100vw - var(--sidebar-current-width, 256px) - 4rem)' 
+             maxHeight: '75vh'
            }}>
         <table
-          className="border-collapse text-sm min-w-full w-full"
-          style={{ minWidth: totalWidth, tableLayout: 'fixed' }}
+          className="border-collapse text-sm w-full"
+          style={{ minWidth: '100%', tableLayout: 'fixed' }}
         >
           {/* ── Column sizing ── */}
           <colgroup>
