@@ -115,8 +115,11 @@ export async function addBkuBulk(data: any[], month: number, year: number) {
   let newRecords = 0;
   
   for (const item of data) {
-    const code = String(item.code || "");
-    const description = String(item.description || "Tanpa Deskripsi");
+    // Normalisasi kode: string kosong → null agar konsisten di DB
+    const rawCode = item.code ? String(item.code).trim() : "";
+    const code = rawCode || null;
+
+    const description = String(item.description || "Tanpa Deskripsi").trim();
     const receiptTotal = Number(item.receiptTotal || 0) || 0;
     const expenseTotal = Number(item.expenseTotal || 0) || 0;
     const balance = Number(item.balance || 0) || 0;
@@ -124,11 +127,15 @@ export async function addBkuBulk(data: any[], month: number, year: number) {
     const itemMonth = item.month || month;
     const itemYear = item.year || year;
 
-    // Lakukan pencegahan pendobelan data
+    // Pengecekan duplikat yang benar:
+    // Sertakan `code` agar baris dengan uraian sama tapi kode rekening
+    // berbeda TIDAK dianggap duplikat (misal: "Gaji Pokok" dengan kode
+    // 5.1.01.01.01.0001 berbeda dengan "Gaji Pokok" tanpa kode)
     const exists = await prisma.bkuTransaction.findFirst({
       where: {
         month: itemMonth,
         year: itemYear,
+        code: code,
         description,
         receiptTotal,
         expenseTotal
@@ -141,7 +148,7 @@ export async function addBkuBulk(data: any[], month: number, year: number) {
           date,
           month: itemMonth,
           year: itemYear,
-          code,
+          code: code ?? undefined,
           description,
           receiptTotal,
           expenseTotal,

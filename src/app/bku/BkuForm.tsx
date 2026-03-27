@@ -55,7 +55,11 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
           
           const isSaldoLalu = uraian.toLowerCase().includes("saldo bulan lalu") || uraian.toLowerCase().includes("saldo s.d bulan lalu")
           
-          if (uraian && (kode || terima > 0 || keluar > 0) && !isSaldoLalu && !uraian.toLowerCase().includes("uraian")) {
+          // Terima semua baris yang punya uraian bermakna, meski tidak ada kode/nominal
+          // (contoh: "Tunjangan Keluarga", "Iuran Askes" dsb tetap harus masuk)
+          const isHeaderRow = uraian.toLowerCase().includes("uraian") || uraian.toLowerCase().includes("kode rekening") || uraian.toLowerCase() === "no"
+          
+          if (uraian && uraian.length >= 2 && !isSaldoLalu && !isHeaderRow) {
             // Extract month and year from currentDate
             let itemMonth = currentMonth
             let itemYear = currentYear
@@ -101,7 +105,7 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
           setUploadProgress(progress)
         }
         
-        alert(`Berhasil mengimpor ${addedTotal} data baru dari total ${parsedData.length} baris (Data dobel otomatis dilewati).`)
+        alert(`Berhasil mengimpor ${addedTotal} data baru dari total ${parsedData.length} baris.\n(Baris yang identik — uraian, kode rekening, dan nominal sama — secara otomatis dilewati untuk mencegah duplikat).`)
       } else {
         alert("Tidak ada baris data valid ditemukan di file Excel.")
       }
