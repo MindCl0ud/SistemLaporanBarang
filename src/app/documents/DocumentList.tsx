@@ -16,10 +16,10 @@ const DEFAULT_WIDTHS: Record<string, number> = {
   docNumber: 150,
   kodeRek: 140,
   subKegiatan: 140,
-  tipe: 95,
-  vendor: 210,
+  tipe: 110,
+  vendor: 160,
   total: 130,
-  items: 345,
+  items: 380,
   aksi: 70,
 }
 
