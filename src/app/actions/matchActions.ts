@@ -15,43 +15,36 @@ export async function runMatchingEngine(month: number, year: number) {
   })
 
   let matchCount = 0
+  
+  const normalizeCode = (c: string | null) => c ? c.replace(/[^0-9]/g, '') : ''
 
   for (const bku of bkuEntries) {
     let bestMatchDoc = null
     let highestConfidence = 0
 
+    const bkuCodeNorm = normalizeCode(bku.code)
+
     for (const doc of documents) {
       let confidence = 0
       
-      // 1. Compare amount (Primary Weight)
+      // 1. Compare amount (50% Weight)
       if (bku.expenseTotal === doc.totalAmount && (doc.totalAmount || 0) > 0) {
         confidence += 0.5
       } else if (Math.abs((bku.expenseTotal || 0) - (doc.totalAmount || 0)) < 1000) {
-         confidence += 0.3
+        confidence += 0.2
       }
 
-      // 2. Code String Match (Strong Indicator: Full Code)
-      // Raw concatenation — subKegiatan already contains the dot prefix (e.g. "5.1.02.03.02.0035")
-      // So fullDocCode = "5.01.01.2.09.00025.1.02.03.02.0035" stripped of all spaces,
-      // which must match the BKU code field stored the same way.
-      const rawDocCode = (doc.subKegiatan
-        ? `${doc.kodeRek}${doc.subKegiatan}`
-        : doc.kodeRek || '')
-        .replace(/\s+/g, '')
+      // 2. Code String Match (50% Weight)
+      const fullDocCode = (doc.subKegiatan ? `${doc.kodeRek}${doc.subKegiatan}` : (doc.kodeRek || ''))
+      const docCodeNorm = normalizeCode(fullDocCode)
 
-      const bkuCode = bku.code?.replace(/\s+/g, '') || ''
-
-      if (bkuCode && rawDocCode && bkuCode === rawDocCode) {
-        // Exact full-code match is the strongest signal
+      if (bkuCodeNorm && docCodeNorm && bkuCodeNorm === docCodeNorm) {
         confidence += 0.5
-      } else if (bkuCode && rawDocCode && (bkuCode.includes(rawDocCode) || rawDocCode.includes(bkuCode))) {
+      } else if (bkuCodeNorm && docCodeNorm && (bkuCodeNorm.includes(docCodeNorm) || docCodeNorm.includes(bkuCodeNorm))) {
         confidence += 0.3
-      } else {
-        // Fallback: both start with the same base activity code
-        const prefix = '5.01.01.2.09.0002'
-        if (bkuCode.startsWith(prefix) && rawDocCode.startsWith(prefix)) {
-          confidence += 0.2
-        }
+      } else if (bkuCodeNorm.startsWith('50101') && docCodeNorm.startsWith('50101')) {
+        // Fallback: both match the BAPPERIDA base code
+        confidence += 0.1
       }
 
       // 3. Keyword match (Secondary Weight)

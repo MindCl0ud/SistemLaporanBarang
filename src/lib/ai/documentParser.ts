@@ -301,7 +301,10 @@ export function extractDataFromText(rawText: string) {
       .replace(/\.Ol\./g, '.01.')        // ".Ol." → ".01."
 
     // Match base code 5.01.01.2.09.0002 and capture the suffix
-    const m = stripped.match(/5\.0[1]\.0[1]\.2\.09\.0002([\d.]*)/i)
+    // The base code itself might have OCR errors (dots/spaces)
+    // We use a more flexible regex that allows for optional dots/spaces between major digit groups
+    const baseCodePattern = /5[\s.]?0[\s.]?1[\s.]?0[\s.]?1[\s.]?2[\s.]?0[\s.]?9[\s.]?0[\s.]?0[\s.]?0[\s.]?2([\d.]*)/i
+    const m = stripped.match(baseCodePattern)
     if (m) {
       kodeRek = '5.01.01.2.09.0002'
       subKegiatan = (m[1] || '').replace(/^\./, '').replace(/\.$/, '')
