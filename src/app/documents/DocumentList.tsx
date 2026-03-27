@@ -4,7 +4,7 @@ import React, { useState, useRef, useCallback, useEffect } from "react"
 import { format } from "date-fns"
 import { id } from "date-fns/locale"
 import { Trash2, Bot, Loader2, WrapText, AlignJustify, ChevronDown, ChevronRight, CheckCircle2, Circle, GripVertical, Pencil, Check, X } from "lucide-react"
-import { deleteDocument, updateDocumentItem } from "@/app/actions/documentActions"
+import { deleteDocument, updateDocumentItem, deleteDocumentItem } from "@/app/actions/documentActions"
 
 // ──────────────────────────────────────────────────────────
 // Column definitions
@@ -106,6 +106,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
   const [colWidths, setColWidths] = useState<Record<string, number>>(DEFAULT_WIDTHS)
   const [editingItems, setEditingItems] = useState<Record<string, { description: string; quantity: number; price: number; total: number }>>({})
   const [savingItemId, setSavingItemId] = useState<string | null>(null)
+  const [deletingItemId, setDeletingItemId] = useState<string | null>(null)
 
   const handleDelete = async (docId: string) => {
     setDeletingId(docId)
@@ -157,8 +158,11 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
       </div>
 
       {/* ── Spreadsheet wrapper ── */}
-      <div className="overflow-auto rounded-xl border border-slate-700/60 shadow-2xl"
-           style={{ maxHeight: '75vh' }}>
+      <div className="overflow-auto rounded-xl border border-border bg-card shadow-2xl custom-scrollbar"
+           style={{ 
+             maxHeight: '75vh',
+             maxWidth: 'calc(100vw - var(--sidebar-current-width, 256px) - 4rem)' 
+           }}>
         <table
           className="border-collapse text-sm min-w-full"
           style={{ width: '100%', minWidth: totalWidth, tableLayout: 'fixed' }}
@@ -171,7 +175,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
           {/* ── Sticky Header ── */}
           <thead className="sticky top-0 z-20">
             {/* Row letters (Excel row 1) */}
-            <tr>
+            <tr className="bg-slate-100 dark:bg-slate-800">
               {COL_KEYS.map((k, i) => (
                 <ResizableHeader
                   key={k}
@@ -215,15 +219,15 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                 <React.Fragment key={doc.id}>
                   {/* ── Main data row ── */}
                   <tr
-                    className={`${rowBg} hover:bg-indigo-950/40 transition-colors cursor-pointer group`}
+                    className={`${rowBg} hover:bg-indigo-500/5 dark:hover:bg-indigo-950/40 transition-colors cursor-pointer group`}
                     onClick={() => setExpandedId(isExpanded ? null : doc.id)}
                   >
                     {/* No */}
-                    <td className={`${cellClass} text-slate-500 text-center font-mono`}>
+                    <td className={`${cellClass} text-slate-500 text-center font-mono border-slate-200 dark:border-slate-800`}>
                       <div className="flex items-center justify-center gap-1.5">
                         {isExpanded
                           ? <ChevronDown className="w-3.5 h-3.5 text-indigo-400" />
-                          : <ChevronRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-amber-500 transition-colors" />
+                          : <ChevronRight className="w-3.5 h-3.5 text-slate-400 dark:text-slate-600 group-hover:text-amber-500 transition-colors" />
                         }
                         <span className="text-[11px] min-w-[12px]">{rowIdx + 1}</span>
                       </div>
@@ -414,14 +418,30 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                                              <td className="px-3 py-1.5 text-slate-300 text-center border border-slate-800">{item.quantity}</td>
                                              <td className="px-3 py-1.5 text-slate-300 text-right font-mono border border-slate-800">Rp {formatCurrency(item.price)}</td>
                                              <td className="px-3 py-1.5 text-indigo-300 text-right font-mono font-bold border border-slate-800">Rp {formatCurrency(item.total)}</td>
-                                             <td className="px-3 py-1.5 text-center border border-slate-800 w-12">
-                                               <button
-                                                 onClick={() => setEditingItems(p => ({ ...p, [item.id]: { description: item.description, quantity: item.quantity, price: item.price, total: item.total } }))}
-                                                 className="p-1 text-slate-600 hover:text-indigo-400 hover:bg-indigo-400/10 rounded transition-colors"
-                                                 title="Edit item"
-                                               >
-                                                 <Pencil className="w-3 h-3" />
-                                               </button>
+                                             <td className="px-3 py-1.5 text-center border border-slate-200 dark:border-slate-800 w-24">
+                                               <div className="flex items-center justify-center gap-1">
+                                                 <button
+                                                   onClick={() => setEditingItems(p => ({ ...p, [item.id]: { description: item.description, quantity: item.quantity, price: item.price, total: item.total } }))}
+                                                   className="p-1 text-slate-400 hover:text-indigo-400 hover:bg-indigo-400/10 rounded transition-colors"
+                                                   title="Edit item"
+                                                 >
+                                                   <Pencil className="w-3 h-3" />
+                                                 </button>
+                                                 <button
+                                                   onClick={async () => {
+                                                     if (confirm('Hapus item ini?')) {
+                                                       setDeletingItemId(item.id)
+                                                       await deleteDocumentItem(item.id)
+                                                       setDeletingItemId(null)
+                                                     }
+                                                   }}
+                                                   disabled={deletingItemId === item.id}
+                                                   className="p-1 text-slate-400 hover:text-rose-400 hover:bg-rose-400/10 rounded transition-colors disabled:opacity-40"
+                                                   title="Hapus item"
+                                                 >
+                                                   {deletingItemId === item.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                                                 </button>
+                                               </div>
                                              </td>
                                            </>
                                          )}

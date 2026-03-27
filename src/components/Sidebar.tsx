@@ -37,10 +37,15 @@ export default function Sidebar() {
     const newVal = !isCollapsed;
     setIsCollapsed(newVal);
     localStorage.setItem("sidebarCollapsed", JSON.stringify(newVal));
+    document.documentElement.style.setProperty('--sidebar-current-width', newVal ? 'var(--sidebar-collapsed)' : 'var(--sidebar-width)');
   };
 
+  useEffect(() => {
+    document.documentElement.style.setProperty('--sidebar-current-width', isCollapsed ? 'var(--sidebar-collapsed)' : 'var(--sidebar-width)');
+  }, [isCollapsed]);
+
   return (
-    <aside className={`h-screen sticky top-0 bg-[#0a0f1c]/80 backdrop-blur-xl border-r border-white/5 flex flex-col py-6 text-white transition-all duration-300 z-50 ${isCollapsed ? 'w-20' : 'w-64'}`}>
+    <aside className={`h-screen sticky top-0 bg-[#0a0f1c]/80 dark:bg-card/80 backdrop-blur-xl border-r border-border flex flex-col py-6 text-white transition-all duration-300 z-50 ${isCollapsed ? 'w-[var(--sidebar-collapsed)]' : 'w-[var(--sidebar-width)]'}`}>
       <div className="px-6 mb-8 flex items-center justify-between">
         {!isCollapsed && (
           <div>

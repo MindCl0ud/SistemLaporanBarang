@@ -232,14 +232,14 @@ export default function DocumentUploader() {
   })
 
   return (
-    <div className="p-6 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-blue-500/5 border border-indigo-500/20 backdrop-blur-md">
+    <div className="p-6 rounded-2xl bg-white dark:bg-card border border-border shadow-sm">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-medium text-white flex items-center gap-2">
+        <h2 className="text-lg font-medium text-slate-900 dark:text-white flex items-center gap-2">
            Unggah Dokumen
         </h2>
         <button
           onClick={() => setShowManualForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-xl text-sm font-bold hover:bg-indigo-500/20 transition-all"
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 rounded-xl text-sm font-bold hover:bg-indigo-500/20 transition-all"
         >
           <Plus className="w-4 h-4" /> Input Manual
         </button>
@@ -249,15 +249,15 @@ export default function DocumentUploader() {
 
         <div
           {...getRootProps()}
-          className={`relative overflow-hidden border-2 border-dashed rounded-2xl p-12 text-center transition-all cursor-pointer bg-slate-900/40 duration-300 flex flex-col items-center justify-center min-h-[250px] ${isDragActive ? 'border-indigo-400 bg-indigo-500/10 scale-[1.02]' : 'border-indigo-500/30 hover:border-indigo-400 bg-black/20 hover:bg-black/40'}`}
+          className={`relative overflow-hidden border-2 border-dashed rounded-2xl p-12 text-center transition-all cursor-pointer bg-slate-50 dark:bg-slate-900/40 duration-300 flex flex-col items-center justify-center min-h-[250px] ${isDragActive ? 'border-indigo-400 bg-indigo-500/10 scale-[1.02]' : 'border-slate-200 dark:border-indigo-500/30 hover:border-indigo-400 hover:bg-slate-100 dark:hover:bg-black/40'}`}
         >
           <input {...getInputProps()} />
           <Upload className={`w-16 h-16 mb-4 transition-colors ${isDragActive ? 'text-indigo-400' : 'text-slate-400'}`} />
           <div className="space-y-1">
-            <p className="text-base font-bold text-slate-200">
+            <p className="text-base font-bold text-slate-700 dark:text-slate-200">
               {isDragActive ? "Lepaskan file di sini..." : "Tarik & Lepas Gambar Dokumen atau PDF"}
             </p>
-            <p className="text-sm text-slate-400">Mendukung JPG, PNG, WEBP, dan PDF</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Mendukung JPG, PNG, WEBP, dan PDF</p>
           </div>
         </div>
 

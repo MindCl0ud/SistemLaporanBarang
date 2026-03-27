@@ -70,7 +70,14 @@ export async function updateDocument(id: string, data: {
   baNumber?: string
   totalAmount?: number
 }) {
-  await prisma.document.update({ where: { id }, data })
+  const doc = await prisma.document.update({ where: { id }, data })
   revalidatePath('/documents')
   revalidatePath('/')
+  return doc
 }
+
+export async function deleteDocumentItem(id: string) {
+  await prisma.documentItem.delete({ where: { id } })
+  revalidatePath('/documents')
+}
+
