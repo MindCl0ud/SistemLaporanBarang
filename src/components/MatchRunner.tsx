@@ -13,11 +13,9 @@ export default function MatchRunner() {
   const handleRun = async () => {
     setLoading(true)
     setResult(null)
-    const month = new Date().getMonth() + 1
-    const year = new Date().getFullYear()
     
     try {
-      const matchCount = await runMatchingEngine(month, year)
+      const matchCount = await runMatchingEngine()
       setResult(matchCount)
       router.refresh()
     } catch (err) {

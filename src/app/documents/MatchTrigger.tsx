@@ -14,9 +14,7 @@ export default function MatchTrigger() {
     setError(null)
     setResult(null)
     try {
-      // Get current month/year for matching (defaulting to current date if needed)
-      const now = new Date()
-      const count = await runMatchingEngine(now.getMonth() + 1, now.getFullYear())
+      const count = await runMatchingEngine()
       setResult({ count })
     } catch (err: any) {
       setError(err.message || 'Gagal menjalankan pemindaian kecocokan.')
