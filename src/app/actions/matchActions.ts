@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
+import { MatchStatus } from "@prisma/client"
 
 export async function runMatchingEngine(month?: number, year?: number) {
   // Fetch unmatched BKU entries (optionally filtered by month/year)
@@ -32,14 +33,15 @@ export async function runMatchingEngine(month?: number, year?: number) {
     return new Date(dStr)
   }
 
-  for (const doc of documents) {
+  for (const doc of (documents as any[])) {
     let bestMatchBku: any = null
     let highestConfidence = 0
 
     const docKodeRekNorm = normalizeCode(doc.kodeRek)
     const docSubKegNorm = normalizeCode(doc.subKegiatan)
+    const docPaymentDesc = (doc.paymentDescription || "").toLowerCase()
 
-    for (const bku of bkuEntries) {
+    for (const bku of (bkuEntries as any[])) {
       let confidence = 0
       
       const bkuAmount = bku.expenseTotal || 0
@@ -79,12 +81,27 @@ export async function runMatchingEngine(month?: number, year?: number) {
         else if (diffDays <= 7) confidence += 0.1
       }
 
-      // 4. Description/Vendor Bonus (Up to +0.15)
+      // 4. Description/Vendor Bonus (Up to +0.3)
+      const bkuDesc = bku.description.toLowerCase()
+      let descScore = 0
+      
       if (doc.vendorName && doc.vendorName !== "Tidak Diketahui") {
-        if (bku.description.toLowerCase().includes(doc.vendorName.toLowerCase())) {
-          confidence += 0.15
-        }
+        if (bkuDesc.includes(doc.vendorName.toLowerCase())) descScore += 0.15
       }
+
+      // NEW: Payment Description Matching (Kwitansi specific)
+      if (docPaymentDesc && bkuDesc) {
+        // Look for significant keyword overlap
+        const docKeywords = docPaymentDesc.split(/\s+/).filter((w: string) => w.length > 4)
+        let matches = 0
+        docKeywords.forEach((word: string) => {
+          if (bkuDesc.includes(word)) matches++
+        })
+        if (matches >= 2) descScore += 0.15
+        else if (matches >= 1) descScore += 0.05
+      }
+      
+      confidence += Math.min(0.3, descScore)
 
       if (confidence > highestConfidence) {
         highestConfidence = confidence
@@ -94,20 +111,30 @@ export async function runMatchingEngine(month?: number, year?: number) {
 
     if (bestMatchBku && highestConfidence >= 0.45) {
       const reason = highestConfidence >= 0.8 
-        ? 'Cocok Sempurna (Nominal & Kode Rekening sesuai).'
+        ? 'Cocok Sempurna (Nominal & Deskripsi sesuai).'
         : `Cocok Tinggi (${(highestConfidence * 100).toFixed(0)}%) berdasarkan kesamaan data.`;
 
-      await prisma.matchRecord.create({
-        data: {
-          bkuTransactionId: bestMatchBku.id,
-          documentId: doc.id,
-          confidence: highestConfidence,
-          status: 'MATCHED',
-          reasoning: reason
-        }
-      })
+      await prisma.$transaction([
+        prisma.matchRecord.create({
+          data: {
+            bkuTransactionId: bestMatchBku.id,
+            documentId: doc.id,
+            confidence: highestConfidence,
+            status: (MatchStatus as any).MATCHED || 'MATCHED',
+            reasoning: reason
+          }
+        }),
+        // Sync document number from BKU if document number is missing
+        ...(doc.docNumber ? [] : [
+          prisma.document.update({
+            where: { id: doc.id },
+            data: { docNumber: bestMatchBku.code || "" }
+          })
+        ])
+      ])
+
       matchCount++
-      const index = bkuEntries.findIndex(b => b.id === bestMatchBku.id)
+      const index = bkuEntries.findIndex((b: any) => b.id === bestMatchBku.id)
       if (index > -1) bkuEntries.splice(index, 1)
     }
   }
@@ -118,20 +145,26 @@ export async function runMatchingEngine(month?: number, year?: number) {
   return matchCount
 }
 
-export async function getDashboardStats() {
-  const totalDocs = await prisma.document.count()
-  const matchedDocs = await prisma.matchRecord.count()
-  const bkuWithoutDocs = await prisma.bkuTransaction.count({
-    where: { matchRecord: null, expenseTotal: { gt: 0 } }
-  })
-  
-  const accuracy = totalDocs > 0 ? ((matchedDocs / totalDocs) * 100).toFixed(1) : "0"
-  
-  const recentMatches = await prisma.matchRecord.findMany({
-    take: 5,
-    orderBy: { createdAt: 'desc' },
-    include: { bkuTransaction: true, document: true }
-  })
+import { unstable_cache } from "next/cache"
 
-  return { totalDocs, matchedDocs, bkuWithoutDocs, accuracy, recentMatches }
-}
+export const getDashboardStats = unstable_cache(
+  async () => {
+    const totalDocs = await prisma.document.count()
+    const matchedDocs = await prisma.matchRecord.count()
+    const bkuWithoutDocs = await prisma.bkuTransaction.count({
+      where: { matchRecord: null, expenseTotal: { gt: 0 } }
+    })
+    
+    const accuracy = totalDocs > 0 ? ((matchedDocs / totalDocs) * 100).toFixed(1) : "0"
+    
+    const recentMatches = await prisma.matchRecord.findMany({
+      take: 5,
+      orderBy: { createdAt: 'desc' },
+      include: { bkuTransaction: true, document: true }
+    })
+
+    return { totalDocs, matchedDocs, bkuWithoutDocs, accuracy, recentMatches }
+  },
+  ['dashboard-stats'],
+  { tags: ['documents', 'bku', 'matches'] }
+)

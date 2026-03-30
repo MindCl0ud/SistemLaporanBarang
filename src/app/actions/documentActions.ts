@@ -2,24 +2,64 @@
 
 import prisma from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
+import { z } from "zod"
 
-export async function getDocuments() {
-  return await prisma.document.findMany({
-    orderBy: { createdAt: 'desc' },
-    include: { 
-      items: true, 
-      matchRecord: {
-        include: { bkuTransaction: true }
+// --- VALIDATION SCHEMAS ---
+const DocumentItemSchema = z.object({
+  id: z.string().optional(),
+  description: z.string().min(1, "Deskripsi wajib diisi"),
+  itemCode: z.string().nullable().optional(),
+  quantity: z.number().nullable().optional(),
+  price: z.number().nullable().optional(),
+  total: z.number().nullable().optional(),
+})
+
+const DocumentSchema = z.object({
+  type: z.string().default("Nota"),
+  docNumber: z.string().nullable().optional(),
+  baNumber: z.string().nullable().optional(),
+  baDate: z.string().nullable().optional().or(z.date().nullable()),
+  kodeRek: z.string().nullable().optional(),
+  subKegiatan: z.string().nullable().optional(),
+  vendorName: z.string().nullable().optional(),
+  totalAmount: z.number().nullable().optional(),
+  date: z.string().nullable().optional().or(z.date().nullable()),
+  extractedText: z.string().nullable().optional(),
+  paymentDescription: z.string().nullable().optional(),
+  items: z.array(DocumentItemSchema).optional(),
+})
+
+import { unstable_cache } from "next/cache"
+
+export const getDocuments = unstable_cache(
+  async () => {
+    return await prisma.document.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: { 
+        items: true, 
+        matchRecord: {
+          include: { bkuTransaction: true }
+        }
       }
-    }
-  })
-}
+    })
+  },
+  ['documents-list'],
+  { tags: ['documents'] }
+)
 
-export async function saveDocument(data: any) {
+export async function saveDocument(rawData: any) {
+  // 1. Server-side validation
+  const validation = DocumentSchema.safeParse(rawData)
+  if (!validation.success) {
+    const errorMsg = validation.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ')
+    throw new Error(`Validasi Gagal: ${errorMsg}`)
+  }
+
+  const data = validation.data
   const { 
     type, docNumber, vendorName, totalAmount, date, 
     extractedText, items, kodeRek, subKegiatan,
-    baNumber, baDate
+    baNumber, baDate, paymentDescription
   } = data
 
   const doc = await prisma.document.create({
@@ -34,8 +74,15 @@ export async function saveDocument(data: any) {
       totalAmount: Number(totalAmount) || 0,
       date: date ? new Date(date) : new Date(),
       extractedText: extractedText || "",
+      paymentDescription: paymentDescription || "",
       items: {
-        create: items || []
+        create: items?.map(item => ({
+          description: item.description,
+          itemCode: item.itemCode || "",
+          quantity: item.quantity || 0,
+          price: item.price || 0,
+          total: item.total || 0,
+        })) || []
       }
     }
   })
@@ -52,25 +99,33 @@ export async function deleteDocument(id: string) {
   revalidatePath('/')
 }
 
-export async function updateDocumentItem(id: string, data: {
-  description?: string
-  quantity?: number
-  price?: number
-  total?: number
-}) {
-  await prisma.documentItem.update({ where: { id }, data })
+export async function updateDocumentItem(id: string, data: z.infer<typeof DocumentItemSchema>) {
+  const result = await prisma.documentItem.update({ where: { id }, data: {
+    description: data.description,
+    itemCode: data.itemCode,
+    quantity: data.quantity,
+    price: data.price,
+    total: data.total
+  }})
   revalidatePath('/documents')
+  return result
 }
 
-export async function updateDocument(id: string, data: {
-  docNumber?: string
-  vendorName?: string
-  kodeRek?: string
-  subKegiatan?: string
-  baNumber?: string
-  totalAmount?: number
-}) {
-  const doc = await prisma.document.update({ where: { id }, data })
+export async function updateDocument(id: string, rawData: any) {
+  const data = DocumentSchema.partial().parse(rawData)
+  
+  // Destructure items so we don't pass it directly to prisma.update (which expects nested operations)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { items, ...updateData } = data
+
+  const doc = await prisma.document.update({ 
+    where: { id }, 
+    data: {
+      ...updateData,
+      date: data.date ? new Date(data.date) : undefined,
+      baDate: data.baDate ? new Date(data.baDate) : undefined,
+    } 
+  })
   revalidatePath('/documents')
   revalidatePath('/')
   return doc

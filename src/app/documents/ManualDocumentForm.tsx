@@ -2,59 +2,73 @@
 
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Save, Plus, Trash2, Loader2 } from 'lucide-react'
+import { X, Save, Plus, Trash2, Loader2, Maximize2, Minimize2, FileText } from 'lucide-react'
 import { saveDocument } from '@/app/actions/documentActions'
 
 interface ManualDocumentFormProps {
   onClose: () => void
   onSuccess: () => void
+  initialData?: any
+  imageUrl?: string
 }
 
-export default function ManualDocumentForm({ onClose, onSuccess }: ManualDocumentFormProps) {
+export default function ManualDocumentForm({ onClose, onSuccess, initialData, imageUrl }: ManualDocumentFormProps) {
   const [mounted, setMounted] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [isSplitView, setIsSplitView] = useState(!!imageUrl)
 
   useEffect(() => {
     setMounted(true)
     return () => setMounted(false)
   }, [])
+
   const [formData, setFormData] = useState({
-    type: 'Kwitansi',
-    date: new Date().toISOString().split('T')[0],
-    docNumber: '',
-    baNumber: '',
-    baDate: '',
-    vendorName: '',
-    totalAmount: 0,
-    kodeRek: '',
-    subKegiatan: '',
-    items: [{ description: '', quantity: 1, price: 0, total: 0 }]
+    type: initialData?.type || 'Kwitansi',
+    date: initialData?.date ? new Date(initialData.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+    docNumber: initialData?.docNumber || '',
+    baNumber: initialData?.baNumber || '',
+    baDate: initialData?.baDate ? new Date(initialData.baDate).toISOString().split('T')[0] : '',
+    vendorName: initialData?.vendorName || '',
+    totalAmount: initialData?.totalAmount || 0,
+    kodeRek: initialData?.kodeRek || '',
+    subKegiatan: initialData?.subKegiatan || '',
+    paymentDescription: initialData?.paymentDescription || '',
+    extractedText: initialData?.extractedText || '',
+    items: initialData?.items?.map((it: any) => ({
+      description: it.description || '',
+      itemCode: it.itemCode || '',
+      quantity: it.quantity || 1,
+      price: it.price || 0,
+      total: it.total || 0
+    })) || [{ description: '', itemCode: '', quantity: 1, price: 0, total: 0 }]
   })
 
   const handleAddItem = () => {
     setFormData(prev => ({
       ...prev,
-      items: [...prev.items, { description: '', quantity: 1, price: 0, total: 0 }]
+      items: [...prev.items, { description: '', itemCode: '', quantity: 1, price: 0, total: 0 }]
     }))
   }
+
+  const [showRawText, setShowRawText] = useState(false)
 
   const handleRemoveItem = (index: number) => {
     setFormData(prev => ({
       ...prev,
-      items: prev.items.filter((_, i) => i !== index)
+      items: prev.items.filter((_it: any, i: number) => i !== index)
     }))
   }
 
   const handleItemChange = (index: number, field: string, value: any) => {
     const newItems = [...formData.items]
     const item = { ...newItems[index], [field]: value }
-    item.total = item.quantity * item.price
+    item.total = (Number(item.quantity) || 0) * (Number(item.price) || 0)
     newItems[index] = item
     
     setFormData(prev => ({
       ...prev,
       items: newItems,
-      totalAmount: newItems.reduce((sum, it) => sum + it.total, 0)
+      totalAmount: newItems.reduce((sum: number, it: any) => sum + (it.total || 0), 0)
     }))
   }
 
@@ -64,7 +78,7 @@ export default function ManualDocumentForm({ onClose, onSuccess }: ManualDocumen
     try {
       await saveDocument({
         ...formData,
-        extractedText: "Input Manual"
+        imageUrl: imageUrl || null
       })
       onSuccess()
       onClose()
@@ -79,210 +93,249 @@ export default function ManualDocumentForm({ onClose, onSuccess }: ManualDocumen
   if (!mounted) return null
 
   return createPortal(
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/60 dark:bg-slate-950/80 backdrop-blur-sm">
-      <div className="bg-card border border-border rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/60 dark:bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
+      <div className={`bg-card border border-border rounded-2xl overflow-hidden shadow-2xl flex flex-col transition-all duration-500 ${isSplitView ? 'w-full max-w-[95vw] h-[90vh]' : 'w-full max-w-4xl max-h-[90vh]'}`}>
+        
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-input/50">
-          <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-            <Plus className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-            Input Dokumen Manual
-          </h2>
+          <div className="flex items-center gap-4">
+            <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+              <Plus className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+              {imageUrl ? 'Review & Simpan Dokumen AI' : 'Input Dokumen Manual'}
+            </h2>
+            {imageUrl && (
+              <div className="flex items-center gap-2 bg-slate-500/5 p-1 rounded-xl border border-border">
+                <button 
+                  onClick={() => setIsSplitView(!isSplitView)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${isSplitView ? 'bg-indigo-500 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-500/10'}`}
+                >
+                  {isSplitView ? <Minimize2 className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
+                  Split View
+                </button>
+                <button 
+                  onClick={() => setShowRawText(!showRawText)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${showRawText ? 'bg-indigo-500 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-500/10'}`}
+                >
+                  <FileText className="w-3 h-3" />
+                  Raw Text
+                </button>
+              </div>
+            )}
+          </div>
           <button onClick={onClose} className="p-1 text-slate-500 dark:text-slate-400 hover:text-foreground transition-colors">
             <X className="w-6 h-6" />
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Basic Info */}
-            <div className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tipe Dokumen</label>
-                <select
-                  value={formData.type}
-                  onChange={e => setFormData({ ...formData, type: e.target.value })}
-                  className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="Kwitansi">Kwitansi</option>
-                  <option value="Berita Acara Penerimaan Barang">BA Penerimaan</option>
-                  <option value="Nota Pesanan">Nota Pesanan</option>
-                  <option value="Dokumen Gabungan">Dokumen Gabungan (Kwitansi + BA)</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nama Vendor</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.vendorName}
-                  onChange={e => setFormData({ ...formData, vendorName: e.target.value })}
-                  placeholder="Contoh: Sumber Mas"
-                  className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500"
+        <div className="flex flex-1 overflow-hidden">
+          {/* PDF/Image Preview Side (Split View) */}
+          {isSplitView && imageUrl && (
+            <div className="w-1/2 border-r border-border bg-slate-100 dark:bg-slate-900 overflow-auto p-4 flex flex-col items-center">
+              {showRawText ? (
+                <div className="w-full h-full p-6 bg-white dark:bg-slate-800 rounded-xl border border-border overflow-y-auto animate-in fade-in zoom-in-95">
+                  <h3 className="text-[10px] font-bold text-indigo-600 uppercase mb-4 tracking-widest">Extracted Raw Text</h3>
+                  <pre className="text-xs font-mono text-slate-600 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                    {formData.extractedText || "Tidak ada teks mentah yang tersedia."}
+                  </pre>
+                </div>
+              ) : (
+                <img 
+                  src={imageUrl} 
+                  alt="Original Document" 
+                  className="max-w-full h-auto shadow-lg rounded border border-border animate-in zoom-in-95" 
                 />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Kode Rekening</label>
-                  <input
-                    type="text"
-                    value={formData.kodeRek}
-                    onChange={e => setFormData({ ...formData, kodeRek: e.target.value })}
-                    placeholder="5.01.01.2.09.0002"
-                    className="w-full bg-input border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Sub Kegiatan</label>
-                  <input
-                    type="text"
-                    value={formData.subKegiatan}
-                    onChange={e => setFormData({ ...formData, subKegiatan: e.target.value })}
-                    placeholder="5.1.02.03.02.0035"
-                    className="w-full bg-input border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
+              )}
             </div>
+          )}
 
-            {/* Dates & Numbers */}
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+          {/* Form Body */}
+          <form onSubmit={handleSubmit} className={`flex-1 overflow-y-auto p-6 space-y-6 ${isSplitView ? 'w-1/2' : 'w-full'}`}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Basic Info */}
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tanggal Kwitansi</label>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tipe Dokumen</label>
+                  <select
+                    value={formData.type}
+                    onChange={e => setFormData({ ...formData, type: e.target.value })}
+                    className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="Kwitansi">Kwitansi</option>
+                    <option value="Berita Acara Penerimaan Barang">BA Penerimaan</option>
+                    <option value="Nota Pesanan">Nota Pesanan</option>
+                    <option value="Dokumen Gabungan">Dokumen Gabungan</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nama Vendor / Penyedia</label>
                   <input
-                    type="date"
+                    type="text"
                     required
-                    value={formData.date}
-                    onChange={e => setFormData({ ...formData, date: e.target.value })}
-                    className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-indigo-500"
+                    value={formData.vendorName}
+                    onChange={e => setFormData({ ...formData, vendorName: e.target.value })}
+                    placeholder="Contoh: Sumber Mas"
+                    className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
+                
+                {/* Payment Description (NEW) */}
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nomor Kwitansi</label>
-                  <input
-                    type="text"
-                    value={formData.docNumber}
-                    onChange={e => setFormData({ ...formData, docNumber: e.target.value })}
-                    className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-indigo-500"
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Uraian Pembayaran</label>
+                  <textarea
+                    rows={3}
+                    value={formData.paymentDescription}
+                    onChange={e => setFormData({ ...formData, paymentDescription: e.target.value })}
+                    placeholder="Contoh: Belanja Pemeliharaan Alat Angkutan Darat..."
+                    className="w-full bg-input border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:ring-2 focus:ring-indigo-500 resize-none"
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tanggal BA</label>
-                  <input
-                    type="date"
-                    value={formData.baDate}
-                    onChange={e => setFormData({ ...formData, baDate: e.target.value })}
-                    className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nomor BA</label>
-                  <input
-                    type="text"
-                    value={formData.baNumber}
-                    onChange={e => setFormData({ ...formData, baNumber: e.target.value })}
-                    className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Total Keseluruhan</label>
-                <div className="bg-input/50 border border-border rounded-lg px-3 py-2 text-indigo-600 dark:text-indigo-400 font-mono font-bold text-lg">
-                  Rp {new Intl.NumberFormat('id-ID').format(formData.totalAmount)}
-                </div>
-              </div>
-            </div>
-          </div>
 
-          {/* Items Table */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Rincian Item</h3>
-              <button
-                type="button"
-                onClick={handleAddItem}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 transition-all"
-              >
-                <Plus className="w-3 h-3" /> Tambah Baris
-              </button>
+              {/* Dates & Codes */}
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Kode Rekening</label>
+                    <input
+                      type="text"
+                      value={formData.kodeRek}
+                      onChange={e => setFormData({ ...formData, kodeRek: e.target.value })}
+                      className="w-full bg-input border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Sub Kegiatan</label>
+                    <input
+                      type="text"
+                      value={formData.subKegiatan}
+                      onChange={e => setFormData({ ...formData, subKegiatan: e.target.value })}
+                      className="w-full bg-input border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tanggal Dokumen</label>
+                    <input
+                      type="date"
+                      required
+                      value={formData.date}
+                      onChange={e => setFormData({ ...formData, date: e.target.value })}
+                      className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nomor Dokumen</label>
+                    <input
+                      type="text"
+                      value={formData.docNumber}
+                      onChange={e => setFormData({ ...formData, docNumber: e.target.value })}
+                      className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Total Keseluruhan</label>
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2 text-emerald-600 dark:text-emerald-400 font-mono font-bold text-lg">
+                    Rp {new Intl.NumberFormat('id-ID').format(formData.totalAmount)}
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="border border-border rounded-xl overflow-hidden">
-              <table className="w-full text-xs">
-                <thead className="bg-input/50 text-slate-500 dark:text-slate-400">
-                  <tr>
-                    <th className="px-3 py-2 text-left font-semibold border-b border-border">Deskripsi</th>
-                    <th className="px-3 py-2 text-center font-semibold w-16 border-b border-border">Qty</th>
-                    <th className="px-3 py-2 text-right font-semibold w-32 border-b border-border">Harga Satuan</th>
-                    <th className="px-3 py-2 text-right font-semibold w-32 border-b border-border">Total</th>
-                    <th className="px-3 py-2 text-center font-semibold w-12 border-b border-border"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {formData.items.map((item, idx) => (
-                    <tr key={idx} className="bg-card">
-                      <td className="p-1">
-                        <input
-                          type="text"
-                          required
-                          value={item.description}
-                          onChange={e => handleItemChange(idx, 'description', e.target.value)}
-                          className="w-full bg-transparent border-none focus:ring-0 text-foreground placeholder:text-slate-400"
-                          placeholder="Masukkan nama barang..."
-                        />
-                      </td>
-                      <td className="p-1">
-                        <input
-                          type="number"
-                          required
-                          value={item.quantity}
-                          onChange={e => handleItemChange(idx, 'quantity', Number(e.target.value))}
-                          className="w-full bg-transparent border-none text-center focus:ring-0 text-foreground"
-                        />
-                      </td>
-                      <td className="p-1">
-                        <input
-                          type="number"
-                          required
-                          value={item.price}
-                          onChange={e => handleItemChange(idx, 'price', Number(e.target.value))}
-                          className="w-full bg-transparent border-none text-right focus:ring-0 text-indigo-600 dark:text-indigo-300 font-mono"
-                        />
-                      </td>
-                      <td className="px-3 py-2 text-right font-mono text-slate-500 dark:text-slate-400">
-                        {new Intl.NumberFormat('id-ID').format(item.total)}
-                      </td>
-                      <td className="p-1 text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveItem(idx)}
-                          className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 rounded transition-all"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </td>
+
+            {/* Items Table (NEW columns) */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Rincian Item & Kode Barang</h3>
+                <button
+                  type="button"
+                  onClick={handleAddItem}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 transition-all"
+                >
+                  <Plus className="w-3 h-3" /> Tambah Baris
+                </button>
+              </div>
+              <div className="border border-border rounded-xl overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead className="bg-input/50 text-slate-500 dark:text-slate-400">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-semibold w-32 border-b border-border">Kode Barang</th>
+                      <th className="px-3 py-2 text-left font-semibold border-b border-border">Deskripsi</th>
+                      <th className="px-3 py-2 text-center font-semibold w-16 border-b border-border">Qty</th>
+                      <th className="px-3 py-2 text-right font-semibold w-28 border-b border-border">Harga</th>
+                      <th className="px-3 py-2 text-right font-semibold w-28 border-b border-border">Total</th>
+                      <th className="px-3 py-2 text-center font-semibold w-10 border-b border-border"></th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {formData.items.map((item: any, idx: number) => (
+                      <tr key={idx} className="bg-card hover:bg-input/30 transition-colors">
+                        <td className="p-1">
+                          <input
+                            type="text"
+                            value={item.itemCode || ''}
+                            onChange={e => handleItemChange(idx, 'itemCode', e.target.value)}
+                            className="w-full bg-transparent border-none text-[10px] focus:ring-0 text-slate-500"
+                            placeholder="Kode..."
+                          />
+                        </td>
+                        <td className="p-1">
+                          <input
+                            type="text"
+                            required
+                            value={item.description}
+                            onChange={e => handleItemChange(idx, 'description', e.target.value)}
+                            className="w-full bg-transparent border-none focus:ring-0 text-foreground"
+                          />
+                        </td>
+                        <td className="p-1">
+                          <input
+                            type="number"
+                            required
+                            value={item.quantity}
+                            onChange={e => handleItemChange(idx, 'quantity', e.target.value)}
+                            className="w-full bg-transparent border-none text-center focus:ring-0"
+                          />
+                        </td>
+                        <td className="p-1">
+                          <input
+                            type="number"
+                            required
+                            value={item.price}
+                            onChange={e => handleItemChange(idx, 'price', e.target.value)}
+                            className="w-full bg-transparent border-none text-right focus:ring-0 font-mono"
+                          />
+                        </td>
+                        <td className="px-3 py-2 text-right font-mono text-indigo-600 dark:text-indigo-400 font-semibold">
+                          {new Intl.NumberFormat('id-ID').format(item.total)}
+                        </td>
+                        <td className="p-1 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveItem(idx)}
+                            className="p-1.5 text-slate-400 hover:text-rose-500 rounded transition-all"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        </form>
+          </form>
+        </div>
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-border bg-input/50 flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-foreground transition-colors"
-          >
+          <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-slate-500 hover:text-foreground">
             Batal
           </button>
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="flex items-center gap-2 px-6 py-2 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 disabled:opacity-50 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-500/20 transition-all"
+            className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-sm font-bold shadow-lg transition-all"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Simpan Dokumen

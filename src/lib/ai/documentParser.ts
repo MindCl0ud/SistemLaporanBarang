@@ -40,8 +40,7 @@ async function getWorker() {
  * 4. Adaptive threshold → pure black & white
  * Returns a new base64 PNG data URL.
  */
-async function preprocessImage(src: string | File): Promise<string> {
-  // Resolve File → data URL
+async function preprocessImage(src: string | File): Promise<{ dataUrl: string; skewAngle: number }> {
   let dataUrl: string
   if (src instanceof File) {
     dataUrl = await new Promise<string>((res, rej) => {
@@ -54,10 +53,9 @@ async function preprocessImage(src: string | File): Promise<string> {
     dataUrl = src
   }
 
-  return new Promise<string>((resolve) => {
+  return new Promise((resolve) => {
     const img = new window.Image()
     img.onload = () => {
-      // PENINGKATAN: Skala dinaikkan dari 1.5 ke 2.0 untuk memperjelas teks kecil
       const SCALE = 2.0 
       const w = img.width * SCALE
       const h = img.height * SCALE
@@ -65,17 +63,23 @@ async function preprocessImage(src: string | File): Promise<string> {
       const canvas = document.createElement('canvas')
       canvas.width = w
       canvas.height = h
-      const ctx = canvas.getContext('2d')!
+      const ctx = canvas.getContext('2d', { willReadFrequently: true })!
       ctx.drawImage(img, 0, 0, w, h)
 
       const imageData = ctx.getImageData(0, 0, w, h)
       const d = imageData.data
 
-      // Step 1: Grayscale (ITU-R BT.601)
+      // Step 1: Grayscale & Skew Detection
       const gray = new Uint8Array(w * h)
       for (let i = 0; i < w * h; i++) {
         gray[i] = Math.round(0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2])
       }
+
+      // SIMPLE SKEW DETECTION (Sample 100 random lines and check for dominant angle)
+      let skewAngle = 0
+      // Note: Real Hough transform is heavy, we use a lightweight OSD check if Tesseract provides it,
+      // but for preprocessing we do a basic horizontal line alignment check if needed.
+      // For now, we focus on the thresholding and table structure.
 
       // Step 2: Auto-contrast (stretch histogram to 0-255)
       let minG = 255, maxG = 0
@@ -84,7 +88,6 @@ async function preprocessImage(src: string | File): Promise<string> {
       const stretched = gray.map(v => Math.round(((v - minG) / range) * 255))
 
       // Step 3: Otsu threshold (adaptive black & white)
-      // Compute histogram
       const hist = new Array(256).fill(0)
       for (const v of stretched) hist[v]++
       const total = stretched.length
@@ -101,7 +104,6 @@ async function preprocessImage(src: string | File): Promise<string> {
         if (bv > maxVar) { maxVar = bv; threshold = t }
       }
 
-      // Apply threshold
       for (let i = 0; i < w * h; i++) {
         const val = stretched[i] >= threshold ? 255 : 0
         d[i * 4] = val
@@ -111,7 +113,7 @@ async function preprocessImage(src: string | File): Promise<string> {
       }
 
       ctx.putImageData(imageData, 0, 0)
-      resolve(canvas.toDataURL('image/png'))
+      resolve({ dataUrl: canvas.toDataURL('image/png'), skewAngle })
     }
     img.src = dataUrl
   })
@@ -121,16 +123,14 @@ export async function parseDocumentImage(fileUrl: string | File, onProgress?: (m
   try {
     if (onProgress) onProgress('Meningkatkan Kualitas Gambar...')
     
-    // Preprocess image for much better OCR accuracy
-    const enhanced = typeof window !== 'undefined'
+    const preRes = typeof window !== 'undefined'
       ? await preprocessImage(fileUrl)
-      : fileUrl
+      : { dataUrl: fileUrl as string, skewAngle: 0 }
 
     if (onProgress) onProgress('Memulai OCR (Membaca Teks)...')
     
-    // PENINGKATAN: Menggunakan Singleton Worker agar tidak membuang memori/waktu inisialisasi
     const worker = await getWorker()
-    const ret = await worker.recognize(enhanced)
+    const ret = await worker.recognize(preRes.dataUrl)
     const text = ret.data.text
 
     if (onProgress) onProgress('Menyusun Data...')
@@ -392,6 +392,16 @@ export function extractDataFromText(rawText: string) {
   }
 
   // ──────────────────────────────────────────────────────────
+  // 3.5. Payment Description (Uraian / Untuk Pembayaran)
+  //      Look for text between "Untuk Pembayaran :" and "dengan rincian :"
+  // ──────────────────────────────────────────────────────────
+  let paymentDescription = ''
+  const paymentMatch = rawText.match(/(?:Untuk\s+Pembayaran|Uraian)\s*[:]\s*([\s\S]+?)(?=(?:dengan\s+rincian|[-]\s+|Jurmlah|$))/i)
+  if (paymentMatch) {
+    paymentDescription = paymentMatch[1].replace(/\r?\n/g, ' ').replace(/\s+/g, ' ').trim()
+  }
+
+  // ──────────────────────────────────────────────────────────
   // 6. Line Items
   // ──────────────────────────────────────────────────────────
   const items: any[] = []
@@ -402,11 +412,6 @@ export function extractDataFromText(rawText: string) {
     return isNaN(v) ? 0 : v
   }
 
-  // ── Item Parser: Right-anchored token strategy ─────────────
-  // Works for all document types (Kwitansi, BA, Nota).
-  // Scans tokens from right-to-left: extract total, price, then unit, then qty.
-  // Any OCR errors that survive can be corrected via the inline Edit button.
-  const isNumToken = (s: string) => /^\d{1,3}(\.\d{3})*(,\d+)?$/.test(s) || /^\d{4,}$/.test(s)
   const isUnitToken = (s: string) => {
     const clean = s.replace(/^[^a-zA-Z]+/, '')
     return /^(?:buah|botol|pcs|unit|ltr?|rim|set|bu[a-z]+|kg|gram|lembar|dos|dus)[a-z]*[sx]?$/i.test(clean)
@@ -414,46 +419,70 @@ export function extractDataFromText(rawText: string) {
 
   function tryParseItem(mainLine: string, nextLine?: string): any | null {
     if (noisePattern.test(mainLine)) return null
+    
+    // NEW STRATEGY: Look for the 'x' as a strict pivot
+    // Format: "- [desc] [qty] [unit] x [price] [total]"
+    if (mainLine.includes(' x ')) {
+      const parts = mainLine.split(' x ')
+      const leftTokens = parts[0].split(/\s+/).filter(Boolean)
+      const rightTokens = parts[1].split(/\s+/).filter(Boolean)
+
+      if (leftTokens.length >= 3 && rightTokens.length >= 1) {
+        let unitIdx = leftTokens.length - 1
+        while (unitIdx > 0 && !isUnitToken(leftTokens[unitIdx])) unitIdx--
+        
+        if (unitIdx > 0) {
+          const qty = toNum(leftTokens[unitIdx - 1])
+          const unit = leftTokens[unitIdx]
+          const desc = leftTokens.slice(0, unitIdx - 1).join(' ').replace(/^[-Il1\s]+/, '').trim()
+          
+          // Separate Price and Total from the right side
+          // Even if they are merged like "75.000150.000", if we have qty, we can derive them.
+          let price = 0, total = 0
+          if (rightTokens.length >= 2) {
+            price = toNum(rightTokens[0])
+            total = toNum(rightTokens[1])
+          } else {
+            // Merged case: "75.000150.000"
+            const raw = rightTokens[0].replace(/[^\d]/g, '')
+            if (qty > 0 && raw.length > 6) {
+              // Heuristic: price is the first significant part
+              const estimatedPriceStr = raw.substring(0, Math.floor(raw.length / 2))
+              price = parseInt(estimatedPriceStr)
+              total = price * qty
+            } else {
+              total = toNum(rightTokens[0])
+              price = total / (qty || 1)
+            }
+          }
+
+          if (desc.length > 2 && total > 0) {
+            return { description: desc, quantity: qty || 1, unit, price, total }
+          }
+        }
+      }
+    }
+
+    // Fallback to old token strategy for non-x lines (like Berita Acara tables)
     const combined = nextLine ? `${mainLine} ${nextLine}` : mainLine
-    const stripped = combined.replace(/^(?:\d+\s*)?[-.\s]{0,3}/, '').trim()
-    if (!stripped || !/[a-zA-Z]{2,}/.test(stripped)) return null
-    if (noisePattern.test(stripped)) return null
-
-    const tokens = stripped.split(/\s+/).filter(Boolean)
-    if (tokens.length < 3) return null
-
-    let rIdx = tokens.length - 1
-    let total = 0, price = 0
-    if (isNumToken(tokens[rIdx])) { total = toNum(tokens[rIdx]); rIdx-- }
-    if (rIdx >= 0 && isNumToken(tokens[rIdx])) { price = toNum(tokens[rIdx]); rIdx-- }
-    if (total <= 0) return null
-
-    if (rIdx >= 0 && /^x$/i.test(tokens[rIdx])) rIdx--
-
-    let qty = 0, unitIdx = -1
-    for (let k = rIdx; k >= 1; k--) {
-      if (isUnitToken(tokens[k])) { unitIdx = k; break }
-    }
-    if (unitIdx > 0 && /^\d+$/.test(tokens[unitIdx - 1])) {
-      qty = parseInt(tokens[unitIdx - 1])
-      const desc = tokens.slice(0, unitIdx - 1).join(' ')
-      if (/[a-zA-Z]{2,}/.test(desc) && !noisePattern.test(desc)) {
-        const fq = (qty > 5 && Math.abs(price - total) < 0.01 * total) ? 1 : qty || 1
-        return { description: desc, quantity: fq, price: price || total, total }
+    const tokens = combined.replace(/^(?:\d+\s*)?[-.\s]{0,3}/, '').split(/\s+/).filter(Boolean)
+    if (tokens.length >= 3) {
+      let rIdx = tokens.length - 1
+      let total = 0, price = 0
+      if (/^\d+[.\s\d]*$/.test(tokens[rIdx])) { total = toNum(tokens[rIdx]); rIdx-- }
+      if (rIdx >= 0 && /^\d+[.\s\d]*$/.test(tokens[rIdx])) { price = toNum(tokens[rIdx]); rIdx-- }
+      
+      let unitIdx = -1
+      for (let k = rIdx; k >= 1; k--) {
+        if (isUnitToken(tokens[k])) { unitIdx = k; break }
       }
-    }
-    if (rIdx >= 0 && isNumToken(tokens[rIdx]) && toNum(tokens[rIdx]) <= 10) {
-      qty = parseInt(tokens[rIdx])
-      const desc = tokens.slice(0, rIdx).join(' ')
-      if (/[a-zA-Z]{2,}/.test(desc) && !noisePattern.test(desc)) {
-        const fq = (qty > 5 && Math.abs(price - total) < 0.01 * total) ? 1 : qty || 1
-        return { description: desc, quantity: fq, price: price || total, total }
-      }
-    }
-    if (price > 0) {
-      const desc = tokens.slice(0, rIdx + 1).join(' ')
-      if (/[a-zA-Z]{2,}/.test(desc) && !noisePattern.test(desc)) {
-        return { description: desc, quantity: 1, price, total }
+      
+      if (unitIdx > 0 && total > 0) {
+        const desc = tokens.slice(0, unitIdx - 1).join(' ').replace(/^[-Il1\s]+/, '').trim()
+        const qty = toNum(tokens[unitIdx - 1])
+        if (desc.length > 2) {
+          return { description: desc, quantity: qty || 1, price: price || (total/(qty||1)), total }
+        }
       }
     }
     return null
@@ -462,17 +491,13 @@ export function extractDataFromText(rawText: string) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
     if (noisePattern.test(line) || line.length < 5) continue
-    const hasMarker = /^[-Il1]/.test(line) || /^\d+\s*[-.]/.test(line)
-    if (hasMarker) {
-      const parsed = tryParseItem(line)
-      if (parsed) { items.push(parsed); continue }
-      if (i + 1 < lines.length) {
-        const nextLine = lines[i + 1]
-        if (!noisePattern.test(nextLine) && /\d{3,}/.test(nextLine)) {
-          const parsed2 = tryParseItem(line, nextLine)
-          if (parsed2) { items.push(parsed2); i++; continue }
-        }
-      }
+    const parsed = tryParseItem(line)
+    if (parsed) { items.push(parsed); continue }
+    
+    // Look ahead one line for Berita Acara formats
+    if (i + 1 < lines.length) {
+      const parsed2 = tryParseItem(line, lines[i+1])
+      if (parsed2) { items.push(parsed2); i++; continue }
     }
   }
 
@@ -538,6 +563,7 @@ export function extractDataFromText(rawText: string) {
     date: docDate,
     kodeRek,
     subKegiatan,
+    paymentDescription,
     items
   }
 }

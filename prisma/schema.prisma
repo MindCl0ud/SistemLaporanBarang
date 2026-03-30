@@ -8,6 +8,12 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum MatchStatus {
+  MATCHED
+  PENDING
+  UNMATCHED
+}
+
 model Document {
   id            String         @id @default(cuid())
   type          String
@@ -21,16 +27,22 @@ model Document {
   date          DateTime?
   imageUrl      String?
   extractedText String?
+  paymentDescription String? // New field for BKU matching
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   items         DocumentItem[]
   matchRecord   MatchRecord?
+
+  @@index([docNumber])
+  @@index([vendorName])
+  @@index([date])
 }
 
 model DocumentItem {
   id          String   @id @default(cuid())
   documentId  String
   description String
+  itemCode    String?  // New field for Item Code
   quantity    Float?
   price       Float?
   total       Float?
@@ -50,6 +62,9 @@ model BkuTransaction {
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   matchRecord  MatchRecord?
+
+  @@index([month, year])
+  @@index([date])
 }
 
 model MatchRecord {
@@ -57,7 +72,7 @@ model MatchRecord {
   bkuTransactionId String         @unique
   documentId       String         @unique
   confidence       Float
-  status           String
+  status           MatchStatus    @default(PENDING)
   reasoning        String?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
