@@ -181,16 +181,18 @@ function normalizeText(text: string): string {
 
   // 5. WORD REPAIR DICTIONARY (User Request: Fix common OCR artifacts)
   const repairMap: Record<string, string> = {
-    'Tcrima': 'Terima',
-    'Scjumlah': 'Sejumlah',
-    'Kuitansi': 'Kwitansi',
-    'Pemerima': 'Penerima',
-    'sarungjog': 'sarung jog',
-    'botolx': 'botol x',
-    'buahx': 'buah x',
-    'ltrx': 'ltr x',
+    'tcrima': 'terima',
+    'scjumlah': 'sejumlah',
+    'pemeliharann': 'pemeliharaan',
+    'sarungjog': 'sarung jok',
+    'gardar': 'gardan',
+    'angkuian': 'angkutan',
+    'dara': 'darat',
     'coolat': 'coolant',
-    'gardar': 'gardan'
+    'kancbo': 'kanebo',
+    '1tr': 'ltr',
+    'botolx': 'botol x',
+    'buahx': 'buah x'
   }
   Object.entries(repairMap).forEach(([bad, good]) => {
     const reg = new RegExp(`\\b${bad}\\b`, 'gi')
