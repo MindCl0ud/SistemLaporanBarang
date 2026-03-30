@@ -79,12 +79,17 @@ export default function ManualDocumentForm({ onClose, onSuccess, initialData, im
     e.preventDefault()
     setLoading(true)
     try {
-      await saveDocument({
+      const result = await saveDocument({
         ...formData,
         imageUrl: imageUrl || null
       })
-      onSuccess()
-      onClose()
+      
+      if (result.success) {
+        onSuccess()
+        onClose()
+      } else {
+        alert(`Error: ${result.error}`)
+      }
     } catch (err: any) {
       console.error(err)
       alert(`Error: ${err.message || 'Gagal menyimpan dokumen.'}`)

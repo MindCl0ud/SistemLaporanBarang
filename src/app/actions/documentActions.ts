@@ -50,20 +50,21 @@ export const getDocuments = unstable_cache(
 )
 
 export async function saveDocument(rawData: any) {
-  // 1. Server-side validation
-  const validation = DocumentSchema.safeParse(rawData)
-  if (!validation.success) {
-    const errorMsg = validation.error.issues.map(i => `${i.path.join('.') || 'Global'}: ${i.message}`).join(', ')
-    console.error("Save Document Validation Error:", errorMsg)
-    throw new Error(`Validasi Gagal: ${errorMsg}`)
-  }
+  try {
+    // 1. Server-side validation
+    const validation = DocumentSchema.safeParse(rawData)
+    if (!validation.success) {
+      const errorMsg = validation.error.issues.map(i => `${i.path.join('.') || 'Global'}: ${i.message}`).join(', ')
+      console.error("Save Document Validation Error:", errorMsg)
+      return { success: false, error: `Validasi Gagal: ${errorMsg}` }
+    }
 
-  const data = validation.data
-  const { 
-    type, docNumber, vendorName, totalAmount, date, 
-    extractedText, items, kodeRek, subKegiatan,
-    baNumber, baDate, paymentFor, unit
-  } = data
+    const data = validation.data
+    const { 
+      type, docNumber, vendorName, totalAmount, date, 
+      extractedText, items, kodeRek, subKegiatan,
+      baNumber, baDate, paymentFor, unit
+    } = data
 
     const doc = await prisma.document.create({
       data: {
@@ -92,10 +93,14 @@ export async function saveDocument(rawData: any) {
       }
     })
 
-  revalidatePath('/documents')
-  revalidatePath('/')
-  
-  return doc
+    revalidatePath('/documents')
+    revalidatePath('/')
+    
+    return { success: true, doc }
+  } catch (error: any) {
+    console.error("CRITICAL SAVE ERROR:", error)
+    return { success: false, error: error.message || "Terjadi kesalahan internal saat menyimpan." }
+  }
 }
 
 export async function deleteDocument(id: string) {
