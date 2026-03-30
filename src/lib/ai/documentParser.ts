@@ -23,9 +23,10 @@ let sharedWorker: Tesseract.Worker | null = null;
 
 async function getWorker() {
   if (!sharedWorker) {
-    sharedWorker = await Tesseract.createWorker('ind', 1);
+    // [UPDATE]: Gunakan kombinasi ind & eng untuk angka, serta PSM 11 untuk akurasi Nota (Sparse text)
+    sharedWorker = await Tesseract.createWorker(['ind', 'eng'], 1);
     await sharedWorker.setParameters({
-      tessedit_pageseg_mode: '6' as any,  // PSM 6: uniform block of text
+      tessedit_pageseg_mode: '11' as any,  // PSM 11: Sparse text (teks tersebar)
       tessedit_ocr_engine_mode: '1' as any, // OEM 1: LSTM
     });
   }
@@ -34,10 +35,8 @@ async function getWorker() {
 
 /**
  * Preprocess an image URL/File for best Tesseract OCR quality:
- * 1. Draw on canvas at 2.0× scale (more pixels = better OCR)
- * 2. Convert to grayscale
- * 3. Auto-contrast stretch (normalize darkest/lightest pixel to 0-255)
- * 4. Adaptive threshold → pure black & white
+ * 1. Draw on canvas at 2.5× scale (more pixels = better OCR)
+ * 2. Convert to grayscale & Auto-contrast via CSS Filter
  * Returns a new base64 PNG data URL.
  */
 async function preprocessImage(src: string | File): Promise<string> {
@@ -57,8 +56,8 @@ async function preprocessImage(src: string | File): Promise<string> {
   return new Promise<string>((resolve) => {
     const img = new window.Image()
     img.onload = () => {
-      // PENINGKATAN: Skala dinaikkan dari 1.5 ke 2.0 untuk memperjelas teks kecil
-      const SCALE = 2.0 
+      // [UPDATE]: Skala dinaikkan ke 2.5 untuk memperjelas teks kecil di Nota
+      const SCALE = 2.5 
       const w = img.width * SCALE
       const h = img.height * SCALE
 
@@ -66,52 +65,13 @@ async function preprocessImage(src: string | File): Promise<string> {
       canvas.width = w
       canvas.height = h
       const ctx = canvas.getContext('2d')!
+      
+      // [UPDATE]: Mengganti Otsu Thresholding dengan CSS Filter.
+      // Otsu Thresholding manual dihapus karena merusak tulisan tangan / teks tipis (dot-matrix) pada nota.
+      ctx.filter = 'grayscale(100%) contrast(150%) brightness(110%)'
       ctx.drawImage(img, 0, 0, w, h)
 
-      const imageData = ctx.getImageData(0, 0, w, h)
-      const d = imageData.data
-
-      // Step 1: Grayscale (ITU-R BT.601)
-      const gray = new Uint8Array(w * h)
-      for (let i = 0; i < w * h; i++) {
-        gray[i] = Math.round(0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2])
-      }
-
-      // Step 2: Auto-contrast (stretch histogram to 0-255)
-      let minG = 255, maxG = 0
-      for (let v of gray) { if (v < minG) minG = v; if (v > maxG) maxG = v }
-      const range = maxG - minG || 1
-      const stretched = gray.map(v => Math.round(((v - minG) / range) * 255))
-
-      // Step 3: Otsu threshold (adaptive black & white)
-      // Compute histogram
-      const hist = new Array(256).fill(0)
-      for (const v of stretched) hist[v]++
-      const total = stretched.length
-      let sumB = 0, wB = 0, sum = 0
-      for (let i = 0; i < 256; i++) sum += i * hist[i]
-      let maxVar = 0, threshold = 128
-      for (let t = 0; t < 256; t++) {
-        wB += hist[t]; if (!wB) continue
-        const wF = total - wB; if (!wF) break
-        sumB += t * hist[t]
-        const mB = sumB / wB
-        const mF = (sum - sumB) / wF
-        const bv = wB * wF * (mB - mF) ** 2
-        if (bv > maxVar) { maxVar = bv; threshold = t }
-      }
-
-      // Apply threshold
-      for (let i = 0; i < w * h; i++) {
-        const val = stretched[i] >= threshold ? 255 : 0
-        d[i * 4] = val
-        d[i * 4 + 1] = val
-        d[i * 4 + 2] = val
-        d[i * 4 + 3] = 255
-      }
-
-      ctx.putImageData(imageData, 0, 0)
-      resolve(canvas.toDataURL('image/png'))
+      resolve(canvas.toDataURL('image/jpeg', 1.0)) // Gunakan JPEG HD agar proses OCR tidak hang
     }
     img.src = dataUrl
   })
@@ -165,7 +125,8 @@ function normalizeText(text: string): string {
   const fragments = [
     'Sum ber', 'Ba rat', 'Ba pperida', 'Bha yangkara', 'Week arou',
     'kan ebo', 'stella gan tung', 'sar ung', 'gar dan', 'coo lant', 'coo lat',
-    'Waikabubak', 'BAPPERIDA', 'Kwitansi', 'Nomor', 'Penerimaan', 'Barang'
+    'Waikabubak', 'BAPPERIDA', 'Kwitansi', 'Nomor', 'Penerimaan', 'Barang',
+    'Kencana', 'Toko' // Ditambahkan agar nota Toko Kencana terbaca baik
   ]
   fragments.forEach(frag => {
     const regex = new RegExp(frag.split('').join('\\s*'), 'gi')
@@ -222,7 +183,7 @@ export function extractDataFromText(rawText: string) {
   let type = 'Nota Pesanan'
   const isBA = lowerText.includes('berita acara') || /ba\s*p-br\s*g/i.test(text) || /penerimaan\s*barang/i.test(text)
   const isKwitansi = lowerText.includes('kwitansi') || lowerText.includes('kuitansi') || /pembayaran\s*sejumlah/i.test(text) || lowerText.includes('bukti pembayaran')
-  const isNota = lowerText.includes('nota pesanan') || /np\.br\s*g/i.test(text) || /pesanan\s*barang/i.test(text)
+  const isNota = lowerText.includes('nota pesanan') || /np\.br\s*g/i.test(text) || /pesanan\s*barang/i.test(text) || lowerText.includes('toko')
 
   if (isKwitansi) {
     type = 'Kwitansi'
@@ -232,6 +193,18 @@ export function extractDataFromText(rawText: string) {
     type = 'Nota Pesanan'
   } else if (lowerText.includes('faktur') || lowerText.includes('invoice')) {
     type = 'Faktur'
+  }
+
+  // [UPDATE]: Ekstraksi "Untuk Pembayaran" (Khusus Kwitansi)
+  let paymentFor = ''
+  if (type === 'Kwitansi') {
+    const paymentMatch = text.match(/Untuk\s+Pembayaran\s*[:;]?\s*([\s\S]*?)(?:Terbilang|Rp|JUMLAH|Waikabubak|$)/i)
+    if (paymentMatch) {
+      paymentFor = paymentMatch[1]
+        .replace(/^[-\s:=]+/, '')
+        .replace(/[\r\n]+/g, ' ')
+        .trim()
+    }
   }
 
   // ──────────────────────────────────────────────────────────
@@ -361,7 +334,7 @@ export function extractDataFromText(rawText: string) {
   if (vendorName === 'Tidak Diketahui') {
     const vendorPatterns = [
       /(?:Pengusaha\s+)?CV\.\s+([A-Z][A-Za-z\s]+?)(?:\r?\n|Alam|Jabat|;|,)/,
-      /(?:Pengusaha\s+)?Toko\s+([A-Za-z\s]+?)(?:\r?\n|Alam|Jabat|;|,)/,
+      /(?:Pengusaha\s+)?Toko\s+([A-Za-z\s0-9]+?)(?:\r?\n|Alam|Jabat|;|,|Waikabubak)/i, // Ditambahkan filter Kota
       /(?:UD\.|PT\.)\s+([A-Z][A-Za-z\s]+?)(?:\r?\n|Alam|Jabat|;|,)/,
       /Terima Dari\s*[:]\s*([A-Z\s.,]{3,50})/i,
     ]
@@ -409,7 +382,17 @@ export function extractDataFromText(rawText: string) {
   const isNumToken = (s: string) => /^\d{1,3}(\.\d{3})*(,\d+)?$/.test(s) || /^\d{4,}$/.test(s)
   const isUnitToken = (s: string) => {
     const clean = s.replace(/^[^a-zA-Z]+/, '')
-    return /^(?:buah|botol|pcs|unit|ltr?|rim|set|bu[a-z]+|kg|gram|lembar|dos|dus)[a-z]*[sx]?$/i.test(clean)
+    // [UPDATE]: Menambahkan unit yang sering muncul di nota
+    return /^(?:buah|botol|pcs|unit|ltr?|rim|set|bu[a-z]+|kg|gram|lembar|dos|dus|paket|buku|kotak|ls)[a-z]*[sx]?$/i.test(clean)
+  }
+
+  // Fungsi internal untuk memisahkan Kode Barang dari awal Deskripsi
+  const extractCodeAndDesc = (rawDesc: string) => {
+    const codeMatch = rawDesc.match(/^([A-Z0-9.\-/]{2,8})\s+(.+)/i)
+    if (codeMatch && !noisePattern.test(codeMatch[1])) {
+      return { code: codeMatch[1], desc: codeMatch[2] }
+    }
+    return { code: '', desc: rawDesc }
   }
 
   function tryParseItem(mainLine: string, nextLine?: string): any | null {
@@ -430,30 +413,44 @@ export function extractDataFromText(rawText: string) {
 
     if (rIdx >= 0 && /^x$/i.test(tokens[rIdx])) rIdx--
 
-    let qty = 0, unitIdx = -1
+    let qty = 0, unitIdx = -1, unit = ''
     for (let k = rIdx; k >= 1; k--) {
-      if (isUnitToken(tokens[k])) { unitIdx = k; break }
+      // [UPDATE]: Menangkap string Satuan (Unit)
+      if (isUnitToken(tokens[k])) { unitIdx = k; unit = tokens[k]; break }
     }
+    
     if (unitIdx > 0 && /^\d+$/.test(tokens[unitIdx - 1])) {
       qty = parseInt(tokens[unitIdx - 1])
-      const desc = tokens.slice(0, unitIdx - 1).join(' ')
+      const rawDesc = tokens.slice(0, unitIdx - 1).join(' ')
+      
+      // [UPDATE]: Mengekstrak Kode Barang
+      const { code, desc } = extractCodeAndDesc(rawDesc)
+
       if (/[a-zA-Z]{2,}/.test(desc) && !noisePattern.test(desc)) {
         const fq = (qty > 5 && Math.abs(price - total) < 0.01 * total) ? 1 : qty || 1
-        return { description: desc, quantity: fq, price: price || total, total }
+        return { itemCode: code, description: desc, quantity: fq, unit, price: price || total, total }
       }
     }
     if (rIdx >= 0 && isNumToken(tokens[rIdx]) && toNum(tokens[rIdx]) <= 10) {
       qty = parseInt(tokens[rIdx])
-      const desc = tokens.slice(0, rIdx).join(' ')
+      const rawDesc = tokens.slice(0, rIdx).join(' ')
+      
+      // [UPDATE]: Mengekstrak Kode Barang
+      const { code, desc } = extractCodeAndDesc(rawDesc)
+
       if (/[a-zA-Z]{2,}/.test(desc) && !noisePattern.test(desc)) {
         const fq = (qty > 5 && Math.abs(price - total) < 0.01 * total) ? 1 : qty || 1
-        return { description: desc, quantity: fq, price: price || total, total }
+        return { itemCode: code, description: desc, quantity: fq, unit, price: price || total, total }
       }
     }
     if (price > 0) {
-      const desc = tokens.slice(0, rIdx + 1).join(' ')
+      const rawDesc = tokens.slice(0, rIdx + 1).join(' ')
+      
+      // [UPDATE]: Mengekstrak Kode Barang
+      const { code, desc } = extractCodeAndDesc(rawDesc)
+
       if (/[a-zA-Z]{2,}/.test(desc) && !noisePattern.test(desc)) {
-        return { description: desc, quantity: 1, price, total }
+        return { itemCode: code, description: desc, quantity: 1, unit, price, total }
       }
     }
     return null
@@ -530,6 +527,7 @@ export function extractDataFromText(rawText: string) {
     totalAmount = items.reduce((s, it) => s + (it.total || 0), 0)
   }
 
+  // [UPDATE]: Menambahkan paymentFor ke hasil Return
   return {
     type,
     docNumber,
@@ -538,6 +536,7 @@ export function extractDataFromText(rawText: string) {
     date: docDate,
     kodeRek,
     subKegiatan,
+    paymentFor,
     items
   }
 }
