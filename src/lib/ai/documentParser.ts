@@ -178,6 +178,25 @@ function normalizeText(text: string): string {
 
   // 4. Normalize 3+ spaces to double space
   t = t.replace(/[ \t]{3,}/g, '  ')
+
+  // 5. WORD REPAIR DICTIONARY (User Request: Fix common OCR artifacts)
+  const repairMap: Record<string, string> = {
+    'Tcrima': 'Terima',
+    'Scjumlah': 'Sejumlah',
+    'Kuitansi': 'Kwitansi',
+    'Pemerima': 'Penerima',
+    'sarungjog': 'sarung jog',
+    'botolx': 'botol x',
+    'buahx': 'buah x',
+    'ltrx': 'ltr x',
+    'coolat': 'coolant',
+    'gardar': 'gardan'
+  }
+  Object.entries(repairMap).forEach(([bad, good]) => {
+    const reg = new RegExp(`\\b${bad}\\b`, 'gi')
+    t = t.replace(reg, good)
+  })
+
   return t
 }
 
@@ -413,91 +432,103 @@ export function extractDataFromText(rawText: string) {
   }
 
   const isUnitToken = (s: string) => {
-    const clean = s.replace(/^[^a-zA-Z]+/, '')
-    return /^(?:buah|botol|pcs|unit|ltr?|rim|set|bu[a-z]+|kg|gram|lembar|dos|dus)[a-z]*[sx]?$/i.test(clean)
+    const clean = s.toLowerCase().replace(/[^a-z]/g, '')
+    const commonUnits = ['buah', 'botol', 'pcs', 'unit', 'ltr', 'liter', 'rim', 'set', 'kg', 'gram', 'lembar', 'dos', 'dus', 'kotak', 'roll', 'm', 'meter', 'ls', 'koli', 'zak', 'btl']
+    return commonUnits.some(u => clean === u || (clean.length > 2 && u.startsWith(clean)))
   }
 
-  function tryParseItem(mainLine: string, nextLine?: string): any | null {
-    if (noisePattern.test(mainLine)) return null
+  function tryParseItem(line: string): any | null {
+    if (noisePattern.test(line) || line.length < 5) return null
     
-    // NEW STRATEGY: Look for the 'x' as a strict pivot
-    // Format: "- [desc] [qty] [unit] x [price] [total]"
-    if (mainLine.includes(' x ')) {
-      const parts = mainLine.split(' x ')
-      const leftTokens = parts[0].split(/\s+/).filter(Boolean)
-      const rightTokens = parts[1].split(/\s+/).filter(Boolean)
+    // Clean line and split into tokens
+    const cleanLine = line.replace(/^[-\s|]+/, '').replace(/[-\s|]+$/, '')
+    const tokens = cleanLine.split(/\s+/).filter(Boolean)
+    
+    // Find all number tokens and unit tokens
+    const nums: { val: number, idx: number, raw: string }[] = []
+    let unit: string | null = null
+    let unitIdx = -1
 
-      if (leftTokens.length >= 3 && rightTokens.length >= 1) {
-        let unitIdx = leftTokens.length - 1
-        while (unitIdx > 0 && !isUnitToken(leftTokens[unitIdx])) unitIdx--
-        
-        if (unitIdx > 0) {
-          const qty = toNum(leftTokens[unitIdx - 1])
-          const unit = leftTokens[unitIdx]
-          const desc = leftTokens.slice(0, unitIdx - 1).join(' ').replace(/^[-Il1\s]+/, '').trim()
+    tokens.forEach((t, i) => {
+      const val = parseAmount(t)
+      if (val > 0 && /[\d.]/.test(t)) {
+        nums.push({ val, idx: i, raw: t })
+      } else if (isUnitToken(t)) {
+        unit = t.toLowerCase().replace(/[^a-z]/g, '')
+        unitIdx = i
+      }
+    })
+
+    // SMART ARITHMETIC: Try to find Qty * Price = Total
+    // We need at least 2 numbers (Total and something else)
+    if (nums.length >= 2) {
+      // Find the largest number (likely the total)
+      const sortedNums = [...nums].sort((a, b) => b.val - a.val)
+      const totalCand = sortedNums[0]
+      
+      // Look for a combination that multiplies to totalCand (allow 1% error for OCR rounding)
+      for (let i = 1; i < sortedNums.length; i++) {
+        for (let j = 1; j < sortedNums.length; j++) {
+          if (i === j) continue
+          const n1 = sortedNums[i].val
+          const n2 = sortedNums[j].val
+          const prod = n1 * n2
+          const diff = Math.abs(prod - totalCand.val)
           
-          // Separate Price and Total from the right side
-          // Even if they are merged like "75.000150.000", if we have qty, we can derive them.
-          let price = 0, total = 0
-          if (rightTokens.length >= 2) {
-            price = toNum(rightTokens[0])
-            total = toNum(rightTokens[1])
-          } else {
-            // Merged case: "75.000150.000"
-            const raw = rightTokens[0].replace(/[^\d]/g, '')
-            if (qty > 0 && raw.length > 6) {
-              // Heuristic: price is the first significant part
-              const estimatedPriceStr = raw.substring(0, Math.floor(raw.length / 2))
-              price = parseInt(estimatedPriceStr)
-              total = price * qty
-            } else {
-              total = toNum(rightTokens[0])
-              price = total / (qty || 1)
+          if (diff <= totalCand.val * 0.01 || (prod === totalCand.val)) {
+            // Found it! n1 or n2 is qty, the other is price.
+            // Typically weight: price is larger than qty
+            const [qty, price] = n1 < n2 ? [n1, n2] : [n2, n1]
+            
+            // Extract description: everything before the first number or unit
+            const firstNumIdx = Math.min(...nums.map(n => n.idx))
+            const firstSignifIdx = unitIdx !== -1 ? Math.min(firstNumIdx, unitIdx) : firstNumIdx
+            const desc = tokens.slice(0, firstSignifIdx).join(' ')
+            
+            if (desc.trim().length > 2) {
+              return { description: desc.trim(), quantity: qty, unit: unit || "buah", price, total: totalCand.val }
             }
           }
+        }
+      }
 
-          if (desc.length > 2 && total > 0) {
-            return { description: desc, quantity: qty || 1, unit, price, total }
+      // Fallback: If no multiplication found, but we have 2 or 3 numbers and a 'x' pivot
+      if (cleanLine.includes(' x ') || cleanLine.includes(' X ')) {
+        const pivotIdx = tokens.findIndex(t => t.toLowerCase() === 'x')
+        if (pivotIdx !== -1) {
+          const leftNums = nums.filter(n => n.idx < pivotIdx)
+          const rightNums = nums.filter(n => n.idx > pivotIdx)
+          
+          if (leftNums.length > 0 && rightNums.length > 0) {
+            const qty = leftNums[leftNums.length-1].val
+            const total = rightNums[rightNums.length-1].val
+            const price = rightNums.length > 1 ? rightNums[0].val : (total / (qty || 1))
+            
+            const firstPartIdx = Math.min(leftNums[0].idx, unitIdx !== -1 ? unitIdx : 999)
+            const desc = tokens.slice(0, firstPartIdx).join(' ')
+            if (desc.trim().length > 2) {
+              return { description: desc.trim(), quantity: qty, unit: unit || "buah", price, total }
+            }
           }
         }
       }
     }
-
-    // Fallback to old token strategy for non-x lines (like Berita Acara tables)
-    const combined = nextLine ? `${mainLine} ${nextLine}` : mainLine
-    const tokens = combined.replace(/^(?:\d+\s*)?[-.\s]{0,3}/, '').split(/\s+/).filter(Boolean)
-    if (tokens.length >= 3) {
-      let rIdx = tokens.length - 1
-      let total = 0, price = 0
-      if (/^\d+[.\s\d]*$/.test(tokens[rIdx])) { total = toNum(tokens[rIdx]); rIdx-- }
-      if (rIdx >= 0 && /^\d+[.\s\d]*$/.test(tokens[rIdx])) { price = toNum(tokens[rIdx]); rIdx-- }
-      
-      let unitIdx = -1
-      for (let k = rIdx; k >= 1; k--) {
-        if (isUnitToken(tokens[k])) { unitIdx = k; break }
-      }
-      
-      if (unitIdx > 0 && total > 0) {
-        const desc = tokens.slice(0, unitIdx - 1).join(' ').replace(/^[-Il1\s]+/, '').trim()
-        const qty = toNum(tokens[unitIdx - 1])
-        if (desc.length > 2) {
-          return { description: desc, quantity: qty || 1, price: price || (total/(qty||1)), total }
-        }
-      }
-    }
+    
     return null
   }
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
-    if (noisePattern.test(line) || line.length < 5) continue
     const parsed = tryParseItem(line)
-    if (parsed) { items.push(parsed); continue }
-    
-    // Look ahead one line for Berita Acara formats
-    if (i + 1 < lines.length) {
-      const parsed2 = tryParseItem(line, lines[i+1])
-      if (parsed2) { items.push(parsed2); i++; continue }
+    if (parsed) {
+      items.push(parsed)
+    } else if (i + 1 < lines.length) {
+      // Try combining with next line (Berita Acara layout)
+      const combinedParsed = tryParseItem(`${line} ${lines[i+1]}`)
+      if (combinedParsed) {
+        items.push(combinedParsed)
+        i++
+      }
     }
   }
 

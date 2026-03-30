@@ -89,19 +89,21 @@ export async function runMatchingEngine(month?: number, year?: number) {
         if (bkuDesc.includes(doc.vendorName.toLowerCase())) descScore += 0.15
       }
 
-      // NEW: Payment Description Matching (Kwitansi specific)
+      // NEW: Payment Description Matching (Kwitansi specific - HIGH WEIGHT)
       if (docPaymentFor && bkuDesc) {
         // Look for significant keyword overlap
-        const docKeywords = docPaymentFor.split(/\s+/).filter((w: string) => w.length > 4)
+        const docKeywords = docPaymentFor.split(/\s+/).filter((w: string) => w.length > 3)
         let matches = 0
         docKeywords.forEach((word: string) => {
           if (bkuDesc.includes(word)) matches++
         })
-        if (matches >= 2) descScore += 0.15
-        else if (matches >= 1) descScore += 0.05
+        
+        // Reward keyword overlap significantly as it's the strongest indicator for BAPERIDA docs
+        if (matches >= 3) descScore += 0.3
+        else if (matches >= 1) descScore += 0.15
       }
       
-      confidence += Math.min(0.3, descScore)
+      confidence += Math.min(0.4, descScore)
 
       if (confidence > highestConfidence) {
         highestConfidence = confidence

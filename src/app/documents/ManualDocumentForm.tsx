@@ -35,10 +35,10 @@ export default function ManualDocumentForm({ onClose, onSuccess, initialData, im
     paymentFor: initialData?.paymentFor || '',
     extractedText: initialData?.extractedText || '',
     items: initialData?.items?.map((it: any) => ({
-      description: it.description || '',
       itemCode: it.itemCode || '',
+      description: it.description || '',
       quantity: it.quantity || 1,
-      unit: it.unit || '',
+      unit: it.unit || 'buah',
       price: it.price || 0,
       total: it.total || 0
     })) || [{ description: '', itemCode: '', quantity: 1, unit: '', price: 0, total: 0 }]
@@ -244,7 +244,7 @@ export default function ManualDocumentForm({ onClose, onSuccess, initialData, im
               </div>
             </div>
 
-            {/* Items Table (NEW columns) */}
+            {/* Items Table */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Rincian Item & Kode Barang</h3>
@@ -259,29 +259,29 @@ export default function ManualDocumentForm({ onClose, onSuccess, initialData, im
               <div className="border border-border rounded-xl overflow-hidden">
                 <table className="w-full text-xs">
                   <thead className="bg-input/50 text-slate-500 dark:text-slate-400">
-                    <tr>
-                      <th className="px-3 py-2 text-left font-semibold w-32 border-b border-border">Kode Barang</th>
-                      <th className="px-3 py-2 text-left font-semibold border-b border-border">Deskripsi</th>
-                      <th className="px-3 py-2 text-center font-semibold w-16 border-b border-border">Qty</th>
-                      <th className="px-3 py-2 text-center font-semibold w-16 border-b border-border">Satuan</th>
-                      <th className="px-3 py-2 text-right font-semibold w-28 border-b border-border">Harga</th>
-                      <th className="px-3 py-2 text-right font-semibold w-28 border-b border-border">Total</th>
-                      <th className="px-3 py-2 text-center font-semibold w-10 border-b border-border"></th>
+                    <tr className="bg-input/80 border-b border-border">
+                      <th className="text-left px-3 py-2 text-[10px] font-bold text-foreground/50 uppercase tracking-widest w-24">Kode</th>
+                      <th className="text-left px-3 py-2 text-[10px] font-bold text-foreground/50 uppercase tracking-widest">Deskripsi</th>
+                      <th className="text-center px-3 py-2 text-[10px] font-bold text-foreground/50 uppercase tracking-widest w-16">Qty</th>
+                      <th className="text-center px-3 py-2 text-[10px] font-bold text-foreground/50 uppercase tracking-widest w-16">Satuan</th>
+                      <th className="text-right px-3 py-2 text-[10px] font-bold text-foreground/50 uppercase tracking-widest w-28">Harga</th>
+                      <th className="text-right px-3 py-2 text-[10px] font-bold text-foreground/50 uppercase tracking-widest w-28">Total</th>
+                      <th className="w-10"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
                     {formData.items.map((item: any, idx: number) => (
-                      <tr key={idx} className="bg-card hover:bg-input/30 transition-colors">
-                        <td className="p-1">
+                      <tr key={idx} className="border-b border-border/50 hover:bg-indigo-500/5 transition-colors">
+                        <td className="px-2 py-1.5">
                           <input
                             type="text"
                             value={item.itemCode || ''}
                             onChange={e => handleItemChange(idx, 'itemCode', e.target.value)}
-                            className="w-full bg-transparent border-none text-[10px] focus:ring-0 text-slate-500"
                             placeholder="Kode..."
+                            className="w-full bg-input border border-border/50 rounded px-2 py-1 text-[11px] text-indigo-400 font-mono focus:ring-1 focus:ring-indigo-500 outline-none"
                           />
                         </td>
-                        <td className="p-1">
+                        <td className="px-2 py-1.5">
                           <input
                             type="text"
                             required

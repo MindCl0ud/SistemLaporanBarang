@@ -37,7 +37,7 @@ const COL_LABELS: Record<string, string> = {
   vendor: 'Vendor / Penyedia',
   satuan: 'Satuan',
   total: 'Total (Rp)',
-  items: 'Rincian Item',
+  items: 'Untuk Pembayaran',
   aksi: 'Aksi',
 }
 
@@ -107,7 +107,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [wrapText, setWrapText] = useState(false)
   const [colWidths, setColWidths] = useState<Record<string, number>>(DEFAULT_WIDTHS)
-  const [editingItems, setEditingItems] = useState<Record<string, { description: string; quantity: number; unit: string; price: number; total: number }>>({})
+  const [editingItems, setEditingItems] = useState<Record<string, { description: string; quantity: number; unit: string; price: number; total: number; itemCode: string }>>({})
   const [savingItemId, setSavingItemId] = useState<string | null>(null)
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null)
 
@@ -312,9 +312,9 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                       Rp {formatCurrency(doc.totalAmount)}
                     </td>
 
-                    {/* Items */}
-                    <td className={cellClass + ' text-foreground/60 text-[11px]'}>
-                      {itemsText}
+                    {/* Items -> Payment Description */}
+                    <td className={cellClass + ' text-foreground/80 text-[11px] font-medium'}>
+                      {doc.paymentFor || '—'}
                     </td>
 
                     {/* Aksi */}
@@ -350,6 +350,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                                 <table className="w-full text-xs border-collapse">
                                   <thead>
                                     <tr className="bg-input/80">
+                                      <th className="text-left px-3 py-2 text-foreground/60 font-semibold border-b border-border w-32">Kode Barang</th>
                                       <th className="text-left px-3 py-2 text-foreground/60 font-semibold border-b border-border">Uraian / Deskripsi</th>
                                       <th className="text-center px-3 py-2 text-foreground/60 font-semibold border-b border-border w-16">Qty</th>
                                       <th className="text-center px-3 py-2 text-foreground/60 font-semibold border-b border-border w-20">Satuan</th>
@@ -367,6 +368,14 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                                         <tr key={item.id ?? idx} className={rowBgC + " hover:bg-indigo-500/5 transition-colors"}>
                                           {editing ? (
                                             <>
+                                              <td className="px-2 py-1 border-b border-border w-32">
+                                                <input
+                                                  className="w-full bg-input text-foreground text-xs px-2 py-1 rounded border border-indigo-500 outline-none"
+                                                  value={editing.itemCode || ''}
+                                                  onChange={e => setEditingItems(p => ({ ...p, [item.id]: { ...p[item.id], itemCode: e.target.value } }))}
+                                                  placeholder="Kode..."
+                                                />
+                                              </td>
                                               <td className="px-2 py-1 border-b border-border">
                                                 <input
                                                   className="w-full bg-input text-foreground text-xs px-2 py-1 rounded border border-indigo-500 outline-none"
@@ -433,6 +442,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                                             </>
                                           ) : (
                                             <>
+                                              <td className="px-3 py-1.5 text-indigo-400 font-mono border-b border-border">{item.itemCode || '—'}</td>
                                               <td className="px-3 py-1.5 text-foreground border-b border-border">{item.description}</td>
                                               <td className="px-3 py-1.5 text-foreground/70 text-center border-b border-border">{item.quantity}</td>
                                               <td className="px-3 py-1.5 text-foreground/50 text-center border-b border-border">{item.unit || '—'}</td>

@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   FileText,
   BookOpen,
+  Package,
   MessageSquare,
   Settings,
   ChevronLeft,
@@ -21,6 +22,7 @@ const navItems = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Dokumen", href: "/documents", icon: FileText },
   { name: "BKU Bulanan", href: "/bku", icon: BookOpen },
+  { name: "Master Barang", href: "/master-barang", icon: Package },
   { name: "Tanya AI", href: "/chat", icon: MessageSquare },
   { name: "Pengaturan", href: "/settings", icon: Settings },
 ];
