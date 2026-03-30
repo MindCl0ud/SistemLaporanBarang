@@ -127,7 +127,7 @@ export default function Sidebar() {
           
           {/* VERSION PROOF BADGE */}
           <div className="px-1 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-lg flex items-center justify-center">
-            <span className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-tighter">V2.1 - MASTER MODE ACTIVE</span>
+            <span className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-tighter">V2.5 - DATA ARITHMETIC PRO</span>
           </div>
         </div>
       )}

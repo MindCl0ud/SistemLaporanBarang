@@ -623,12 +623,15 @@ export function extractDataFromText(rawText: string) {
   // 3. SMART SUM VALIDATION
   const sumTotalItems = uniqueItems.reduce((sum, item) => sum + (item.total || 0), 0)
   
+  // Hard cap for grand total (Shouldn't exceed 10 Billion in this context)
+  if (totalAmount > 10000000000) totalAmount = 0
+
   // If the extracted total is suspiciously large or doesn't match the sum
   // we prioritize the sum if we found multiple items.
   let finalTotal = totalAmount
   if (Math.abs(sumTotalItems - totalAmount) > 10 && sumTotalItems > 0) {
-    // If sum of items is reasonable and total is suspiciously large (> 10M for simple items)
-    if (totalAmount > 10000000 && sumTotalItems < 10000000) {
+    // If sum of items is reasonable and total is suspiciously large (> 500M for simple items)
+    if (totalAmount > 500000000 && sumTotalItems < 500000000) {
       finalTotal = sumTotalItems
     } else if (totalAmount === 0 && sumTotalItems > 0) {
       finalTotal = sumTotalItems
