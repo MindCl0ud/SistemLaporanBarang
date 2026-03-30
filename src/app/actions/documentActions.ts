@@ -11,6 +11,7 @@ const DocumentItemSchema = z.object({
   itemCode: z.string().nullable().optional(),
   quantity: z.number().nullable().optional(),
   price: z.number().nullable().optional(),
+  unit: z.string().nullable().optional(),
   total: z.number().nullable().optional(),
 })
 
@@ -26,6 +27,7 @@ const DocumentSchema = z.object({
   date: z.string().nullable().optional().or(z.date().nullable()),
   extractedText: z.string().nullable().optional(),
   paymentDescription: z.string().nullable().optional(),
+  unit: z.string().nullable().optional(),
   items: z.array(DocumentItemSchema).optional(),
 })
 
@@ -59,7 +61,7 @@ export async function saveDocument(rawData: any) {
   const { 
     type, docNumber, vendorName, totalAmount, date, 
     extractedText, items, kodeRek, subKegiatan,
-    baNumber, baDate, paymentDescription
+    baNumber, baDate, paymentDescription, unit
   } = data
 
   const doc = await prisma.document.create({
@@ -75,11 +77,13 @@ export async function saveDocument(rawData: any) {
       date: date ? new Date(date) : new Date(),
       extractedText: extractedText || "",
       paymentDescription: paymentDescription || "",
+      unit: unit || "",
       items: {
         create: items?.map(item => ({
           description: item.description,
           itemCode: item.itemCode || "",
           quantity: item.quantity || 0,
+          unit: item.unit || "",
           price: item.price || 0,
           total: item.total || 0,
         })) || []

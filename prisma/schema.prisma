@@ -28,6 +28,7 @@ model Document {
   imageUrl      String?
   extractedText String?
   paymentDescription String? // New field for BKU matching
+  unit          String?        // Global unit if applicable
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   items         DocumentItem[]
@@ -45,6 +46,7 @@ model DocumentItem {
   itemCode    String?  // New field for Item Code
   quantity    Float?
   price       Float?
+  unit        String?  // New field for Satuan (e.g., buah, ltr)
   total       Float?
   document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 }

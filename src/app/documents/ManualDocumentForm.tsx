@@ -38,15 +38,16 @@ export default function ManualDocumentForm({ onClose, onSuccess, initialData, im
       description: it.description || '',
       itemCode: it.itemCode || '',
       quantity: it.quantity || 1,
+      unit: it.unit || '',
       price: it.price || 0,
       total: it.total || 0
-    })) || [{ description: '', itemCode: '', quantity: 1, price: 0, total: 0 }]
+    })) || [{ description: '', itemCode: '', quantity: 1, unit: '', price: 0, total: 0 }]
   })
 
   const handleAddItem = () => {
     setFormData(prev => ({
       ...prev,
-      items: [...prev.items, { description: '', itemCode: '', quantity: 1, price: 0, total: 0 }]
+      items: [...prev.items, { description: '', itemCode: '', quantity: 1, unit: '', price: 0, total: 0 }]
     }))
   }
 
@@ -262,6 +263,7 @@ export default function ManualDocumentForm({ onClose, onSuccess, initialData, im
                       <th className="px-3 py-2 text-left font-semibold w-32 border-b border-border">Kode Barang</th>
                       <th className="px-3 py-2 text-left font-semibold border-b border-border">Deskripsi</th>
                       <th className="px-3 py-2 text-center font-semibold w-16 border-b border-border">Qty</th>
+                      <th className="px-3 py-2 text-center font-semibold w-16 border-b border-border">Satuan</th>
                       <th className="px-3 py-2 text-right font-semibold w-28 border-b border-border">Harga</th>
                       <th className="px-3 py-2 text-right font-semibold w-28 border-b border-border">Total</th>
                       <th className="px-3 py-2 text-center font-semibold w-10 border-b border-border"></th>
@@ -295,6 +297,15 @@ export default function ManualDocumentForm({ onClose, onSuccess, initialData, im
                             value={item.quantity}
                             onChange={e => handleItemChange(idx, 'quantity', e.target.value)}
                             className="w-full bg-transparent border-none text-center focus:ring-0"
+                          />
+                        </td>
+                        <td className="p-1">
+                          <input
+                            type="text"
+                            value={item.unit || ''}
+                            onChange={e => handleItemChange(idx, 'unit', e.target.value)}
+                            className="w-full bg-transparent border-none text-center focus:ring-0 text-slate-500"
+                            placeholder="Satuan"
                           />
                         </td>
                         <td className="p-1">
