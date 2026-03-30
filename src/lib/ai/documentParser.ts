@@ -426,7 +426,7 @@ export function extractDataFromText(rawText: string) {
   // 6. Line Items
   // ──────────────────────────────────────────────────────────
   const items: any[] = []
-  const noisePattern = /\b(?:JUMLAH|Terbilang|NIP|Nama|Jabatan|Alamat|Waikabubak|BAPPERIDA|BRIDA|DAERAH|Tanda\s+Tangan|Pihak|Pertama|Kedua|Nomor|Terima|Uang|Jalan|Jl\.)\b/i
+  const noisePattern = /\b(?:JUMLAH|Terbilang|NIP|Nama|Jabatan|Alamat|Waikabubak|BAPPERIDA|BRIDA|DAERAH|Tanda\s+Tangan|Pihak|Pertama|Kedua|Nomor|Terima|Uang|Jalan|Jl\.|202[4-6]|8045|5\.01\.|5\.1\.)\b/i
 
   const cleanNum = (str: string) => {
     // Replace dots that are used as thousand separators, then replace comma with dot for decimal
@@ -595,15 +595,41 @@ export function extractDataFromText(rawText: string) {
     totalAmount = items.reduce((s, it) => s + (it.total || 0), 0)
   }
 
+  // 2. DEDUPLICATE ITEMS
+  const uniqueItems: any[] = []
+  const seenItems = new Set<string>()
+  
+  items.forEach(item => {
+    const key = `${item.description.toLowerCase()}-${item.total}`
+    if (!seenItems.has(key)) {
+      uniqueItems.push(item)
+      seenItems.add(key)
+    }
+  })
+
+  // 3. SMART SUM VALIDATION
+  const sumTotalItems = uniqueItems.reduce((sum, item) => sum + (item.total || 0), 0)
+  
+  // If the extracted total is suspiciously large or doesn't match the sum
+  // we prioritize the sum if we found multiple items.
+  let finalTotal = totalAmount
+  if (Math.abs(sumTotalItems - totalAmount) > 10 && sumTotalItems > 0) {
+    // If sum of items is reasonable and total is suspiciously large (> 10M for simple items)
+    if (totalAmount > 10000000 && sumTotalItems < 10000000) {
+      finalTotal = sumTotalItems
+    } else if (totalAmount === 0 && sumTotalItems > 0) {
+      finalTotal = sumTotalItems
+    }
+  }
+
   return {
     type,
     docNumber,
     vendorName,
-    totalAmount,
+    totalAmount: finalTotal,
     date: docDate,
     kodeRek,
     subKegiatan,
     paymentFor,
-    items
   }
 }
