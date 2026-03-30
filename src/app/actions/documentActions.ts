@@ -9,22 +9,22 @@ const DocumentItemSchema = z.object({
   id: z.string().optional(),
   description: z.string().min(1, "Deskripsi wajib diisi"),
   itemCode: z.string().nullable().optional(),
-  quantity: z.number().nullable().optional(),
-  price: z.number().nullable().optional(),
+  quantity: z.coerce.number().nullable().optional().default(1),
+  price: z.coerce.number().nullable().optional().default(0),
   unit: z.string().nullable().optional(),
-  total: z.number().nullable().optional(),
+  total: z.coerce.number().nullable().optional().default(0),
 })
 
 const DocumentSchema = z.object({
   type: z.string().default("Nota"),
   docNumber: z.string().nullable().optional(),
   baNumber: z.string().nullable().optional(),
-  baDate: z.string().nullable().optional().or(z.date().nullable()),
+  baDate: z.coerce.date().nullable().optional(),
   kodeRek: z.string().nullable().optional(),
   subKegiatan: z.string().nullable().optional(),
   vendorName: z.string().nullable().optional(),
-  totalAmount: z.number().nullable().optional(),
-  date: z.string().nullable().optional().or(z.date().nullable()),
+  totalAmount: z.coerce.number().nullable().optional().default(0),
+  date: z.coerce.date().nullable().optional().default(() => new Date()),
   extractedText: z.string().nullable().optional(),
   paymentFor: z.string().nullable().optional(),
   unit: z.string().nullable().optional(),
@@ -53,7 +53,8 @@ export async function saveDocument(rawData: any) {
   // 1. Server-side validation
   const validation = DocumentSchema.safeParse(rawData)
   if (!validation.success) {
-    const errorMsg = validation.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ')
+    const errorMsg = validation.error.issues.map(i => `${i.path.join('.') || 'Global'}: ${i.message}`).join(', ')
+    console.error("Save Document Validation Error:", errorMsg)
     throw new Error(`Validasi Gagal: ${errorMsg}`)
   }
 
@@ -64,32 +65,32 @@ export async function saveDocument(rawData: any) {
     baNumber, baDate, paymentFor, unit
   } = data
 
-  const doc = await prisma.document.create({
-    data: {
-      type: type || "Nota",
-      docNumber: docNumber || "",
-      baNumber: baNumber || "",
-      baDate: baDate ? new Date(baDate) : null,
-      kodeRek: kodeRek || "",
-      subKegiatan: subKegiatan || "",
-      vendorName: vendorName || "Tidak Diketahui",
-      totalAmount: Number(totalAmount) || 0,
-      date: date ? new Date(date) : new Date(),
-      extractedText: extractedText || "",
-      paymentFor: paymentFor || "",
-      unit: unit || "",
-      items: {
-        create: items?.map(item => ({
-          description: item.description,
-          itemCode: item.itemCode || "",
-          quantity: item.quantity || 0,
-          unit: item.unit || "",
-          price: item.price || 0,
-          total: item.total || 0,
-        })) || []
+    const doc = await prisma.document.create({
+      data: {
+        type: type || "Nota",
+        docNumber: docNumber || "",
+        baNumber: baNumber || "",
+        baDate: baDate || null,
+        kodeRek: kodeRek || "",
+        subKegiatan: subKegiatan || "",
+        vendorName: vendorName || "Tidak Diketahui",
+        totalAmount: totalAmount || 0,
+        date: date || new Date(),
+        extractedText: extractedText || "",
+        paymentFor: paymentFor || "",
+        unit: unit || "",
+        items: {
+          create: items?.map(item => ({
+            description: item.description,
+            itemCode: item.itemCode || "",
+            quantity: item.quantity || 0,
+            unit: item.unit || "",
+            price: item.price || 0,
+            total: item.total || 0,
+          })) || []
+        }
       }
-    }
-  })
+    })
 
   revalidatePath('/documents')
   revalidatePath('/')

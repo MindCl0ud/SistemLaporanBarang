@@ -85,9 +85,9 @@ export default function ManualDocumentForm({ onClose, onSuccess, initialData, im
       })
       onSuccess()
       onClose()
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
-      alert('Gagal menyimpan dokumen.')
+      alert(`Error: ${err.message || 'Gagal menyimpan dokumen.'}`)
     } finally {
       setLoading(false)
     }
