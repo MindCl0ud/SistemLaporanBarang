@@ -18,6 +18,7 @@ const DEFAULT_WIDTHS: Record<string, number> = {
   subKegiatan: 140,
   tipe: 110,
   vendor: 160,
+  satuan: 90,
   total: 130,
   items: 380,
   aksi: 70,
@@ -34,12 +35,14 @@ const COL_LABELS: Record<string, string> = {
   subKegiatan: 'Sub Kegiatan',
   tipe: 'Tipe',
   vendor: 'Vendor / Penyedia',
+  satuan: 'Satuan',
   total: 'Total (Rp)',
   items: 'Rincian Item',
   aksi: 'Aksi',
 }
 
-function formatCurrency(amount: number) {
+function formatCurrency(amount: number | null | undefined) {
+  if (amount === null || amount === undefined) return '0'
   return new Intl.NumberFormat('id-ID').format(amount)
 }
 
@@ -104,7 +107,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [wrapText, setWrapText] = useState(false)
   const [colWidths, setColWidths] = useState<Record<string, number>>(DEFAULT_WIDTHS)
-  const [editingItems, setEditingItems] = useState<Record<string, { description: string; quantity: number; price: number; total: number }>>({})
+  const [editingItems, setEditingItems] = useState<Record<string, { description: string; quantity: number; unit: string; price: number; total: number }>>({})
   const [savingItemId, setSavingItemId] = useState<string | null>(null)
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null)
 
@@ -205,7 +208,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
               // Build items string
               const itemsText = doc.items && doc.items.length > 0
                 ? doc.items.map((it: any) =>
-                    `${it.description} (${it.quantity} × ${formatCurrency(it.price)} = ${formatCurrency(it.total)})`
+                    `${it.description} (${it.quantity} ${it.unit || ''} × ${formatCurrency(it.price)} = ${formatCurrency(it.total)})`
                   ).join(' | ')
                 : '—'
 
@@ -299,6 +302,11 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                     {/* Vendor */}
                     <td className={cellClass}>{doc.vendorName}</td>
 
+                    {/* Satuan */}
+                    <td className={cellClass + ' text-center text-slate-500'}>
+                      {doc.unit || '—'}
+                    </td>
+
                     {/* Total */}
                     <td className={`${cellClass} text-right font-mono font-black text-foreground text-sm`}>
                       Rp {formatCurrency(doc.totalAmount)}
@@ -344,6 +352,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                                     <tr className="bg-input/80">
                                       <th className="text-left px-3 py-2 text-foreground/60 font-semibold border-b border-border">Uraian / Deskripsi</th>
                                       <th className="text-center px-3 py-2 text-foreground/60 font-semibold border-b border-border w-16">Qty</th>
+                                      <th className="text-center px-3 py-2 text-foreground/60 font-semibold border-b border-border w-20">Satuan</th>
                                       <th className="text-right px-3 py-2 text-foreground/60 font-semibold border-b border-border w-32">Harga Satuan</th>
                                       <th className="text-right px-3 py-2 text-foreground/60 font-semibold border-b border-border w-32">Jumlah</th>
                                       <th className="text-center px-3 py-2 text-foreground/60 font-semibold border-b border-border w-14">Aksi</th>
@@ -371,6 +380,14 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                                                   className="w-full bg-input text-foreground text-xs px-2 py-1 rounded border border-indigo-500 outline-none text-center"
                                                   value={editing.quantity}
                                                   onChange={e => setEditingItems(p => ({ ...p, [item.id]: { ...p[item.id], quantity: Number(e.target.value) } }))}
+                                                />
+                                              </td>
+                                              <td className="px-2 py-1 border-b border-border w-20">
+                                                <input
+                                                  className="w-full bg-input text-foreground text-xs px-2 py-1 rounded border border-indigo-500 outline-none text-center"
+                                                  value={editing.unit}
+                                                  onChange={e => setEditingItems(p => ({ ...p, [item.id]: { ...p[item.id], unit: e.target.value } }))}
+                                                  placeholder="Satuan"
                                                 />
                                               </td>
                                               <td className="px-2 py-1 border-b border-border w-32">
@@ -418,12 +435,13 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                                             <>
                                               <td className="px-3 py-1.5 text-foreground border-b border-border">{item.description}</td>
                                               <td className="px-3 py-1.5 text-foreground/70 text-center border-b border-border">{item.quantity}</td>
+                                              <td className="px-3 py-1.5 text-foreground/50 text-center border-b border-border">{item.unit || '—'}</td>
                                               <td className="px-3 py-1.5 text-foreground/60 text-right font-mono border-b border-border">Rp {formatCurrency(item.price)}</td>
                                               <td className="px-3 py-1.5 text-emerald-600 dark:text-emerald-400 text-right font-mono font-bold border-b border-border tracking-tight">Rp {formatCurrency(item.total)}</td>
                                               <td className="px-3 py-1.5 text-center border-b border-slate-800 w-24">
                                                 <div className="flex items-center justify-center gap-1">
                                                   <button
-                                                    onClick={() => setEditingItems(p => ({ ...p, [item.id]: { description: item.description, quantity: item.quantity, price: item.price, total: item.total } }))}
+                                                    onClick={() => setEditingItems(p => ({ ...p, [item.id]: { description: item.description, quantity: item.quantity, unit: item.unit || '', price: item.price, total: item.total } }))}
                                                     className="p-1 text-slate-500 hover:text-indigo-400 hover:bg-indigo-400/10 rounded transition-colors"
                                                     title="Edit item"
                                                   >
