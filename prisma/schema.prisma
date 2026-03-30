@@ -25,17 +25,14 @@ model Document {
   updatedAt     DateTime       @updatedAt
   items         DocumentItem[]
   matchRecord   MatchRecord?
-  paymentFor    String?
 }
 
 model DocumentItem {
   id          String   @id @default(cuid())
   documentId  String
-  itemCode    String?  // Field baru: Kode Barang
   description String
-  quantity    Float?   // Volume
-  unit        String?  // Field baru: Satuan (contoh: buah, rim, liter)
-  price       Float?   // Harga Satuan
+  quantity    Float?
+  price       Float?
   total       Float?
   document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 }
