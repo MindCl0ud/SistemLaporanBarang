@@ -119,6 +119,19 @@ async function preprocessImage(src: string | File): Promise<{ dataUrl: string; s
   })
 }
 
+function sanitizePayload(data: any): any {
+  if (Array.isArray(data)) return data.map(sanitizePayload)
+  if (data !== null && typeof data === 'object') {
+    return Object.fromEntries(
+      Object.entries(data).map(([key, value]) => [
+        key,
+        value === "" ? null : sanitizePayload(value)
+      ])
+    )
+  }
+  return data
+}
+
 export async function parseDocumentImage(fileUrl: string | File, onProgress?: (msg: string) => void) {
   try {
     if (onProgress) onProgress('Meningkatkan Kualitas Gambar...')
@@ -136,7 +149,7 @@ export async function parseDocumentImage(fileUrl: string | File, onProgress?: (m
     if (onProgress) onProgress('Menyusun Data...')
     const parsedData = extractDataFromText(text)
     if (onProgress) onProgress('Selesai')
-    return { text, data: parsedData }
+    return { text, data: sanitizePayload(parsedData) }
   } catch (error: any) {
     console.error('OCR Error:', error)
     throw new Error('Gagal membaca dokumen: ' + (error?.message || error))
