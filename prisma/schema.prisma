@@ -27,7 +27,7 @@ model Document {
   date          DateTime?
   imageUrl      String?
   extractedText String?
-  paymentDescription String? // New field for BKU matching
+  paymentFor    String?        // New field for BKU matching
   unit          String?        // Global unit if applicable
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt

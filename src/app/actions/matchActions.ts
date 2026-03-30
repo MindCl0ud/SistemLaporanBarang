@@ -39,7 +39,7 @@ export async function runMatchingEngine(month?: number, year?: number) {
 
     const docKodeRekNorm = normalizeCode(doc.kodeRek)
     const docSubKegNorm = normalizeCode(doc.subKegiatan)
-    const docPaymentDesc = (doc.paymentDescription || "").toLowerCase()
+    const docPaymentFor = (doc.paymentFor || "").toLowerCase()
 
     for (const bku of (bkuEntries as any[])) {
       let confidence = 0
@@ -90,9 +90,9 @@ export async function runMatchingEngine(month?: number, year?: number) {
       }
 
       // NEW: Payment Description Matching (Kwitansi specific)
-      if (docPaymentDesc && bkuDesc) {
+      if (docPaymentFor && bkuDesc) {
         // Look for significant keyword overlap
-        const docKeywords = docPaymentDesc.split(/\s+/).filter((w: string) => w.length > 4)
+        const docKeywords = docPaymentFor.split(/\s+/).filter((w: string) => w.length > 4)
         let matches = 0
         docKeywords.forEach((word: string) => {
           if (bkuDesc.includes(word)) matches++

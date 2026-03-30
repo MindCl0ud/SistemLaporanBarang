@@ -32,7 +32,7 @@ export default function ManualDocumentForm({ onClose, onSuccess, initialData, im
     totalAmount: initialData?.totalAmount || 0,
     kodeRek: initialData?.kodeRek || '',
     subKegiatan: initialData?.subKegiatan || '',
-    paymentDescription: initialData?.paymentDescription || '',
+    paymentFor: initialData?.paymentFor || '',
     extractedText: initialData?.extractedText || '',
     items: initialData?.items?.map((it: any) => ({
       description: it.description || '',
@@ -184,8 +184,8 @@ export default function ManualDocumentForm({ onClose, onSuccess, initialData, im
                   <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Uraian Pembayaran</label>
                   <textarea
                     rows={3}
-                    value={formData.paymentDescription}
-                    onChange={e => setFormData({ ...formData, paymentDescription: e.target.value })}
+                    value={formData.paymentFor}
+                    onChange={e => setFormData({ ...formData, paymentFor: e.target.value })}
                     placeholder="Contoh: Belanja Pemeliharaan Alat Angkutan Darat..."
                     className="w-full bg-input border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:ring-2 focus:ring-indigo-500 resize-none"
                   />

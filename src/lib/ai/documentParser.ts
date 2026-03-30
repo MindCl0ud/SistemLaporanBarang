@@ -395,10 +395,10 @@ export function extractDataFromText(rawText: string) {
   // 3.5. Payment Description (Uraian / Untuk Pembayaran)
   //      Look for text between "Untuk Pembayaran :" and "dengan rincian :"
   // ──────────────────────────────────────────────────────────
-  let paymentDescription = ''
+  let paymentFor = ''
   const paymentMatch = rawText.match(/(?:Untuk\s+Pembayaran|Uraian)\s*[:]\s*([\s\S]+?)(?=(?:dengan\s+rincian|[-]\s+|Jurmlah|$))/i)
   if (paymentMatch) {
-    paymentDescription = paymentMatch[1].replace(/\r?\n/g, ' ').replace(/\s+/g, ' ').trim()
+    paymentFor = paymentMatch[1].replace(/\r?\n/g, ' ').replace(/\s+/g, ' ').trim()
   }
 
   // ──────────────────────────────────────────────────────────
@@ -563,7 +563,7 @@ export function extractDataFromText(rawText: string) {
     date: docDate,
     kodeRek,
     subKegiatan,
-    paymentDescription,
+    paymentFor,
     items
   }
 }

@@ -43,7 +43,7 @@ export default function DocumentUploader() {
           totalAmount: 0,
           extractedText: "",
           pageItems: [] as any[],
-          paymentDescription: ""
+          paymentFor: ""
         }
 
         const pdfjsLib = await import('pdfjs-dist')
@@ -71,7 +71,7 @@ export default function DocumentUploader() {
             
             if (pageRes.data.totalAmount > masterData.totalAmount) masterData.totalAmount = pageRes.data.totalAmount
             if (pageRes.data.vendorName && pageRes.data.vendorName !== 'Tidak Diketahui') masterData.vendorName = pageRes.data.vendorName
-            if (pageRes.data.paymentDescription) masterData.paymentDescription += " " + pageRes.data.paymentDescription
+            if (pageRes.data.paymentFor) masterData.paymentFor += " " + pageRes.data.paymentFor
             if (pageRes.data.items) masterData.pageItems.push(...pageRes.data.items)
           }
         }
