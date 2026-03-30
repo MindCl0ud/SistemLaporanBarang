@@ -10,18 +10,18 @@ import { deleteDocument, updateDocumentItem, deleteDocumentItem } from "@/app/ac
 // Column definitions
 // ──────────────────────────────────────────────────────────
 const DEFAULT_WIDTHS: Record<string, number> = {
-  no: 45,
-  status: 95,
-  tanggal: 115,
-  docNumber: 150,
-  kodeRek: 140,
-  subKegiatan: 140,
-  tipe: 110,
-  vendor: 160,
-  satuan: 90,
-  total: 130,
-  items: 380,
-  aksi: 70,
+  no: 40,
+  status: 80,
+  tanggal: 90,
+  docNumber: 130,
+  kodeRek: 110,
+  subKegiatan: 110,
+  tipe: 90,
+  vendor: 130,
+  satuan: 70,
+  total: 100,
+  items: 280,
+  aksi: 60,
 }
 
 const COL_KEYS = Object.keys(DEFAULT_WIDTHS)
@@ -204,13 +204,6 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
               const baDateStr = doc.baDate
                 ? format(new Date(doc.baDate), 'dd/MM/yyyy', { locale: id })
                 : null
-
-              // Build items string
-              const itemsText = doc.items && doc.items.length > 0
-                ? doc.items.map((it: any) =>
-                    `${it.description} (${it.quantity} ${it.unit || ''} × ${formatCurrency(it.price)} = ${formatCurrency(it.total)})`
-                  ).join(' | ')
-                : '—'
 
               const rowBg = rowIdx % 2 === 0 ? 'bg-card' : 'bg-input/20'
               const cellClass = `border-r border-b border-border px-2 py-1.5 align-top text-foreground text-[12px] ${
