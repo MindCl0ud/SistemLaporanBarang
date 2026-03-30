@@ -3,6 +3,9 @@
 import prisma from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 
+// ============================================================================
+// 1. ENGINE PENCOCOKAN OTOMATIS (Milik Anda dengan tambahan Update Nomor)
+// ============================================================================
 export async function runMatchingEngine(month?: number, year?: number) {
   // Fetch unmatched BKU entries (optionally filtered by month/year)
   const whereClause: any = { matchRecord: null, expenseTotal: { gt: 0 } }
@@ -106,6 +109,15 @@ export async function runMatchingEngine(month?: number, year?: number) {
           reasoning: reason
         }
       })
+
+      // FITUR BARU: Otomatis mengisi Nomor Dokumen dari BKU saat Auto-Match sukses
+      await prisma.document.update({
+        where: { id: doc.id },
+        data: {
+          docNumber: bestMatchBku.code || doc.docNumber
+        }
+      })
+
       matchCount++
       const index = bkuEntries.findIndex(b => b.id === bestMatchBku.id)
       if (index > -1) bkuEntries.splice(index, 1)
@@ -118,6 +130,9 @@ export async function runMatchingEngine(month?: number, year?: number) {
   return matchCount
 }
 
+// ============================================================================
+// 2. DASHBOARD STATS
+// ============================================================================
 export async function getDashboardStats() {
   const totalDocs = await prisma.document.count()
   const matchedDocs = await prisma.matchRecord.count()
@@ -134,4 +149,98 @@ export async function getDashboardStats() {
   })
 
   return { totalDocs, matchedDocs, bkuWithoutDocs, accuracy, recentMatches }
+}
+
+// ============================================================================
+// 3. PENCOCOKAN MANUAL (MANUAL MATCH)
+// ============================================================================
+export async function matchDocumentWithBku(documentId: string, bkuId: string) {
+  const doc = await prisma.document.findUnique({ where: { id: documentId } })
+  const bku = await prisma.bkuTransaction.findUnique({ where: { id: bkuId } })
+  
+  if (!doc || !bku) throw new Error("Data tidak ditemukan")
+
+  // Otomatis update Nomor Dokumen (Kwitansi) berdasarkan Nomor Bukti BKU
+  const updatedDoc = await prisma.document.update({
+    where: { id: documentId },
+    data: {
+      docNumber: bku.code || doc.docNumber 
+    }
+  })
+
+  // Simpan record matching
+  await prisma.matchRecord.create({
+    data: {
+      documentId: documentId,
+      bkuTransactionId: bkuId,
+      confidence: 0.95, // Disetujui manual (tinggi)
+      status: 'MATCHED',
+      reasoning: 'Dicocokkan secara manual oleh pengguna.'
+    }
+  })
+
+  revalidatePath('/documents')
+  revalidatePath('/bku')
+  revalidatePath('/')
+  
+  return updatedDoc
+}
+
+// ============================================================================
+// 4. HAPUS KECOCOKAN (UNMATCH)
+// ============================================================================
+export async function removeMatch(matchId: string) {
+  await prisma.matchRecord.delete({
+    where: { id: matchId }
+  })
+
+  revalidatePath('/documents')
+  revalidatePath('/bku')
+  revalidatePath('/')
+}
+
+// ============================================================================
+// 5. SARAN/SUGGESTION BKU BERDASARKAN URAIAN (FUZZY SEARCH)
+// ============================================================================
+export async function suggestBkuForDocument(documentId: string) {
+  const doc = await prisma.document.findUnique({
+    where: { id: documentId },
+    include: { items: true }
+  })
+  
+  if (!doc) return []
+
+  // Ambil transaksi BKU yang nominalnya pengeluaran (expense) dan belum di-match
+  const candidates = await prisma.bkuTransaction.findMany({
+    where: { matchRecord: null, expenseTotal: { gt: 0 } }
+  })
+
+  // Kata kunci: 'Untuk Pembayaran' + Semua nama item yang diekstrak
+  const searchString = `${doc.paymentFor || ''} ${doc.items.map(i => i.description).join(' ')}`.toLowerCase()
+  const searchWords = searchString.match(/\b\w+\b/g) || []
+
+  const scored = candidates.map(bku => {
+    const bkuWords = bku.description.toLowerCase().match(/\b\w+\b/g) || []
+    let matchCount = 0
+    
+    // Algoritma overlap kata dasar (Fuzzy text match)
+    searchWords.forEach(sw => {
+      // Abaikan kata hubung pendek, hitung kemiripan
+      if (sw.length > 3 && bkuWords.includes(sw)) matchCount++
+    })
+    
+    // Beri bobot sangat besar jika Total Nominal sama persis
+    const isExactAmount = bku.expenseTotal === doc.totalAmount
+    
+    // Hitung persentase kecocokan (Skor)
+    const confidence = (matchCount / (bkuWords.length || 1)) + (isExactAmount ? 1.5 : 0)
+
+    return { ...bku, confidence }
+  })
+
+  // Kembalikan top 3 kecocokan tertinggi
+  return scored
+    .filter(s => s.confidence > 0.3) // Tampilkan jika ada kemiripan sedikit saja
+    .sort((a, b) => b.confidence - a.confidence)
+    .slice(0, 3)
 }
