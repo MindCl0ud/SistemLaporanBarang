@@ -5,7 +5,7 @@ const PDFParser = require('pdf2json')
 
 import { extractDataFromText } from './documentParser';
 
-export async function parsePdfServer(formData: FormData) {
+export async function parsePdfServer(formData: FormData): Promise<any> {
   const file = formData.get('file') as File
   if (!file) throw new Error('No file provided')
 
@@ -21,6 +21,17 @@ export async function parsePdfServer(formData: FormData) {
       try {
         const fullText = pdfParser.getRawTextContent() || "";
         
+        // --- LOGIKA HYBRID: Deteksi PDF Scan ---
+        // Jika teks yang diekstrak sangat sedikit (< 50 karakter), kemungkinan besar ini adalah PDF hasil scan (gambar)
+        if (fullText.trim().length < 50) {
+           resolve([{ 
+             text: "PDF_SCAN_DETECTED", 
+             data: null,
+             info: "Dokumen ini terdeteksi sebagai PDF hasil scan (tanpa teks asli). Silakan unggah dalam format gambar (JPG/PNG) untuk menggunakan OCR."
+           }]);
+           return;
+        }
+
         // Split by page break markers "----------------Page (n) Break----------------"
         const pageChunks = fullText.split(/----------------Page \(\d+\) Break----------------/g)
           .map((c: string) => c.trim())
