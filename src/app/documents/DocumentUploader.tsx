@@ -2,12 +2,25 @@
 
 import { useCallback, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { Upload, Loader2, AlertCircle, FileText, CheckCircle2, Plus } from 'lucide-react'
+import { Upload, Loader2, AlertCircle, CheckCircle2, Plus } from 'lucide-react'
 import { parseDocumentImage } from '@/lib/ai/documentParser'
 import { parsePdfServer } from '@/lib/ai/pdfParser'
 import { saveDocument } from '@/app/actions/documentActions'
 import { useRouter } from 'next/navigation'
-import ManualDocumentForm from './ManualDocumentForm'
+import dynamic from 'next/dynamic'
+
+// OPTIMALISASI NEXT.JS: Lazy Loading (Dynamic Import)
+// Komponen ManualDocumentForm hanya akan diunduh oleh browser JIKA user menekan tombol "Input Manual".
+// Ini mengurangi ukuran bundle JavaScript halaman utama secara signifikan.
+const ManualDocumentForm = dynamic(() => import('./ManualDocumentForm'), {
+  loading: () => (
+    <div className="flex justify-center items-center p-8 bg-card rounded-2xl border border-border mt-4">
+      <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
+      <span className="ml-3 text-sm text-slate-500">Memuat formulir...</span>
+    </div>
+  ),
+  ssr: false // Form ini banyak menggunakan state client-side, aman untuk di-disable SSR-nya
+})
 
 export default function DocumentUploader() {
   const [loading, setLoading] = useState(false)
@@ -27,8 +40,6 @@ export default function DocumentUploader() {
     setStatusText('Menginisialisasi AI...')
 
     try {
-      let result: any;
-      // Convert to object URL for image preview or processing if it's an image
       const fileUrl = URL.createObjectURL(file)
 
       if (file.type === 'application/pdf') {
@@ -43,7 +54,6 @@ export default function DocumentUploader() {
           vendorName: "Tidak Diketahui",
           totalAmount: 0,
           extractedText: "",
-          // Collect items per page type for final arbitration
           pageItems: [] as { type: string, items: any[] }[],
           date: null,
           baDate: null,
@@ -66,7 +76,6 @@ export default function DocumentUploader() {
           if (res.data.kodeRek) masterData.kodeRek = res.data.kodeRek
           if (res.data.subKegiatan) masterData.subKegiatan = res.data.subKegiatan
 
-          // Collect items with their source type
           if (res.data.items && res.data.items.length > 0) {
             masterData.pageItems.push({
               type: res.data.type,
@@ -74,7 +83,6 @@ export default function DocumentUploader() {
             })
           }
 
-          // Specific Logic based on Document Type
           if (res.data.type === 'Berita Acara Penerimaan Barang') {
             masterData.baNumber = res.data.docNumber
             masterData.baDate = res.data.date
@@ -87,23 +95,18 @@ export default function DocumentUploader() {
           }
         }
 
-        // ────────────────────────────────────────────────────────
-        // ALWAYS render via pdf.js at HIGH resolution (3.5×) for OCR.
-        // The server-side text (pdf2json) may be corrupted for scanned PDFs.
-        // We use high-res canvas rendering as the sole input to Tesseract.
-        // ────────────────────────────────────────────────────────
         setStatusText('Memuat Halaman PDF...')
+        // OPTIMALISASI: Dynamic import library berat PDF.js hanya saat dibutuhkan
         const pdfjsLib = await import('pdfjs-dist')
         pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
 
         const arrayBuffer = await file.arrayBuffer()
         const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
-        const numPages = Math.min(pdfDoc.numPages, 5)
+        const numPages = Math.min(pdfDoc.numPages, 5) // Batasi maksimal 5 halaman untuk mencegah kelebihan beban RAM
         
         for (let i = 1; i <= numPages; i++) {
           setStatusText(`Mengolah Halaman ${i} dari ${numPages}...`)
           const page = await pdfDoc.getPage(i)
-          // Scale 3.5× gives ~2450px width for A4 — much better for Tesseract
           const viewport = page.getViewport({ scale: 3.5 })
           const canvas = document.createElement('canvas')
           canvas.width = viewport.width
@@ -112,14 +115,12 @@ export default function DocumentUploader() {
           if (ctx) {
             // @ts-ignore
             await page.render({ canvasContext: ctx, viewport }).promise
-            // JPEG at 95% quality → smaller + clean edges for Tesseract
             const imgDataUrl = canvas.toDataURL('image/jpeg', 0.95)
             const pageResult = await parseDocumentImage(imgDataUrl, (msg) => setStatusText(`Halaman ${i}: ${msg}`))
             processPageResult(pageResult)
           }
         }
 
-        // Apply server-side metadata as fallback for fields not found via OCR
         if (pdfResults && pdfResults.length > 0) {
           pdfResults.forEach((res: any) => {
             if (!res?.data) return
@@ -132,37 +133,27 @@ export default function DocumentUploader() {
           })
         }
 
-        // Final Consolidation & Deduplication
         setStatusText('Membersihkan Data Item (Prioritas Berita Acara)...')
-        
-        // Priority: BERITA ACARA > KWITANSI > NOTA PESANAN
         const baPages = masterData.pageItems.filter((p: any) => p.type === 'Berita Acara Penerimaan Barang')
         const kwitansiPages = masterData.pageItems.filter((p: any) => p.type === 'Kwitansi')
-        const notaPages = masterData.pageItems.filter((p: any) => p.type === 'Nota Pesanan')
         
         let targetItems: any[] = []
         if (baPages.length > 0) {
-          // EXCLUSIVE: BA table is the most structured source
           targetItems = baPages.flatMap((p: any) => p.items)
         } else if (kwitansiPages.length > 0) {
           targetItems = kwitansiPages.flatMap((p: any) => p.items)
         } else {
-          // Final fallback: all items found
           targetItems = masterData.pageItems.flatMap((p: any) => p.items)
         }
 
-        // 2. Semantic Deduplication for the isolated source
         const finalMap = new Map<string, any>()
         targetItems.forEach(it => {
-          // Sanity check: reject nonsense items
           if (!it.description || !/[a-zA-Z]{2,}/.test(it.description)) return
-          if (it.quantity > 99) return // OCR noise (table column numbers etc)
+          if (it.quantity > 99) return 
           if (it.total > 0 && it.price > 0) {
-            // Reject if qty * price is extremely far from total (>200% off)
             const expected = it.quantity * it.price
             if (Math.abs(expected - it.total) > 2 * it.total && it.total > 1000) return
           }
-          // Dedup key: letters+digits only, lowercase
           const key = it.description.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 15)
           if (!finalMap.has(key)) finalMap.set(key, it)
         })
@@ -200,7 +191,6 @@ export default function DocumentUploader() {
         })
 
       } else {
-        // Run Native OCR & AI Parsing for Single Images
         const result = await parseDocumentImage(fileUrl, (msg) => setStatusText(msg))
         setStatusText('Menyimpan ke Database...')
         await saveDocument({
@@ -238,15 +228,15 @@ export default function DocumentUploader() {
            Unggah Dokumen
         </h2>
         <button
-          onClick={() => setShowManualForm(true)}
+          onClick={() => setShowManualForm(!showManualForm)}
           className="flex items-center gap-2 px-4 py-2 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 rounded-xl text-sm font-bold hover:bg-indigo-500/20 transition-all"
         >
-          <Plus className="w-4 h-4" /> Input Manual
+          <Plus className={`w-4 h-4 transition-transform ${showManualForm ? 'rotate-45' : ''}`} /> 
+          {showManualForm ? 'Tutup Manual' : 'Input Manual'}
         </button>
       </div>
       
-      <div className="space-y-4">
-
+      <div className={`space-y-4 transition-all duration-300 ${showManualForm ? 'hidden' : 'block'}`}>
         <div
           {...getRootProps()}
           className={`relative overflow-hidden border-2 border-dashed rounded-2xl p-12 text-center transition-all cursor-pointer bg-input/20 duration-300 flex flex-col items-center justify-center min-h-[250px] ${isDragActive ? 'border-indigo-400 bg-indigo-500/10 scale-[1.02]' : 'border-border dark:border-indigo-500/30 hover:border-indigo-400 hover:bg-input/40 dark:hover:bg-black/40'}`}
@@ -287,10 +277,15 @@ export default function DocumentUploader() {
       </div>
 
       {showManualForm && (
-        <ManualDocumentForm 
-          onClose={() => setShowManualForm(false)} 
-          onSuccess={() => router.refresh()} 
-        />
+        <div className="animate-in fade-in slide-in-from-top-2">
+          <ManualDocumentForm 
+            onClose={() => setShowManualForm(false)} 
+            onSuccess={() => {
+              setShowManualForm(false)
+              router.refresh()
+            }} 
+          />
+        </div>
       )}
     </div>
   )
