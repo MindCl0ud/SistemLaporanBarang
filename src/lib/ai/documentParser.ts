@@ -3,26 +3,41 @@
  * Manages the native browser AI logic for parsing documents using Tesseract.js
  *
  * Extraction logic is tuned for BAPPERIDA Sumba Barat financial documents:
- *   - Kwitansi (receipts)
- *   - Nota Pesanan (purchase orders)
- *   - Berita Acara Penerimaan Barang (goods receipt records)
+ * - Kwitansi (receipts)
+ * - Nota Pesanan (purchase orders)
+ * - Berita Acara Penerimaan Barang (goods receipt records)
  *
  * Key observations from actual PDF OCR output:
- *  - "Waikabubak" is often split as "W aikabubak" or "Waika bubak"
- *  - Numbers like "1.195.000" are OCR'd as "1. 19 5.000" or "1.19 5.000"
- *  - Item lines have lots of spaces: "- stuff sarung jog   2   buah x   200.000   400.000"
- *  - Berita Acara items may span two lines (name, then qty+price+total)
- *  - JUMLAH is on its own line and total on next line in some pages
+ * - "Waikabubak" is often split as "W aikabubak" or "Waika bubak"
+ * - Numbers like "1.195.000" are OCR'd as "1. 19 5.000" or "1.19 5.000"
+ * - Item lines have lots of spaces: "- stuff sarung jog   2   buah x   200.000   400.000"
+ * - Berita Acara items may span two lines (name, then qty+price+total)
+ * - JUMLAH is on its own line and total on next line in some pages
  */
 
 import Tesseract from 'tesseract.js'
 
+// --- OPTIMALISASI PERFORMA: Singleton Worker ---
+// Mencegah memory leak akibat pembuatan worker baru setiap kali memproses dokumen
+let sharedWorker: Tesseract.Worker | null = null;
+
+async function getWorker() {
+  if (!sharedWorker) {
+    sharedWorker = await Tesseract.createWorker('ind', 1);
+    await sharedWorker.setParameters({
+      tessedit_pageseg_mode: '6' as any,  // PSM 6: uniform block of text
+      tessedit_ocr_engine_mode: '1' as any, // OEM 1: LSTM
+    });
+  }
+  return sharedWorker;
+}
+
 /**
  * Preprocess an image URL/File for best Tesseract OCR quality:
- *  1. Draw on canvas at 1.5× scale (more pixels = better OCR)
- *  2. Convert to grayscale
- *  3. Auto-contrast stretch (normalize darkest/lightest pixel to 0-255)
- *  4. Adaptive threshold → pure black & white
+ * 1. Draw on canvas at 2.0× scale (more pixels = better OCR)
+ * 2. Convert to grayscale
+ * 3. Auto-contrast stretch (normalize darkest/lightest pixel to 0-255)
+ * 4. Adaptive threshold → pure black & white
  * Returns a new base64 PNG data URL.
  */
 async function preprocessImage(src: string | File): Promise<string> {
@@ -42,7 +57,8 @@ async function preprocessImage(src: string | File): Promise<string> {
   return new Promise<string>((resolve) => {
     const img = new window.Image()
     img.onload = () => {
-      const SCALE = 1.5
+      // PENINGKATAN: Skala dinaikkan dari 1.5 ke 2.0 untuk memperjelas teks kecil
+      const SCALE = 2.0 
       const w = img.width * SCALE
       const h = img.height * SCALE
 
@@ -112,16 +128,10 @@ export async function parseDocumentImage(fileUrl: string | File, onProgress?: (m
 
     if (onProgress) onProgress('Memulai OCR (Membaca Teks)...')
     
-    const worker = await Tesseract.createWorker('ind', 1, {
-      // Use LSTM engine (OEM 1) + assume a single uniform block (PSM 6)
-    })
-    await worker.setParameters({
-      tessedit_pageseg_mode: '6' as any,  // PSM 6: uniform block of text
-      tessedit_ocr_engine_mode: '1' as any, // OEM 1: LSTM
-    })
+    // PENINGKATAN: Menggunakan Singleton Worker agar tidak membuang memori/waktu inisialisasi
+    const worker = await getWorker()
     const ret = await worker.recognize(enhanced)
     const text = ret.data.text
-    await worker.terminate()
 
     if (onProgress) onProgress('Menyusun Data...')
     const parsedData = extractDataFromText(text)
@@ -139,17 +149,23 @@ export async function parseDocumentImage(fileUrl: string | File, onProgress?: (m
  */
 function normalizeText(text: string): string {
   // 0. Strip table border characters (OCR reads BA table lines as | or +)
-  let t = text.replace(/[|+#]/g, ' ')
+  // PENINGKATAN: Menambahkan underscore (_)
+  let t = text.replace(/[|+#_]/g, ' ')
 
   // Fix OCR artifacts in codes, numbers, and common words:
   // 1. Bridges spaces between digits and dots/slashes
   t = t.replace(/([A-Z0-9])\s*\.\s*([A-Z0-9])/gi, '$1.$2')
   t = t.replace(/([A-Z0-9])\s*\/\s*([A-Z0-9])/gi, '$1/$2')
   
+  // PENINGKATAN: Menggabungkan spasi liar pada angka ribuan tanpa titik
+  t = t.replace(/(\d)\s+(?=\d{3})/g, '$1')
+  
   // 2. Bridges spaces in common Indonesian vendor fragments/words/ITEMS
+  // PENINGKATAN: Menambahkan kata kunci BAPPERIDA agar lebih presisi
   const fragments = [
     'Sum ber', 'Ba rat', 'Ba pperida', 'Bha yangkara', 'Week arou',
-    'kan ebo', 'stella gan tung', 'sar ung', 'gar dan', 'coo lant', 'coo lat'
+    'kan ebo', 'stella gan tung', 'sar ung', 'gar dan', 'coo lant', 'coo lat',
+    'Waikabubak', 'BAPPERIDA', 'Kwitansi', 'Nomor', 'Penerimaan', 'Barang'
   ]
   fragments.forEach(frag => {
     const regex = new RegExp(frag.split('').join('\\s*'), 'gi')
