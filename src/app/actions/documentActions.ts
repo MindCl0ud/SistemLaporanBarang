@@ -33,6 +33,22 @@ const DocumentSchema = z.object({
 
 import { unstable_cache } from "next/cache"
 
+function sanitizePayload(data: any): any {
+  if (Array.isArray(data)) return data.map(sanitizePayload)
+  // Check for null or Date instances which shouldn't be recursed
+  if (data === null || data instanceof Date) return data
+  
+  if (typeof data === 'object') {
+    return Object.fromEntries(
+      Object.entries(data).map(([key, value]) => [
+        key,
+        value === "" ? null : sanitizePayload(value)
+      ])
+    )
+  }
+  return data
+}
+
 export const getDocuments = unstable_cache(
   async () => {
     return await prisma.document.findMany({
