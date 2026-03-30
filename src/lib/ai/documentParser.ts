@@ -428,9 +428,16 @@ export function extractDataFromText(rawText: string) {
   const items: any[] = []
   const noisePattern = /\b(?:JUMLAH|Terbilang|NIP|Nama|Jabatan|Alamat|Waikabubak|BAPPERIDA|BRIDA|DAERAH|Tanda\s+Tangan|Pihak|Pertama|Kedua|Nomor|Terima|Uang|Jalan|Jl\.)\b/i
 
-  const toNum = (s: string) => {
-    const v = parseFloat(s.replace(/\./g, '').replace(',', '.'))
-    return isNaN(v) ? 0 : v
+  const cleanNum = (str: string) => {
+    // Replace dots that are used as thousand separators, then replace comma with dot for decimal
+    // But in ID usually it's just dots for thousand separators.
+    // Example: 100.000,00 -> 100000.00
+    let cleaned = str.replace(/\.(?=\d{3})/g, '').replace(',', '.')
+    if (cleaned.includes('.') && cleaned.split('.').pop()?.length === 3) {
+      // It was probably a thousand separator dot, not a decimal.
+      cleaned = cleaned.replace('.', '')
+    }
+    return parseFloat(cleaned)
   }
 
   const isUnitToken = (s: string) => {
