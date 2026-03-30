@@ -54,9 +54,11 @@ export default function ManualDocumentForm({ onClose, onSuccess, initialData, im
   const [showRawText, setShowRawText] = useState(false)
 
   const handleRemoveItem = (index: number) => {
+    const newItems = formData.items.filter((_it: any, i: number) => i !== index)
     setFormData(prev => ({
       ...prev,
-      items: prev.items.filter((_it: any, i: number) => i !== index)
+      items: newItems,
+      totalAmount: newItems.reduce((sum: number, it: any) => sum + (Number(it.total) || 0), 0)
     }))
   }
 
@@ -141,8 +143,13 @@ export default function ManualDocumentForm({ onClose, onSuccess, initialData, im
                 </div>
               ) : (
                 <img 
-                  src={imageUrl} 
+                  src={imageUrl || initialData?.imageUrl} 
                   alt="Original Document" 
+                  onError={(e) => {
+                    console.error("Image failed to load:", imageUrl);
+                    const target = e.target as HTMLImageElement;
+                    target.src = "https://placehold.co/600x800?text=Scan+Gagal+Dimuat";
+                  }}
                   className="max-w-full h-auto shadow-lg rounded border border-border animate-in zoom-in-95" 
                 />
               )}

@@ -631,5 +631,6 @@ export function extractDataFromText(rawText: string) {
     kodeRek,
     subKegiatan,
     paymentFor,
+    items: uniqueItems
   }
 }
