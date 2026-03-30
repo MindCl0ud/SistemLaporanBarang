@@ -3,6 +3,8 @@ export const dynamic = 'force-dynamic'
 import { getDashboardStats } from "@/app/actions/matchActions"
 import MatchRunner from "@/components/MatchRunner"
 import Link from "next/link"
+// Trigger deployment for Master Barang update
+import React from 'react'
 
 export default async function Home() {
   const stats = await getDashboardStats()
