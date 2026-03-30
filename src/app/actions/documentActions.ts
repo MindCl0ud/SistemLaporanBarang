@@ -32,7 +32,7 @@ export async function saveDocument(data: any) {
       kodeRek: kodeRek || "",
       subKegiatan: subKegiatan || "",
       vendorName: vendorName || "Tidak Diketahui",
-      paymentFor: paymentFor || "", // Simpan Untuk Pembayaran
+      paymentFor: paymentFor || "",
       totalAmount: Number(totalAmount) || 0,
       date: date ? new Date(date) : new Date(),
       extractedText: extractedText || "",
@@ -41,7 +41,7 @@ export async function saveDocument(data: any) {
           itemCode: item.itemCode || "",
           description: item.description || "",
           quantity: Number(item.quantity) || 0,
-          unit: item.unit || "", // Simpan Satuan
+          unit: item.unit || "",
           price: Number(item.price) || 0,
           total: Number(item.total) || 0
         })) || []
