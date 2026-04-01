@@ -45,21 +45,21 @@ function extractName(description: string, isFull: boolean): string {
   return name
 }
 
-export default function BkuAccountSummary({ records }: { records: any[] }) {
+export default function BkuAccountSummary({ monthlyRecords, yearlyRecords }: { monthlyRecords: any[], yearlyRecords: any[] }) {
   // Aggregation level: 'full' (all segments) or 'prefix' (first 6 segments)
   const [aggrLevel, setAggrLevel] = useState<'prefix' | 'full'>('prefix')
 
   const summary = useMemo(() => {
-    const map = new Map<string, { total: number, name: string }>()
+    const map = new Map<string, { monthlyTotal: number, yearlyTotal: number, name: string }>()
     
-    records.forEach(r => {
+    // Process yearly records first
+    yearlyRecords.forEach(r => {
       let code = r.code || ''
       if (!code) return
       
       let key = code
       if (aggrLevel === 'prefix') {
         const parts = code.split('.')
-        // Typical sub-kegiatan has 6 parts, e.g., 5.01.01.2.08.0002
         if (parts.length >= 6) {
           key = parts.slice(0, 6).join('.')
         }
@@ -67,33 +67,52 @@ export default function BkuAccountSummary({ records }: { records: any[] }) {
       
       const amt = r.expenseTotal || 0
       if (amt > 0) {
-        const current = map.get(key) || { total: 0, name: '' }
-        current.total += amt
-        // Determine name if not set
+        const current = map.get(key) || { monthlyTotal: 0, yearlyTotal: 0, name: '' }
+        current.yearlyTotal += amt
         if (!current.name) {
           current.name = extractName(r.description, aggrLevel === 'full')
         }
         map.set(key, current)
       }
     })
+
+    // Process monthly records for current month subtotal
+    monthlyRecords.forEach(r => {
+      let code = r.code || ''
+      if (!code) return
+      
+      let key = code
+      if (aggrLevel === 'prefix') {
+        const parts = code.split('.')
+        if (parts.length >= 6) {
+          key = parts.slice(0, 6).join('.')
+        }
+      }
+      
+      const amt = r.expenseTotal || 0
+      if (amt > 0) {
+         const current = map.get(key)
+         if (current) current.monthlyTotal += amt
+      }
+    })
     
     return Array.from(map.entries())
-      .sort((a,b) => b[1].total - a[1].total) // Sort descending by amount
-  }, [records, aggrLevel])
+      .sort((a,b) => b[1].yearlyTotal - a[1].yearlyTotal) // Sort descending by yearly amount
+  }, [monthlyRecords, yearlyRecords, aggrLevel])
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount)
   }
 
   if (summary.length === 0) return (
-     <div className="mt-8 pt-4 border-t border-border flex items-center justify-between">
+     <div className="flex items-center justify-between">
        <span className="text-xs text-slate-500 italic">Belum ada data pengeluaran dengan kode rekening.</span>
      </div>
   )
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-6">
         <h3 className="text-base font-bold text-foreground flex items-center gap-2">
           <PieChart className="w-5 h-5 text-indigo-500" />
           Pengeluaran per Rekening
@@ -114,16 +133,26 @@ export default function BkuAccountSummary({ records }: { records: any[] }) {
         </div>
       </div>
       
-      <div className="bg-input/10 border border-border rounded-xl p-1 max-h-[220px] overflow-y-auto custom-scrollbar">
-        {summary.map(([code, data], idx) => (
-          <div key={code} className={`flex items-start justify-between p-3 rounded-lg hover:bg-indigo-500/10 transition-colors gap-4 ${idx !== summary.length - 1 ? 'border-b border-border/50' : ''}`}>
-            <div className="flex flex-col gap-1 min-w-0">
-               <span className="text-sm font-bold text-foreground truncate">{data.name}</span>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 bg-transparent max-h-[400px] overflow-y-auto custom-scrollbar p-1">
+        {summary.map(([code, data]) => (
+          <div key={code} className="flex flex-col p-4 rounded-2xl bg-input/20 border border-border/50 hover:bg-indigo-500/10 transition-colors gap-3">
+             <div className="flex flex-col gap-1 min-w-0">
+               <span className="text-sm font-bold text-foreground truncate" title={data.name}>{data.name}</span>
                <span className="font-mono text-[10px] text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
                  <ListTree className="w-3 h-3 opacity-70" /> {code}
                </span>
-            </div>
-            <span className="text-sm font-black text-rose-600 dark:text-rose-400 whitespace-nowrap mt-0.5">{formatCurrency(data.total)}</span>
+             </div>
+             
+             <div className="flex items-center justify-between mt-2 pt-3 border-t border-border/50">
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Bulan Ini</span>
+                  <span className="text-sm font-black text-rose-600 dark:text-rose-400">{formatCurrency(data.monthlyTotal)}</span>
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Tahunan</span>
+                  <span className="text-sm font-black text-rose-700 dark:text-rose-500">{formatCurrency(data.yearlyTotal)}</span>
+                </div>
+             </div>
           </div>
         ))}
       </div>

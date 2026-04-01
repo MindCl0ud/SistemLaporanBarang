@@ -1,4 +1,4 @@
-import { getBkuRecords, getBkuComparison } from "@/app/actions/bkuActions"
+import { getBkuRecords, getBkuComparison, getYearlyBkuRecords } from "@/app/actions/bkuActions"
 import BkuForm from "./BkuForm"
 import BkuList from "./BkuList"
 import BkuAccountSummary from "./BkuAccountSummary"
@@ -7,6 +7,7 @@ import { Plus, TrendingUp, CalendarDays } from "lucide-react"
 export default async function BkuDashboardContent({ month, year }: { month: number, year: number }) {
   const records = await getBkuRecords(month, year)
   const stats = await getBkuComparison(month, year)
+  const yearlyRecords = await getYearlyBkuRecords(year)
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount)
@@ -17,18 +18,14 @@ export default async function BkuDashboardContent({ month, year }: { month: numb
       {/* Top Row: Form + Account Summary on Left, Stats on Right */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
-        {/* LEFT COLUMN: Input Form & Detail Pengeluaran */}
+        {/* LEFT COLUMN: Input Form */}
         <div className="space-y-6">
-          <div className="p-6 rounded-3xl bg-card border border-border backdrop-blur-md shadow-sm">
+          <div className="p-6 rounded-3xl bg-card border border-border backdrop-blur-md shadow-sm h-full">
             <h2 className="text-lg font-bold text-foreground mb-6 flex items-center gap-2">
               <Plus className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
               Tambah Data BKU
             </h2>
             <BkuForm currentMonth={month} currentYear={year} />
-          </div>
-
-          <div className="p-6 rounded-3xl bg-card border border-border backdrop-blur-md shadow-sm">
-            <BkuAccountSummary records={records} />
           </div>
         </div>
 
@@ -105,6 +102,11 @@ export default async function BkuDashboardContent({ month, year }: { month: numb
               </div>
           </div>
         </div>
+      </div>
+
+      {/* Row 2: Account Summary (Full Width) */}
+      <div className="p-6 rounded-3xl bg-card border border-border backdrop-blur-md shadow-sm w-full">
+        <BkuAccountSummary monthlyRecords={records} yearlyRecords={yearlyRecords} />
       </div>
 
       {/* Bottom Section: Data List Table (Full Width) */}

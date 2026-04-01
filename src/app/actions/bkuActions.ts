@@ -11,6 +11,13 @@ export async function getBkuRecords(month: number, year: number) {
   })
 }
 
+export async function getYearlyBkuRecords(year: number) {
+  return await prisma.bkuTransaction.findMany({
+    where: { year },
+    orderBy: { createdAt: 'desc' }
+  })
+}
+
 export async function getBkuComparison(month: number, year: number) {
   const allPastRecords = await prisma.bkuTransaction.findMany({
     where: {
