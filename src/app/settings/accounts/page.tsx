@@ -75,7 +75,7 @@ export default function AccountMappingPage() {
                   type="text"
                   required
                   placeholder="Contoh: 5.1.02.01..."
-                  className="w-full bg-input border border-border rounded-xl px-4 py-2.5 text-sm font-bold text-foreground focus:ring-2 focus:ring-primary outline-none transition-all"
+                  className="w-full bg-white dark:bg-input border border-border rounded-xl px-4 py-2.5 text-sm font-bold text-foreground focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-muted/60"
                   value={newMapping.code}
                   onChange={e => setNewMapping({ ...newMapping, code: e.target.value })}
                 />
@@ -86,7 +86,7 @@ export default function AccountMappingPage() {
                   type="text"
                   required
                   placeholder="Contoh: Belanja Alat Tulis"
-                  className="w-full bg-input border border-border rounded-xl px-4 py-2.5 text-sm font-bold text-foreground focus:ring-2 focus:ring-primary outline-none transition-all"
+                  className="w-full bg-white dark:bg-input border border-border rounded-xl px-4 py-2.5 text-sm font-bold text-foreground focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-muted/60"
                   value={newMapping.name}
                   onChange={e => setNewMapping({ ...newMapping, name: e.target.value })}
                 />
@@ -119,7 +119,7 @@ export default function AccountMappingPage() {
           <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm">
             <table className="w-full text-sm border-collapse">
               <thead>
-                <tr className="bg-input/50">
+                <tr className="bg-slate-50 dark:bg-input/50">
                   <th className="text-left px-6 py-4 text-[10px] font-black text-muted uppercase tracking-widest border-b border-border">Kode</th>
                   <th className="text-left px-6 py-4 text-[10px] font-black text-muted uppercase tracking-widest border-b border-border">Nama Kustom</th>
                   <th className="text-center px-6 py-4 text-[10px] font-black text-muted uppercase tracking-widest border-b border-border w-24">Aksi</th>
