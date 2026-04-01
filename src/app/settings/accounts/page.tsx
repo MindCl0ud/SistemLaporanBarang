@@ -57,7 +57,7 @@ export default function AccountMappingPage() {
           <ListTree className="w-8 h-8 text-primary" />
           Master Rekening
         </h1>
-        <p className="text-muted mt-2 font-semibold">Kelola nama khusus untuk kode rekening agar laporan lebih mudah dibaca.</p>
+        <p className="text-foreground/80 mt-2 font-black">Kelola nama khusus untuk kode rekening agar laporan lebih mudah dibaca.</p>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -128,11 +128,11 @@ export default function AccountMappingPage() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={3} className="px-6 py-12 text-center text-muted italic">Memuat data...</td>
+                    <td colSpan={3} className="px-6 py-12 text-center text-foreground font-black italic">Memuat data...</td>
                   </tr>
                 ) : filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="px-6 py-12 text-center text-muted italic">Belum ada pemetaan.</td>
+                    <td colSpan={3} className="px-6 py-12 text-center text-foreground/70 font-black italic">Belum ada pemetaan.</td>
                   </tr>
                 ) : filtered.map(m => (
                   <tr key={m.id} className="hover:bg-primary/5 transition-colors border-b border-border/50 last:border-0 group">
@@ -142,7 +142,7 @@ export default function AccountMappingPage() {
                       <div className="flex justify-center gap-2">
                         <button
                           onClick={() => setNewMapping({ code: m.code, name: m.name })}
-                          className="p-2 text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition-all transition-all shadow-sm"
+                          className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-all shadow-sm border border-transparent hover:border-primary/20"
                           title="Edit"
                         >
                           <Pencil className="w-4 h-4" />
