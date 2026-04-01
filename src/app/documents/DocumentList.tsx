@@ -293,11 +293,11 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                     </td>
 
                     {/* Nomor Dokumen */}
-                    <td className={cellClass + ' font-mono text-slate-400 text-[11px]'}>
+                    <td className={cellClass + ' font-mono text-foreground/80 text-[11px] font-black'}>
                       <div className="flex flex-col gap-0.5">
                         <span title="Nomor Kwitansi/Nota">{doc.docNumber || '—'}</span>
                         {doc.baNumber && (
-                          <span className="text-[10px] text-amber-500/80 font-bold" title="Nomor Berita Acara">
+                          <span className="text-[10px] text-amber-700 dark:text-amber-500 font-black" title="Nomor Berita Acara">
                              {doc.baNumber}
                           </span>
                         )}
@@ -310,7 +310,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                     </td>
 
                     {/* Sub Kegiatan */}
-                    <td className={cellClass + ' font-mono text-indigo-700 dark:text-indigo-200 text-[11px] font-bold'}>
+                    <td className={cellClass + ' font-mono text-indigo-800 dark:text-indigo-200 text-[11px] font-black'}>
                       {doc.subKegiatan || '—'}
                     </td>
 
@@ -328,10 +328,10 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                     </td>
 
                     {/* Vendor */}
-                    <td className={cellClass}>{doc.vendorName}</td>
+                    <td className={cellClass + ' font-black text-foreground'}>{doc.vendorName}</td>
 
                     {/* Satuan */}
-                    <td className={cellClass + ' text-center text-slate-500'}>
+                    <td className={cellClass + ' text-center text-foreground font-bold'}>
                       {doc.unit || '—'}
                     </td>
 
