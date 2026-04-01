@@ -116,6 +116,22 @@ export async function runMatchingEngine(month?: number, year?: number) {
         ? 'Cocok Sempurna (Nominal & Deskripsi sesuai).'
         : `Cocok Tinggi (${(highestConfidence * 100).toFixed(0)}%) berdasarkan kesamaan data.`;
 
+      // Menghitung No dari tabel BKU
+      let bkuNomorKwitansi = bestMatchBku.code || "";
+      try {
+        const allMonthBkus = await prisma.bkuTransaction.findMany({
+          where: { month: bestMatchBku.month, year: bestMatchBku.year },
+          orderBy: { createdAt: 'asc' },
+          select: { id: true }
+        });
+        const tableNo = allMonthBkus.findIndex(b => b.id === bestMatchBku.id) + 1;
+        if (tableNo > 0) {
+          bkuNomorKwitansi = `${tableNo} BKU`;
+        }
+      } catch (e) {
+        console.error("Gagal menghitung nomor tabel", e);
+      }
+
       await prisma.$transaction([
         prisma.matchRecord.create({
           data: {
@@ -126,13 +142,11 @@ export async function runMatchingEngine(month?: number, year?: number) {
             reasoning: reason
           }
         }),
-        // Sync document number from BKU if document number is missing
-        ...(doc.docNumber ? [] : [
-          prisma.document.update({
-            where: { id: doc.id },
-            data: { docNumber: bestMatchBku.code || "" }
-          })
-        ])
+        // Fix: user requested that docNumber is completely replaced by '{tableNo} BKU'
+        prisma.document.update({
+          where: { id: doc.id },
+          data: { docNumber: bkuNomorKwitansi }
+        })
       ])
 
       matchCount++

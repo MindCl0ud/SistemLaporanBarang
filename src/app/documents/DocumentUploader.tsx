@@ -38,40 +38,53 @@ export default function DocumentUploader() {
       setCapturedImageUrl(fileUrl)
 
       if (file.type === 'application/pdf') {
-        setStatusText(aiEngine === 'gemini' ? 'Mengekstrak Halaman PDF untuk Gemini...' : 'Memproses PDF...')
-        const masterData: any = {
-          type: "Dokumen Gabungan",
-          vendorName: "Tidak Diketahui",
-          totalAmount: 0,
-          extractedText: "",
-          pageItems: [] as any[],
-          paymentFor: ""
-        }
+        if (aiEngine === 'gemini') {
+          setStatusText('Memproses dokumen PDF untuk Gemini (1 Request)...')
+          const base64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.readAsDataURL(file)
+            reader.onload = () => resolve(reader.result as string)
+            reader.onerror = reject
+          })
+          
+          setStatusText('Meminta Analisis dari Google Gemini AI...')
+          const formData = new FormData()
+          formData.append('images', base64) // Gemini action supports application/pdf mimeType natively
+          
+          const geminiData = await parseWithGemini(formData)
+          setRawText(JSON.stringify(geminiData, null, 2))
+          setPendingData(geminiData)
+          setShowManualForm(true)
+        } else {
+          setStatusText('Memproses PDF Lokal...')
+          const masterData: any = {
+            type: "Dokumen Gabungan",
+            vendorName: "Tidak Diketahui",
+            totalAmount: 0,
+            extractedText: "",
+            pageItems: [] as any[],
+            paymentFor: ""
+          }
 
-        const pdfjsLib = await import('pdfjs-dist')
-        pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-        const arrayBuffer = await file.arrayBuffer()
-        const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
-        const numPages = Math.min(pdfDoc.numPages, 5) // Handle up to 5 pages
-        
-        const base64Images: string[] = []
-
-        for (let i = 1; i <= numPages; i++) {
-          setStatusText(`Mengolah Halaman ${i} dari ${numPages}...`)
-          const page = await pdfDoc.getPage(i)
-          const viewport = page.getViewport({ scale: 2.5 })
-          const canvas = document.createElement('canvas')
-          const ctx = canvas.getContext('2d')
-          canvas.width = viewport.width
-          canvas.height = viewport.height
-          if (ctx) {
-            // @ts-ignore
-            await page.render({ canvasContext: ctx, viewport }).promise
-            const img = canvas.toDataURL('image/jpeg', 0.9)
-            
-            if (aiEngine === 'gemini') {
-              base64Images.push(img)
-            } else {
+          const pdfjsLib = await import('pdfjs-dist')
+          pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
+          const arrayBuffer = await file.arrayBuffer()
+          const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+          const numPages = Math.min(pdfDoc.numPages, 5) // Handle up to 5 pages
+          
+          for (let i = 1; i <= numPages; i++) {
+            setStatusText(`Mengolah Halaman ${i} dari ${numPages}...`)
+            const page = await pdfDoc.getPage(i)
+            const viewport = page.getViewport({ scale: 2.5 })
+            const canvas = document.createElement('canvas')
+            const ctx = canvas.getContext('2d')
+            canvas.width = viewport.width
+            canvas.height = viewport.height
+            if (ctx) {
+              // @ts-ignore
+              await page.render({ canvasContext: ctx, viewport }).promise
+              const img = canvas.toDataURL('image/jpeg', 0.9)
+              
               const pageRes = await parseDocumentImage(img, (msg) => setStatusText(`Hal ${i}: ${msg}`))
               masterData.extractedText += "\n" + pageRes.text
               setRawText(p => p + "\n" + pageRes.text)
@@ -82,23 +95,13 @@ export default function DocumentUploader() {
               if (pageRes.data.items) masterData.pageItems.push(...pageRes.data.items)
             }
           }
-        }
-        
-        if (aiEngine === 'gemini') {
-          setStatusText('Meminta Analisis dari Google Gemini AI...')
-          const formData = new FormData()
-          base64Images.forEach((img) => formData.append('images', img))
           
-          const geminiData = await parseWithGemini(formData)
-          setRawText(JSON.stringify(geminiData, null, 2))
-          setPendingData(geminiData)
-        } else {
           setPendingData({
             ...masterData,
             items: masterData.pageItems
           })
+          setShowManualForm(true)
         }
-        setShowManualForm(true)
 
       } else {
         // Handle direct image uploads
