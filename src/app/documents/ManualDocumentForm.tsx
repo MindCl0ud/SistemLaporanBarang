@@ -108,21 +108,21 @@ export default function ManualDocumentForm({ onClose, onSuccess, initialData, im
         <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-input/50">
           <div className="flex items-center gap-4">
             <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-              <Plus className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+              <Plus className="w-5 h-5 text-primary" />
               {imageUrl ? 'Review & Simpan Dokumen AI' : 'Input Dokumen Manual'}
             </h2>
             {imageUrl && (
-              <div className="flex items-center gap-2 bg-slate-500/5 p-1 rounded-xl border border-border">
+              <div className="flex items-center gap-2 bg-input border border-border p-1 rounded-xl">
                 <button 
                   onClick={() => setIsSplitView(!isSplitView)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${isSplitView ? 'bg-indigo-500 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-500/10'}`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${isSplitView ? 'bg-primary text-white shadow-sm' : 'text-muted hover:bg-accent'}`}
                 >
                   {isSplitView ? <Minimize2 className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
                   Split View
                 </button>
                 <button 
                   onClick={() => setShowRawText(!showRawText)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${showRawText ? 'bg-indigo-500 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-500/10'}`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${showRawText ? 'bg-primary text-white shadow-sm' : 'text-muted hover:bg-accent'}`}
                 >
                   <FileText className="w-3 h-3" />
                   Raw Text
@@ -138,11 +138,11 @@ export default function ManualDocumentForm({ onClose, onSuccess, initialData, im
         <div className="flex flex-1 overflow-hidden">
           {/* PDF/Image Preview Side (Split View) */}
           {isSplitView && imageUrl && (
-            <div className="w-1/2 border-r border-border bg-slate-100 dark:bg-slate-900 overflow-auto p-4 flex flex-col items-center">
+            <div className="w-1/2 border-r border-border bg-input overflow-auto p-4 flex flex-col items-center">
               {showRawText ? (
-                <div className="w-full h-full p-6 bg-white dark:bg-slate-800 rounded-xl border border-border overflow-y-auto animate-in fade-in zoom-in-95">
-                  <h3 className="text-[10px] font-bold text-indigo-600 uppercase mb-4 tracking-widest">Extracted Raw Text</h3>
-                  <pre className="text-xs font-mono text-slate-600 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                <div className="w-full h-full p-6 bg-card rounded-xl border border-border overflow-y-auto animate-in fade-in zoom-in-95">
+                  <h3 className="text-[10px] font-bold text-primary uppercase mb-4 tracking-widest">Extracted Raw Text</h3>
+                  <pre className="text-xs font-mono text-muted leading-relaxed">
                     {formData.extractedText || "Tidak ada teks mentah yang tersedia."}
                   </pre>
                 </div>
@@ -167,11 +167,11 @@ export default function ManualDocumentForm({ onClose, onSuccess, initialData, im
               {/* Basic Info */}
               <div className="space-y-4">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tipe Dokumen</label>
+                  <label className="block text-[10px] font-bold text-muted uppercase mb-1">Tipe Dokumen</label>
                   <select
                     value={formData.type}
                     onChange={e => setFormData({ ...formData, type: e.target.value })}
-                    className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-indigo-500"
+                    className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-primary focus:outline-none"
                   >
                     <option value="Kwitansi">Kwitansi</option>
                     <option value="Berita Acara Penerimaan Barang">BA Penerimaan</option>
@@ -180,26 +180,26 @@ export default function ManualDocumentForm({ onClose, onSuccess, initialData, im
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nama Vendor / Penyedia</label>
+                  <label className="block text-[10px] font-bold text-muted uppercase mb-1">Nama Vendor / Penyedia</label>
                   <input
                     type="text"
                     required
                     value={formData.vendorName}
                     onChange={e => setFormData({ ...formData, vendorName: e.target.value })}
                     placeholder="Contoh: Sumber Mas"
-                    className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500"
+                    className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:outline-none"
                   />
                 </div>
                 
                 {/* Payment Description (NEW) */}
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Uraian Pembayaran</label>
+                  <label className="block text-[10px] font-bold text-muted uppercase mb-1">Uraian Pembayaran</label>
                   <textarea
                     rows={3}
                     value={formData.paymentFor}
                     onChange={e => setFormData({ ...formData, paymentFor: e.target.value })}
                     placeholder="Contoh: Belanja Pemeliharaan Alat Angkutan Darat..."
-                    className="w-full bg-input border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:ring-2 focus:ring-indigo-500 resize-none"
+                    className="w-full bg-input border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:ring-2 focus:ring-primary focus:outline-none resize-none"
                   />
                 </div>
               </div>
@@ -208,47 +208,47 @@ export default function ManualDocumentForm({ onClose, onSuccess, initialData, im
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Kode Rekening</label>
+                    <label className="block text-[10px] font-bold text-muted uppercase mb-1">Kode Rekening</label>
                     <input
                       type="text"
                       value={formData.kodeRek}
                       onChange={e => setFormData({ ...formData, kodeRek: e.target.value })}
-                      className="w-full bg-input border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:ring-2 focus:ring-indigo-500"
+                      className="w-full bg-input border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:ring-2 focus:ring-primary focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Sub Kegiatan</label>
+                    <label className="block text-[10px] font-bold text-muted uppercase mb-1">Sub Kegiatan</label>
                     <input
                       type="text"
                       value={formData.subKegiatan}
                       onChange={e => setFormData({ ...formData, subKegiatan: e.target.value })}
-                      className="w-full bg-input border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:ring-2 focus:ring-indigo-500"
+                      className="w-full bg-input border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:ring-2 focus:ring-primary focus:outline-none"
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tanggal Dokumen</label>
+                    <label className="block text-[10px] font-bold text-muted uppercase mb-1">Tanggal Dokumen</label>
                     <input
                       type="date"
                       required
                       value={formData.date}
                       onChange={e => setFormData({ ...formData, date: e.target.value })}
-                      className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground"
+                      className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nomor Dokumen</label>
+                    <label className="block text-[10px] font-bold text-muted uppercase mb-1">Nomor Dokumen</label>
                     <input
                       type="text"
                       value={formData.docNumber}
                       onChange={e => setFormData({ ...formData, docNumber: e.target.value })}
-                      className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground"
+                      className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Total Keseluruhan</label>
+                  <label className="block text-[10px] font-bold text-muted uppercase mb-1">Total Keseluruhan</label>
                   <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2 text-emerald-600 dark:text-emerald-400 font-mono font-bold text-lg">
                     Rp {new Intl.NumberFormat('id-ID').format(formData.totalAmount)}
                   </div>
@@ -259,11 +259,11 @@ export default function ManualDocumentForm({ onClose, onSuccess, initialData, im
             {/* Items Table */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Rincian Item & Kode Barang</h3>
+                <h3 className="text-xs font-bold text-muted uppercase tracking-widest">Rincian Item & Kode Barang</h3>
                 <button
                   type="button"
                   onClick={handleAddItem}
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 transition-all"
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-all"
                 >
                   <Plus className="w-3 h-3" /> Tambah Baris
                 </button>
@@ -329,14 +329,14 @@ export default function ManualDocumentForm({ onClose, onSuccess, initialData, im
                             className="w-full bg-transparent border-none text-right focus:ring-0 font-mono"
                           />
                         </td>
-                        <td className="px-3 py-2 text-right font-mono text-indigo-600 dark:text-indigo-400 font-semibold">
+                        <td className="px-3 py-2 text-right font-mono text-primary font-semibold">
                           {new Intl.NumberFormat('id-ID').format(item.total)}
                         </td>
                         <td className="p-1 text-center">
                           <button
                             type="button"
                             onClick={() => handleRemoveItem(idx)}
-                            className="p-1.5 text-slate-400 hover:text-rose-500 rounded transition-all"
+                            className="p-1.5 text-muted hover:text-rose-500 rounded transition-all"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -352,13 +352,13 @@ export default function ManualDocumentForm({ onClose, onSuccess, initialData, im
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-border bg-input/50 flex justify-end gap-3">
-          <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-slate-500 hover:text-foreground">
+          <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-muted hover:text-foreground">
             Batal
           </button>
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-sm font-bold shadow-lg transition-all"
+            className="flex items-center gap-2 px-6 py-2 bg-primary hover:bg-primary/90 disabled:opacity-50 text-white rounded-xl text-sm font-bold shadow-lg transition-all"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Simpan Dokumen

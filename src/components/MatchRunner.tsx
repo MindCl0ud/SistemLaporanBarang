@@ -30,7 +30,7 @@ export default function MatchRunner() {
       <button 
         onClick={handleRun}
         disabled={loading}
-        className="w-full py-3 px-4 bg-indigo-500 hover:bg-indigo-400 disabled:opacity-50 text-white rounded-xl font-medium transition-colors shadow-[0_0_20px_rgba(99,102,241,0.3)] shrink-0 flex items-center justify-center gap-2"
+        className="w-full py-3 px-4 bg-primary hover:bg-primary/90 disabled:opacity-50 text-white rounded-xl font-medium transition-colors shadow-[0_0_20px_rgba(99,102,241,0.2)] shrink-0 flex items-center justify-center gap-2"
       >
         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Webhook className="w-4 h-4" />}
         {loading ? "Menjalankan AI Engine..." : "Jalankan Pencocokan Otomatis"}
