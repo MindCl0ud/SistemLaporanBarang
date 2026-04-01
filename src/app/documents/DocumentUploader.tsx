@@ -6,6 +6,7 @@ import { Upload, Loader2, AlertCircle, FileText, CheckCircle2, Plus } from 'luci
 import { parseDocumentImage } from '@/lib/ai/documentParser'
 import { parsePdfServer } from '@/lib/ai/pdfParser'
 import { saveDocument } from '@/app/actions/documentActions'
+import { parseWithGemini } from '@/app/actions/geminiActions'
 import { useRouter } from 'next/navigation'
 import ManualDocumentForm from './ManualDocumentForm'
 
@@ -19,6 +20,7 @@ export default function DocumentUploader() {
   const [rawText, setRawText] = useState('')
   const [pendingData, setPendingData] = useState<any>(null)
   const [capturedImageUrl, setCapturedImageUrl] = useState<string>('')
+  const [aiEngine, setAiEngine] = useState<'tesseract' | 'gemini'>('gemini') // Default to Gemini per user request
   
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0]
@@ -36,7 +38,7 @@ export default function DocumentUploader() {
       setCapturedImageUrl(fileUrl)
 
       if (file.type === 'application/pdf') {
-        setStatusText('Memproses PDF...')
+        setStatusText(aiEngine === 'gemini' ? 'Mengekstrak Halaman PDF untuk Gemini...' : 'Memproses PDF...')
         const masterData: any = {
           type: "Dokumen Gabungan",
           vendorName: "Tidak Diketahui",
@@ -50,8 +52,10 @@ export default function DocumentUploader() {
         pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
         const arrayBuffer = await file.arrayBuffer()
         const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
-        const numPages = Math.min(pdfDoc.numPages, 5)
+        const numPages = Math.min(pdfDoc.numPages, 5) // Handle up to 5 pages
         
+        const base64Images: string[] = []
+
         for (let i = 1; i <= numPages; i++) {
           setStatusText(`Mengolah Halaman ${i} dari ${numPages}...`)
           const page = await pdfDoc.getPage(i)
@@ -64,29 +68,57 @@ export default function DocumentUploader() {
             // @ts-ignore
             await page.render({ canvasContext: ctx, viewport }).promise
             const img = canvas.toDataURL('image/jpeg', 0.9)
-            const pageRes = await parseDocumentImage(img, (msg) => setStatusText(`Hal ${i}: ${msg}`))
             
-            masterData.extractedText += "\n" + pageRes.text
-            setRawText(p => p + "\n" + pageRes.text)
-            
-            if (pageRes.data.totalAmount > masterData.totalAmount) masterData.totalAmount = pageRes.data.totalAmount
-            if (pageRes.data.vendorName && pageRes.data.vendorName !== 'Tidak Diketahui') masterData.vendorName = pageRes.data.vendorName
-            if (pageRes.data.paymentFor) masterData.paymentFor += " " + pageRes.data.paymentFor
-            if (pageRes.data.items) masterData.pageItems.push(...pageRes.data.items)
+            if (aiEngine === 'gemini') {
+              base64Images.push(img)
+            } else {
+              const pageRes = await parseDocumentImage(img, (msg) => setStatusText(`Hal ${i}: ${msg}`))
+              masterData.extractedText += "\n" + pageRes.text
+              setRawText(p => p + "\n" + pageRes.text)
+              
+              if (pageRes.data.totalAmount > masterData.totalAmount) masterData.totalAmount = pageRes.data.totalAmount
+              if (pageRes.data.vendorName && pageRes.data.vendorName !== 'Tidak Diketahui') masterData.vendorName = pageRes.data.vendorName
+              if (pageRes.data.paymentFor) masterData.paymentFor += " " + pageRes.data.paymentFor
+              if (pageRes.data.items) masterData.pageItems.push(...pageRes.data.items)
+            }
           }
         }
         
-        setPendingData({
-          ...masterData,
-          items: masterData.pageItems
-        })
+        if (aiEngine === 'gemini') {
+          setStatusText('Meminta Analisis dari Google Gemini AI...')
+          const geminiData = await parseWithGemini(base64Images)
+          setRawText(JSON.stringify(geminiData, null, 2))
+          setPendingData(geminiData)
+        } else {
+          setPendingData({
+            ...masterData,
+            items: masterData.pageItems
+          })
+        }
         setShowManualForm(true)
 
       } else {
-        const result = await parseDocumentImage(fileUrl, (msg) => setStatusText(msg))
-        setRawText(result.text)
-        setPendingData({ ...result.data, extractedText: result.text })
-        setShowManualForm(true)
+        // Handle direct image uploads
+        if (aiEngine === 'gemini') {
+          setStatusText('Memproses Gambar ke Format Base64...')
+          const base64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.readAsDataURL(file)
+            reader.onload = () => resolve(reader.result as string)
+            reader.onerror = reject
+          })
+          
+          setStatusText('Meminta Analisis dari Google Gemini AI...')
+          const geminiData = await parseWithGemini([base64])
+          setRawText(JSON.stringify(geminiData, null, 2))
+          setPendingData(geminiData)
+          setShowManualForm(true)
+        } else {
+          const result = await parseDocumentImage(fileUrl, (msg) => setStatusText(msg))
+          setRawText(result.text)
+          setPendingData({ ...result.data, extractedText: result.text })
+          setShowManualForm(true)
+        }
       }
     } catch (err: any) {
       setError(err.message || 'Terjadi kesalahan')
@@ -132,6 +164,32 @@ export default function DocumentUploader() {
               {isDragActive ? "Lepaskan file di sini..." : "Tarik & Lepas Gambar Dokumen atau PDF"}
             </p>
             <p className="text-sm text-slate-500 dark:text-slate-400">Mendukung JPG, PNG, WEBP, dan PDF</p>
+          </div>
+        </div>
+
+        {/* AI ENGINE TOGGLE */}
+        <div className="flex items-center justify-center p-2">
+          <div className="inline-flex bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-1">
+            <button
+              onClick={() => setAiEngine('tesseract')}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                aiEngine === 'tesseract' 
+                  ? 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 shadow-sm border-slate-200 dark:border-slate-700' 
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+              }`}
+            >
+              🚀 Lokal (Tesseract)
+            </button>
+            <button
+              onClick={() => setAiEngine('gemini')}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                aiEngine === 'gemini' 
+                  ? 'bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 shadow-sm border-indigo-200 dark:border-indigo-500/30' 
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+              }`}
+            >
+              ✨ Super Presisi (Gemini Cloud)
+            </button>
           </div>
         </div>
 
