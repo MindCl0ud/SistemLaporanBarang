@@ -1,10 +1,9 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   ListTree, 
-  Plus, 
   Save, 
   Trash2, 
   Loader2, 
@@ -12,9 +11,9 @@ import {
   Pencil, 
   RefreshCw, 
   X,
-  CreditCard,
   Hash,
-  ArrowRight
+  Plus,
+  Check
 } from 'lucide-react'
 import { getAccountMappings, upsertAccountMapping, deleteAccountMapping, syncAccountCodesFromBku } from '@/app/actions/bkuActions'
 
@@ -22,9 +21,15 @@ export default function AccountMappingPage() {
   const [mappings, setMappings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [newMapping, setNewMapping] = useState({ id: '', code: '', name: '' })
-  const [saving, setSaving] = useState(false)
-  const formRef = useRef<HTMLDivElement>(null)
+  const [savingId, setSavingId] = useState<string | null>(null)
+  
+  // Inline editing states
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editValue, setEditValue] = useState('')
+
+  // New row states
+  const [showAddRow, setShowAddRow] = useState(false)
+  const [newRow, setNewRow] = useState({ code: '', name: '' })
 
   useEffect(() => {
     fetchMappings()
@@ -40,17 +45,17 @@ export default function AccountMappingPage() {
     }
   }
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newMapping.code || !newMapping.name) return
-    
-    setSaving(true)
+  const handleSaveInline = async (code: string, name: string, id: string | null = null) => {
+    if (!code || !name) return
+    setSavingId(id || 'new')
     try {
-      await upsertAccountMapping(newMapping.code, newMapping.name)
-      setNewMapping({ id: '', code: '', name: '' })
+      await upsertAccountMapping(code, name)
+      setEditingId(null)
+      setShowAddRow(false)
+      setNewRow({ code: '', name: '' })
       fetchMappings()
     } finally {
-      setSaving(false)
+      setSavingId(null)
     }
   }
 
@@ -58,11 +63,6 @@ export default function AccountMappingPage() {
     if (!confirm('Hapus pemetaan ini?')) return
     await deleteAccountMapping(id)
     fetchMappings()
-  }
-
-  const handleEdit = (m: any) => {
-    setNewMapping({ id: m.id, code: m.code, name: m.name })
-    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 
   const handleSync = async () => {
@@ -82,12 +82,12 @@ export default function AccountMappingPage() {
   )
 
   return (
-    <div className="max-w-[1400px] mx-auto px-4 py-8 space-y-12 min-h-screen">
-      {/* HEADER SECTION */}
+    <div className="max-w-[1400px] mx-auto px-4 py-8 space-y-8 min-h-screen">
+      {/* HEADER */}
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="space-y-2">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-black uppercase tracking-widest mb-2">
-            <Hash className="w-3 h-3" /> Sistem Pemetaan Data
+            <Hash className="w-3 h-3" /> Master Data Management
           </div>
           <h1 className="text-4xl font-black text-foreground flex items-center gap-4 tracking-tighter">
             <div className="p-3 rounded-2xl bg-primary text-white shadow-xl shadow-primary/20">
@@ -96,190 +96,175 @@ export default function AccountMappingPage() {
             Master Rekening
           </h1>
           <p className="text-foreground/70 font-black text-lg max-w-2xl leading-tight">
-            Personalisasi kode rekening BKU yang rumit menjadi nama yang mudah dikenali untuk laporan yang lebih intuitif.
+            Klik pada sel <span className="text-primary italic">Nama Kustom</span> untuk mengedit data secara langsung.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <button
+            onClick={() => setShowAddRow(true)}
+            className="flex items-center gap-2 px-6 py-4 bg-primary text-white rounded-2xl text-sm font-black shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+          >
+            <Plus className="w-4 h-4" /> Tambah Manual
+          </button>
+          <button
             onClick={handleSync}
             disabled={loading}
-            className="group flex items-center gap-2 px-6 py-4 bg-white dark:bg-card hover:bg-primary hover:text-white text-foreground rounded-2xl text-sm font-black border border-border hover:border-primary transition-all shadow-xl shadow-indigo-500/5 active:scale-95"
+            className="group flex items-center gap-2 px-6 py-4 bg-white dark:bg-card hover:bg-slate-50 text-foreground rounded-2xl text-sm font-black border border-border transition-all shadow-sm active:scale-95"
           >
             <RefreshCw className={`w-4 h-4 transition-transform group-hover:rotate-180 duration-500 ${loading ? 'animate-spin' : ''}`} />
-            Sinkronisasi dari BKU
+            Sync BKU
           </button>
         </div>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-        {/* LEFT COLUMN: FORM */}
-        <motion.div 
-          ref={formRef}
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="lg:col-span-4 sticky top-10"
-        >
-          <div className="p-8 rounded-[2.5rem] bg-white dark:bg-card border border-border shadow-2xl shadow-indigo-500/5 space-y-8 relative overflow-hidden group">
-            {/* Ambient Background Accent */}
-            <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-all duration-700 font-black" />
-            
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-black text-foreground flex items-center gap-3">
-                {newMapping.id ? <Pencil className="w-5 h-5 text-primary" /> : <Plus className="w-5 h-5 text-primary" />}
-                {newMapping.id ? 'Edit Rekening' : 'Tambah Rekening'}
-              </h2>
-              {newMapping.id && (
-                <button 
-                  onClick={() => setNewMapping({ id: '', code: '', name: '' })}
-                  className="p-2 hover:bg-input rounded-xl transition-colors text-muted"
-                  title="Batalkan Edit"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
+      {/* SEARCH BAR */}
+      <div className="flex items-center gap-4 bg-white dark:bg-card p-2 pr-4 rounded-[2rem] border border-border shadow-2xl shadow-indigo-500/5">
+        <div className="relative flex-1">
+          <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
+          <input
+            type="text"
+            placeholder="Cari berdasarkan kode atau nama..."
+            className="w-full bg-transparent border-none rounded-2xl pl-16 pr-6 py-4 text-base font-bold text-foreground outline-none placeholder:text-muted/40"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+      </div>
 
-            <form onSubmit={handleSave} className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-foreground/50 uppercase tracking-[0.2em] ml-1">Kode Rekening</label>
-                <div className="relative group/input">
-                  <Hash className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted group-focus-within/input:text-primary transition-colors" />
-                  <input
-                    type="text"
-                    required
-                    placeholder="Contoh: 5.1.02.01..."
-                    className="w-full bg-slate-50 dark:bg-input border border-border rounded-2xl pl-12 pr-4 py-4 text-sm font-bold text-foreground focus:ring-2 focus:ring-primary focus:bg-white outline-none transition-all placeholder:text-muted/40 shadow-inner"
-                    value={newMapping.code}
-                    onChange={e => setNewMapping({ ...newMapping, code: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-foreground/50 uppercase tracking-[0.2em] ml-1">Nama Kustom</label>
-                <div className="relative group/input">
-                  <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted group-focus-within/input:text-primary transition-colors" />
-                  <textarea
-                    required
-                    rows={3}
-                    placeholder="Contoh: Belanja Alat Tulis Kantor (BOS)..."
-                    className="w-full bg-slate-50 dark:bg-input border border-border rounded-2xl pl-12 pr-4 py-4 text-sm font-bold text-foreground focus:ring-2 focus:ring-primary focus:bg-white outline-none transition-all placeholder:text-muted/40 shadow-inner resize-none"
-                    value={newMapping.name}
-                    onChange={e => setNewMapping({ ...newMapping, name: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={saving}
-                className="w-full flex items-center justify-center gap-3 px-8 py-5 bg-primary hover:bg-primary/90 disabled:opacity-50 text-white rounded-[1.5rem] text-sm font-black shadow-2xl shadow-primary/30 transition-all active:scale-95 group/btn"
-              >
-                {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5 group-hover/btn:scale-110 transition-transform" />}
-                {newMapping.id ? 'Simpan Perubahan' : 'Daftarkan Rekening'}
-              </button>
-            </form>
-          </div>
-        </motion.div>
-
-        {/* RIGHT COLUMN: LIST */}
-        <div className="lg:col-span-8 space-y-6">
-          {/* SEARCH & FILTER BAR */}
-          <div className="flex items-center gap-4 bg-white dark:bg-card p-2 pr-4 rounded-[2rem] border border-border shadow-2xl shadow-indigo-500/5">
-            <div className="relative flex-1">
-              <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
-              <input
-                type="text"
-                placeholder="Cari kode atau nama rekening..."
-                className="w-full bg-transparent border-none rounded-2xl pl-16 pr-6 py-4 text-base font-bold text-foreground outline-none placeholder:text-muted/40"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-            </div>
-            <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-input rounded-xl border border-border text-[10px] font-black text-muted uppercase">
-              {filtered.length} Rekening Terdaftar
-            </div>
-          </div>
-
-          {/* CARDS LIST */}
-          <div className="grid grid-cols-1 gap-4">
-            <AnimatePresence mode="popLayout">
-              {loading ? (
-                <motion.div 
-                  initial={{ opacity: 0 }} 
-                  animate={{ opacity: 1 }} 
-                  className="py-32 text-center space-y-4"
-                >
-                  <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto opacity-20" />
-                  <p className="text-foreground/30 font-black uppercase tracking-[0.3em] text-xs">Menyelaraskan Data...</p>
-                </motion.div>
-              ) : filtered.length === 0 ? (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="py-32 text-center space-y-6 bg-slate-50 dark:bg-card/30 rounded-[3rem] border-2 border-dashed border-border"
-                >
-                  <div className="w-20 h-20 bg-muted/20 rounded-full flex items-center justify-center mx-auto">
-                    <ListTree className="w-10 h-10 text-muted" />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xl font-black text-foreground">Data Masih Kosong</p>
-                    <p className="text-foreground/50 text-sm font-bold">Belum ada pemetaan kode rekening yang ditemukan.</p>
-                  </div>
-                </motion.div>
-              ) : (
-                filtered.map((m, idx) => (
-                  <motion.div
-                    key={m.id}
-                    layout
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ delay: idx * 0.03 }}
-                    className="group relative bg-white dark:bg-card border border-border hover:border-primary/30 rounded-[2rem] p-6 pr-8 transition-all hover:shadow-2xl hover:shadow-indigo-500/10"
+      {/* TABLE SECTION */}
+      <div className="bg-white dark:bg-card border border-border rounded-[2.5rem] overflow-hidden shadow-2xl shadow-indigo-500/5 transition-all">
+        <div className="overflow-x-auto custom-scrollbar">
+          <table className="w-full text-sm border-collapse min-w-[900px]">
+            <thead>
+              <tr className="bg-slate-50 dark:bg-input/50 border-b border-border">
+                <th className="px-8 py-5 text-left text-[10px] uppercase font-black tracking-widest text-muted w-64">Kode Rekening</th>
+                <th className="px-8 py-5 text-left text-[10px] uppercase font-black tracking-widest text-muted">Nama Kustom (Edit Langsung)</th>
+                <th className="px-8 py-5 text-center text-[10px] uppercase font-black tracking-widest text-muted w-32">Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {/* ADD NEW ROW (HIDDEN BY DEFAULT) */}
+              <AnimatePresence>
+                {showAddRow && (
+                  <motion.tr 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="bg-primary/5 border-b border-primary/20"
                   >
-                    <div className="flex items-start gap-6">
-                      {/* Icon/Badge */}
-                      <div className="hidden sm:flex shrink-0 w-14 h-14 rounded-2xl bg-slate-50 dark:bg-input border border-border items-center justify-center group-hover:bg-primary/5 group-hover:border-primary/20 transition-colors">
-                        <CreditCard className="w-6 h-6 text-muted group-hover:text-primary transition-colors" />
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex-1 min-w-0 space-y-2">
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                          <span className="font-mono text-[10px] font-black text-primary bg-primary/5 px-3 py-1 rounded-full border border-primary/10 tracking-tight">
-                            {m.code}
-                          </span>
-                        </div>
-                        <h3 className="text-lg font-black text-foreground leading-snug break-words">
-                          {m.name}
-                        </h3>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex flex-col sm:flex-row items-center gap-2 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
-                        <button
-                          onClick={() => handleEdit(m)}
-                          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 rounded-xl text-xs font-black hover:bg-primary hover:text-white transition-all border border-transparent"
+                    <td className="px-8 py-4">
+                      <input 
+                        className="w-full bg-white dark:bg-input border border-primary/30 rounded-xl px-4 py-2.5 text-xs font-mono font-black text-primary outline-none focus:ring-2 focus:ring-primary shadow-sm"
+                        placeholder="Kode: 5.x.x..."
+                        value={newRow.code}
+                        onChange={e => setNewRow({...newRow, code: e.target.value})}
+                      />
+                    </td>
+                    <td className="px-8 py-4">
+                      <input 
+                        className="w-full bg-white dark:bg-input border border-primary/30 rounded-xl px-4 py-2.5 text-sm font-black text-foreground outline-none focus:ring-2 focus:ring-primary shadow-sm"
+                        placeholder="Nama Kustom..."
+                        value={newRow.name}
+                        onChange={e => setNewRow({...newRow, name: e.target.value})}
+                        autoFocus
+                      />
+                    </td>
+                    <td className="px-8 py-4">
+                      <div className="flex items-center justify-center gap-2">
+                        <button 
+                          onClick={() => handleSaveInline(newRow.code, newRow.name)}
+                          disabled={savingId === 'new'}
+                          className="p-2.5 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 hover:scale-110 transition-all disabled:opacity-50"
                         >
-                          <Pencil className="w-3.5 h-3.5" />
-                          Edit
+                          {savingId === 'new' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                         </button>
-                        <button
-                          onClick={() => handleDelete(m.id)}
-                          className="flex items-center gap-2 px-4 py-2.5 bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-black hover:bg-rose-500 hover:text-white transition-all border border-transparent"
+                        <button 
+                          onClick={() => setShowAddRow(false)}
+                          className="p-2.5 bg-white text-muted hover:text-rose-500 rounded-xl border border-border transition-all"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          Hapus
+                          <X className="w-4 h-4" />
                         </button>
                       </div>
+                    </td>
+                  </motion.tr>
+                )}
+              </AnimatePresence>
+
+              {loading ? (
+                <tr>
+                  <td colSpan={3} className="px-8 py-20 text-center">
+                    <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-4 opacity-20" />
+                    <p className="text-xs font-black text-muted uppercase tracking-[0.3em]">Memuat Data Master...</p>
+                  </td>
+                </tr>
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="px-8 py-20 text-center">
+                    <div className="w-16 h-16 bg-muted/10 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-dashed border-border">
+                      <ListTree className="w-8 h-8 text-muted" />
                     </div>
-                  </motion.div>
+                    <p className="text-base font-black text-foreground">Tidak Ada Data</p>
+                    <p className="text-xs text-muted font-bold">Coba sinkronkan dengan BKU atau tambah manual.</p>
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((m) => (
+                  <tr key={m.id} className="group hover:bg-primary/5 transition-colors border-b border-border last:border-0">
+                    <td className="px-8 py-5 font-mono text-[11px] text-primary font-black">
+                      {m.code}
+                    </td>
+                    <td className="px-8 py-5">
+                      {editingId === m.id ? (
+                        <div className="flex items-center gap-3 animate-in fade-in duration-300">
+                          <input 
+                            className="flex-1 bg-white dark:bg-input border border-primary rounded-xl px-4 py-2.5 text-sm font-black text-foreground outline-none shadow-lg shadow-primary/5"
+                            value={editValue}
+                            onChange={e => setEditValue(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleSaveInline(m.code, editValue, m.id)}
+                            onKeyDownCapture={e => e.key === 'Escape' && setEditingId(null)}
+                            autoFocus
+                          />
+                          <button 
+                            onClick={() => handleSaveInline(m.code, editValue, m.id)}
+                            disabled={savingId === m.id}
+                            className="p-2.5 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 hover:scale-110 transition-all disabled:opacity-50"
+                          >
+                            {savingId === m.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                          </button>
+                          <button 
+                            onClick={() => setEditingId(null)}
+                            className="p-2.5 bg-input text-muted hover:text-foreground rounded-xl transition-all"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div 
+                          className="font-bold text-foreground text-sm cursor-pointer hover:text-primary transition-colors flex items-center justify-between group/cell"
+                          onClick={() => {
+                            setEditingId(m.id)
+                            setEditValue(m.name)
+                          }}
+                        >
+                          {m.name}
+                          <Pencil className="w-3 h-3 text-primary opacity-0 group-hover/cell:opacity-100 transition-opacity" />
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-8 py-5 text-center">
+                      <button 
+                        onClick={() => handleDelete(m.id)}
+                        className="p-2.5 text-muted hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                        title="Hapus"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
                 ))
               )}
-            </AnimatePresence>
-          </div>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

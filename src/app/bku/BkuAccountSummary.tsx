@@ -148,28 +148,48 @@ export default function BkuAccountSummary({
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 bg-transparent max-h-[400px] overflow-y-auto custom-scrollbar p-1">
-        {summary.map(([code, data]) => (
-          <div key={code} className="flex flex-col p-4 rounded-2xl bg-input/20 border border-border/50 hover:bg-primary/5 transition-colors gap-3">
-             <div className="flex flex-col gap-1 min-w-0">
-               <span className="text-sm font-bold text-foreground truncate" title={data.name}>{data.name}</span>
-               <span className="font-mono text-[10px] text-primary flex items-center gap-1">
-                 <ListTree className="w-3 h-3 opacity-70" /> {code}
-               </span>
-             </div>
-             
-             <div className="flex items-center justify-between mt-2 pt-3 border-t border-border/50">
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Bulan Ini</span>
-                  <span className="text-sm font-black text-rose-600 dark:text-rose-400">{formatCurrency(data.monthlyTotal)}</span>
-                </div>
-                <div className="flex flex-col items-end">
-                  <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Total Tahunan</span>
-                  <span className="text-sm font-black text-rose-700 dark:text-rose-500">{formatCurrency(data.yearlyTotal)}</span>
-                </div>
-             </div>
-          </div>
-        ))}
+      <div className="overflow-x-auto custom-scrollbar border border-border rounded-2xl bg-card shadow-sm">
+        <table className="w-full text-sm border-collapse min-w-[700px]">
+          <thead>
+            <tr className="bg-slate-50 dark:bg-input/50">
+              <th className="px-4 py-4 text-left text-[10px] uppercase font-black tracking-widest text-muted border-b border-border w-48">Kode Rekening</th>
+              <th className="px-4 py-4 text-left text-[10px] uppercase font-black tracking-widest text-muted border-b border-border">Nama / Uraian Kustom</th>
+              <th className="px-4 py-4 text-right text-[10px] uppercase font-black tracking-widest text-muted border-b border-border w-40">Bulan Ini</th>
+              <th className="px-4 py-4 text-right text-[10px] uppercase font-black tracking-widest text-muted border-b border-border w-40">Total Tahunan</th>
+            </tr>
+          </thead>
+          <tbody>
+            {summary.map(([code, data]) => (
+              <tr key={code} className="hover:bg-primary/5 transition-colors border-b border-border/50 last:border-0 group">
+                <td className="px-4 py-4 font-mono text-[11px] text-primary font-black">
+                  <div className="flex items-center gap-2">
+                    <ListTree className="w-3.5 h-3.5 opacity-50" />
+                    {code}
+                  </div>
+                </td>
+                <td className="px-4 py-4">
+                  <div className="font-bold text-foreground text-sm leading-tight">
+                    {data.name}
+                  </div>
+                </td>
+                <td className="px-4 py-4 text-right font-black text-rose-600 dark:text-rose-400">
+                  {formatCurrency(data.monthlyTotal)}
+                </td>
+                <td className="px-4 py-4 text-right">
+                  <div className="inline-flex flex-col items-end">
+                    <span className="font-black text-rose-700 dark:text-rose-500">{formatCurrency(data.yearlyTotal)}</span>
+                    <div className="w-full h-1 bg-rose-500/10 rounded-full mt-1 overflow-hidden">
+                       <div 
+                         className="h-full bg-rose-500" 
+                         style={{ width: `${Math.min((data.monthlyTotal / data.yearlyTotal) * 100, 100)}%` }}
+                       />
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   )
