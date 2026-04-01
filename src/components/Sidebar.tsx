@@ -54,15 +54,15 @@ export default function Sidebar() {
       <div className="px-6 mb-8 flex items-center justify-between">
         {!isCollapsed && (
           <div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-indigo-600 dark:from-primary dark:to-indigo-500 bg-clip-text text-transparent tracking-tight whitespace-nowrap">
+            <h1 className="text-xl font-black text-foreground tracking-tight whitespace-nowrap">
               DocuMatch AI
             </h1>
-            <p className="text-[10px] text-muted mt-1 whitespace-nowrap tracking-wider font-bold">SISTEM LAPORAN BARANG</p>
+            <p className="text-[10px] text-primary mt-1 whitespace-nowrap tracking-wider font-extrabold uppercase">SISTEM LAPORAN BARANG</p>
           </div>
         )}
         <button 
           onClick={toggleSidebar} 
-          className="p-1.5 rounded-lg bg-input hover:bg-accent text-foreground/50 hover:text-foreground transition-all border border-border active:scale-95 transition-all duration-200"
+          className="p-1.5 rounded-lg bg-input hover:bg-accent text-foreground/70 hover:text-foreground transition-all border border-border shadow-sm active:scale-95 transition-all duration-200"
         >
           {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
@@ -117,11 +117,11 @@ export default function Sidebar() {
 
       {mounted && !isCollapsed && (
         <div className="px-6 space-y-3">
-          <div className="p-4 rounded-xl bg-input border border-border">
-            <h4 className="text-[10px] font-bold text-primary mb-1 uppercase tracking-widest">Status Sistem</h4>
+          <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+            <h4 className="text-[10px] font-black text-primary mb-1 uppercase tracking-widest">Status Sistem</h4>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.3)] shrink-0"></div>
-              <p className="text-[11px] text-muted-foreground font-medium tracking-tight">AI Engine Ready</p>
+              <p className="text-[11px] text-foreground font-bold tracking-tight">AI Engine Ready</p>
             </div>
           </div>
           

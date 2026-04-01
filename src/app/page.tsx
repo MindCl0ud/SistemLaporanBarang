@@ -12,10 +12,10 @@ export default async function Home() {
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
       <header>
-        <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-white dark:to-slate-400">
+        <h1 className="text-3xl font-black text-foreground tracking-tight">
           Overview Dashboard
         </h1>
-        <p className="text-foreground/60 mt-2 font-medium">Ringkasan status pencocokan dokumen vs BKU bulan ini.</p>
+        <p className="text-muted mt-2 font-semibold">Ringkasan status pencocokan dokumen vs BKU bulan ini.</p>
       </header>
 
       {/* Stats Row */}
@@ -23,25 +23,25 @@ export default async function Home() {
         <StatCard
           title="Total Dokumen"
           value={stats.totalDocs.toString()}
-          icon={<FileText className="w-5 h-5 text-blue-400" />}
+          icon={<FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />}
           trend="Semua dari sistem"
         />
         <StatCard
           title="Tercocokkan"
           value={stats.matchedDocs.toString()}
-          icon={<CheckCircle2 className="w-5 h-5 text-emerald-400" />}
+          icon={<CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />}
           trend="Dengan BKU"
         />
         <StatCard
           title="Belum Berdokumen"
           value={stats.bkuWithoutDocs.toString()}
-          icon={<AlertTriangle className="w-5 h-5 text-amber-400" />}
+          icon={<AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />}
           trend="Transaksi BKU"
         />
         <StatCard
           title="Akurasi AI"
           value={`${stats.accuracy}%`}
-          icon={<Activity className="w-5 h-5 text-indigo-400" />}
+          icon={<Activity className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />}
           trend="Tingkat Kecocokan"
         />
       </div>
@@ -54,7 +54,7 @@ export default async function Home() {
           
           {stats.recentMatches.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-12 mt-4 border border-dashed border-border rounded-xl bg-input/50">
-              <p className="text-foreground/50 text-sm font-medium">Belum ada data pencocokan aktif. Silakan unggah dokumen atau BKU.</p>
+              <p className="text-muted text-sm font-bold">Belum ada data pencocokan aktif. Silakan unggah dokumen atau BKU.</p>
             </div>
           ) : (
             <div className="space-y-3 mt-4">
@@ -62,7 +62,7 @@ export default async function Home() {
                 <div key={match.id} className="p-4 rounded-xl bg-input/30 border border-border/50 flex items-center justify-between hover:bg-input/50 transition-colors">
                   <div>
                      <p className="text-sm font-semibold text-foreground">{match.bkuTransaction.description}</p>
-                     <p className="text-xs text-foreground/50 mt-1 font-medium italic">Dicocokkan dengan {match.document.type} - Dok #{match.document.docNumber || 'Tanpa Nomor'}</p>
+                     <p className="text-xs text-muted mt-1 font-bold italic">Dicocokkan dengan {match.document.type} - Dok #{match.document.docNumber || 'Tanpa Nomor'}</p>
                   </div>
                   <div className="text-right">
                      <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">{(match.confidence * 100).toFixed(0)}% Conf</p>
@@ -106,7 +106,7 @@ function StatCard({ title, value, icon, trend }: { title: string, value: string,
     <div className="p-6 rounded-2xl bg-card border border-border backdrop-blur-sm hover:bg-input/50 transition-all relative overflow-hidden group shadow-sm">
       <div className="absolute -right-4 -top-4 w-24 h-24 bg-card rounded-full blur-2xl group-hover:bg-input transition-all duration-500 -z-10"></div>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-bold text-foreground/70 uppercase tracking-widest">{title}</h3>
+        <h3 className="text-[10px] font-black text-muted uppercase tracking-widest">{title}</h3>
         <div className="p-2 rounded-lg bg-input border border-border shadow-inner">
           {icon}
         </div>
@@ -114,7 +114,7 @@ function StatCard({ title, value, icon, trend }: { title: string, value: string,
       <div className="flex items-baseline gap-2">
         <h2 className="text-3xl font-black text-foreground tracking-tight">{value}</h2>
       </div>
-      <p className="text-[10px] text-foreground/70 mt-2 font-bold uppercase tracking-widest">{trend}</p>
+      <p className="text-[10px] text-muted mt-2 font-black uppercase tracking-widest">{trend}</p>
     </div>
   )
 }

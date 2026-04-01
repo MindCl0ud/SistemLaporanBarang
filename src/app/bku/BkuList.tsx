@@ -142,7 +142,7 @@ export default function BkuList({ initialRecords, openingBalance = 0 }: {
           <AlignJustify className="w-3.5 h-3.5" />
           Reset Lebar
         </button>
-        <span className="text-foreground/60 text-xs ml-auto font-medium">
+        <span className="text-muted text-xs ml-auto font-black uppercase tracking-tighter opacity-80">
           {displayed.length} baris · Seret batas kolom untuk mengubah lebar
         </span>
       </div>
@@ -188,7 +188,7 @@ export default function BkuList({ initialRecords, openingBalance = 0 }: {
               return (
                 <tr key={record.id} className={`${rowBg} hover:bg-primary/5 transition-colors group`}>
                   {/* No */}
-                  <td className={`${cellBase} text-foreground/50 text-center font-mono`}>{rowIdx + 1}</td>
+                  <td className={`${cellBase} text-foreground/70 text-center font-black font-mono`}>{rowIdx + 1}</td>
 
                   {/* Tanggal */}
                   <td className={`${cellBase} font-mono text-emerald-600 dark:text-emerald-300`}>

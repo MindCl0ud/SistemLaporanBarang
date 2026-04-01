@@ -1,15 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
+  --background: #f1f5f9;
   --foreground: #020617;
   --card-bg: #ffffff;
-  --card-border: rgba(0,0,0,0.06);
-  --input-bg: #f1f5f9;
-  --input-border: #e2e8f0;
+  --card-border: rgba(0,0,0,0.12);
+  --input-bg: #e2e8f0;
+  --input-border: #cbd5e1;
   --primary: #4f46e5;
   --primary-foreground: #ffffff;
-  --muted: #64748b;
+  --muted: #475569;
   --muted-foreground: #94a3b8;
   --accent: #f1f5f9;
   --accent-foreground: #0f172a;
@@ -22,7 +22,7 @@
   --background: #020617;
   --foreground: #f8fafc;
   --card-bg: #0f172a;
-  --card-border: rgba(255,255,255,0.06);
+  --card-border: rgba(255,255,255,0.08);
   --input-bg: #1e293b;
   --input-border: #334155;
   --primary: #6366f1;
@@ -41,13 +41,26 @@
   --color-border: var(--card-border);
   --color-muted: var(--muted);
   --color-accent: var(--accent);
+  --color-primary: var(--primary);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  font-family: system-ui, sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Fix visibility of headers on light mode */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--foreground);
+}
+
+.bg-card {
+  background-color: var(--card-bg) !important;
+  color: var(--foreground) !important;
 }
 
 /* Custom scrollbar for data tables */
