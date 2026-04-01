@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useState, useRef } from 'react'
+import { motion } from 'framer-motion'
 import { useDropzone } from 'react-dropzone'
 import { 
   Upload, 
