@@ -72,7 +72,9 @@ export default function Sidebar() {
 
       <nav className="flex-1 px-4 space-y-2">
         {navItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href + "/"));
+          const isExactMatch = pathname === item.href;
+          const isSubPathMatch = item.href !== "/" && pathname.startsWith(item.href + "/") && !navItems.some(n => n.href === pathname);
+          const isActive = isExactMatch || isSubPathMatch;
           return (
             <Link
               key={item.name}
