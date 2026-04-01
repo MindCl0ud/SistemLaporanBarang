@@ -295,10 +295,9 @@ export default function DocumentItemsReport({ documents }: { documents: any[] })
         />
       </div>
 
-      {/* EXCEL GRID TABLE WITH RESIZING */}
       <div className="border-x border-b border-border bg-white dark:bg-black/10 overflow-hidden relative shadow-2xl shadow-indigo-500/5 select-none">
         <div className="overflow-x-auto custom-scrollbar max-h-[700px]">
-          <table className="border-collapse table-fixed w-max">
+          <table className="border-collapse table-fixed w-full min-w-full">
             <thead className="sticky top-0 z-[10] shadow-sm">
               <tr className="bg-slate-200 dark:bg-slate-800 text-foreground">
                 {visibleColumns.map((colId) => {
