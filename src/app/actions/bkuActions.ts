@@ -153,11 +153,11 @@ export async function getAccountMappings() {
   })
 }
 
-export async function upsertAccountMapping(code: string, name: string) {
+export async function upsertAccountMapping(code: string, name: string, division?: string) {
   const result = await (prisma as any).accountCodeMapping.upsert({
     where: { code },
-    update: { name },
-    create: { code, name }
+    update: { name, division },
+    create: { code, name, division }
   })
   revalidatePath('/bku')
   revalidatePath('/settings/accounts')

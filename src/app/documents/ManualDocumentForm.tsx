@@ -33,6 +33,7 @@ export default function ManualDocumentForm({ onClose, onSuccess, initialData, im
     kodeRek: initialData?.kodeRek || '',
     subKegiatan: initialData?.subKegiatan || '',
     paymentFor: initialData?.paymentFor || '',
+    division: initialData?.division || '',
     extractedText: initialData?.extractedText || '',
     items: initialData?.items?.map((it: any) => ({
       itemCode: it.itemCode || '',
@@ -200,6 +201,16 @@ export default function ManualDocumentForm({ onClose, onSuccess, initialData, im
                     onChange={e => setFormData({ ...formData, paymentFor: e.target.value })}
                     placeholder="Contoh: Belanja Pemeliharaan Alat Angkutan Darat..."
                     className="w-full bg-input border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:ring-2 focus:ring-primary focus:outline-none resize-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-muted uppercase mb-1">Bidang (Keterangan)</label>
+                  <input
+                    type="text"
+                    value={formData.division}
+                    onChange={e => setFormData({ ...formData, division: e.target.value })}
+                    placeholder="Contoh: Bidang Bina Marga"
+                    className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-primary focus:outline-none"
                   />
                 </div>
               </div>

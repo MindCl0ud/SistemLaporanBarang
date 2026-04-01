@@ -30,6 +30,7 @@ const AVAILABLE_COLUMNS = [
   { id: 'unit', label: 'Satuan', defaultWidth: 80 },
   { id: 'price', label: 'Harga Satuan', defaultWidth: 130 },
   { id: 'total', label: 'Total Harga', defaultWidth: 150 },
+  { id: 'bidang', label: 'Bidang', defaultWidth: 120 },
   { id: 'kodeRek', label: 'Kode Rekening', defaultWidth: 120 },
   { id: 'subKeg', label: 'Sub Kegiatan', defaultWidth: 120 },
 ]
@@ -59,6 +60,7 @@ export default function DocumentItemsReport({ documents }: { documents: any[] })
       docNo: doc.docNumber || '-',
       baNumber: doc.baNumber || '-',
       baDate: doc.baDate ? new Date(doc.baDate).toLocaleDateString('id-ID') : '-',
+      bidang: doc.division || '-',
       vendor: doc.vendorName || 'Tidak Diketahui',
       date: doc.date ? new Date(doc.date).toLocaleDateString('id-ID') : '-',
       kodeRek: doc.kodeRek || '-',
@@ -172,19 +174,21 @@ export default function DocumentItemsReport({ documents }: { documents: any[] })
         
         const label = config.label
         if (colId === 'no') row[label] = idx + 1
-        else if (colId === 'date') row[label] = item.docDate
-        else if (colId === 'docNo') row[label] = item.docNumber
+        else if (colId === 'date') row[label] = item.date
+        else if (colId === 'docNo') row[label] = item.docNo
         else if (colId === 'baNumber') row[label] = item.baNumber
         else if (colId === 'baDate') row[label] = item.baDate
-        else if (colId === 'vendor') row[label] = item.vendorName
+        else if (colId === 'bidang') row[label] = item.bidang
+        else if (colId === 'vendor') row[label] = item.vendor
         else if (colId === 'kodeRek') row[label] = item.kodeRek
-        else if (colId === 'subKeg') row[label] = item.subKegiatan
-        else if (colId === 'desc') row[label] = item.description
-        else if (colId === 'qty') row[label] = item.quantity
+        else if (colId === 'subKeg') row[label] = item.subKeg
+        else if (colId === 'desc') row[label] = item.desc
+        else if (colId === 'qty') row[label] = item.qty
         else if (colId === 'unit') row[label] = item.unit
         else if (colId === 'price') row[label] = item.price
         else if (colId === 'total') row[label] = item.total
         else if (colId === 'itemCode') row[label] = item.itemCode
+        return row
       })
       return row
     })

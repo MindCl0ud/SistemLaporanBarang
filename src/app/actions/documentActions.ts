@@ -28,6 +28,7 @@ const DocumentSchema = z.object({
   extractedText: z.string().nullable().optional(),
   paymentFor: z.string().nullable().optional(),
   unit: z.string().nullable().optional(),
+  division: z.string().nullable().optional(),
   items: z.array(DocumentItemSchema).optional(),
 })
 
@@ -79,7 +80,7 @@ export async function saveDocument(rawData: any) {
     const { 
       type, docNumber, vendorName, totalAmount, date, 
       extractedText, items, kodeRek, subKegiatan,
-      baNumber, baDate, paymentFor, unit
+      baNumber, baDate, paymentFor, unit, division
     } = data
 
     const doc = await prisma.document.create({
@@ -96,6 +97,7 @@ export async function saveDocument(rawData: any) {
         extractedText: extractedText || "",
         paymentFor: paymentFor || "",
         unit: unit || "",
+        division: division || "",
         items: {
           create: items?.map(item => ({
             description: item.description,

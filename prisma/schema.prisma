@@ -29,6 +29,7 @@ model Document {
   extractedText String?
   paymentFor    String?        // New field for BKU matching
   unit          String?        // Global unit if applicable
+  division      String?        // New field for Bidang
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   items         DocumentItem[]
@@ -98,6 +99,7 @@ model AccountCodeMapping {
   id        String   @id @default(cuid())
   code      String   @unique
   name      String
+  division  String?        // New field for Bidang
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

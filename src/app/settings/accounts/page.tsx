@@ -29,7 +29,7 @@ export default function AccountMappingPage() {
 
   // New row states
   const [showAddRow, setShowAddRow] = useState(false)
-  const [newRow, setNewRow] = useState({ code: '', name: '' })
+  const [newRow, setNewRow] = useState({ code: '', name: '', division: '' })
 
   useEffect(() => {
     fetchMappings()
@@ -45,14 +45,14 @@ export default function AccountMappingPage() {
     }
   }
 
-  const handleSaveInline = async (code: string, name: string, id: string | null = null) => {
+  const handleSaveInline = async (code: string, name: string, division: string | null = null, id: string | null = null) => {
     if (!code || !name) return
     setSavingId(id || 'new')
     try {
-      await upsertAccountMapping(code, name)
+      await upsertAccountMapping(code, name, division || undefined)
       setEditingId(null)
       setShowAddRow(false)
-      setNewRow({ code: '', name: '' })
+      setNewRow({ code: '', name: '', division: '' })
       fetchMappings()
     } finally {
       setSavingId(null)
@@ -78,7 +78,8 @@ export default function AccountMappingPage() {
 
   const filtered = mappings.filter(m => 
     m.code.toLowerCase().includes(search.toLowerCase()) || 
-    m.name.toLowerCase().includes(search.toLowerCase())
+    m.name.toLowerCase().includes(search.toLowerCase()) ||
+    m.division?.toLowerCase().includes(search.toLowerCase())
   )
 
   return (
@@ -124,7 +125,7 @@ export default function AccountMappingPage() {
           <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
           <input
             type="text"
-            placeholder="Cari berdasarkan kode atau nama..."
+            placeholder="Cari berdasarkan kode, nama, atau bidang..."
             className="w-full bg-transparent border-none rounded-2xl pl-16 pr-6 py-4 text-base font-bold text-foreground outline-none placeholder:text-muted/40"
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -140,6 +141,7 @@ export default function AccountMappingPage() {
               <tr className="bg-slate-50 dark:bg-input/50 border-b border-border">
                 <th className="px-8 py-5 text-left text-[10px] uppercase font-black tracking-widest text-muted w-64">Kode Rekening</th>
                 <th className="px-8 py-5 text-left text-[10px] uppercase font-black tracking-widest text-muted">Nama Kustom (Edit Langsung)</th>
+                <th className="px-8 py-5 text-left text-[10px] uppercase font-black tracking-widest text-muted w-64">Bidang (Keterangan)</th>
                 <th className="px-8 py-5 text-center text-[10px] uppercase font-black tracking-widest text-muted w-32">Aksi</th>
               </tr>
             </thead>
@@ -170,9 +172,17 @@ export default function AccountMappingPage() {
                       />
                     </td>
                     <td className="px-8 py-4">
+                      <input 
+                        className="w-full bg-white dark:bg-input border border-primary/30 rounded-xl px-4 py-2.5 text-sm font-black text-foreground outline-none focus:ring-2 focus:ring-primary shadow-sm"
+                        placeholder="Bidang..."
+                        value={newRow.division}
+                        onChange={e => setNewRow({...newRow, division: e.target.value})}
+                      />
+                    </td>
+                    <td className="px-8 py-4">
                       <div className="flex items-center justify-center gap-2">
                         <button 
-                          onClick={() => handleSaveInline(newRow.code, newRow.name)}
+                          onClick={() => handleSaveInline(newRow.code, newRow.name, newRow.division)}
                           disabled={savingId === 'new'}
                           className="p-2.5 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 hover:scale-110 transition-all disabled:opacity-50"
                         >
@@ -192,14 +202,14 @@ export default function AccountMappingPage() {
 
               {loading ? (
                 <tr>
-                  <td colSpan={3} className="px-8 py-20 text-center">
+                  <td colSpan={4} className="px-8 py-20 text-center">
                     <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-4 opacity-20" />
                     <p className="text-xs font-black text-muted uppercase tracking-[0.3em]">Memuat Data Master...</p>
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="px-8 py-20 text-center">
+                  <td colSpan={4} className="px-8 py-20 text-center">
                     <div className="w-16 h-16 bg-muted/10 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-dashed border-border">
                       <ListTree className="w-8 h-8 text-muted" />
                     </div>
@@ -220,12 +230,12 @@ export default function AccountMappingPage() {
                             className="flex-1 bg-white dark:bg-input border border-primary rounded-xl px-4 py-2.5 text-sm font-black text-foreground outline-none shadow-lg shadow-primary/5"
                             value={editValue}
                             onChange={e => setEditValue(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && handleSaveInline(m.code, editValue, m.id)}
+                            onKeyDown={e => e.key === 'Enter' && handleSaveInline(m.code, editValue, m.division, m.id)}
                             onKeyDownCapture={e => e.key === 'Escape' && setEditingId(null)}
                             autoFocus
                           />
                           <button 
-                            onClick={() => handleSaveInline(m.code, editValue, m.id)}
+                            onClick={() => handleSaveInline(m.code, editValue, m.division, m.id)}
                             disabled={savingId === m.id}
                             className="p-2.5 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 hover:scale-110 transition-all disabled:opacity-50"
                           >
@@ -250,6 +260,20 @@ export default function AccountMappingPage() {
                           <Pencil className="w-3 h-3 text-primary opacity-0 group-hover/cell:opacity-100 transition-opacity" />
                         </div>
                       )}
+                    </td>
+                    <td className="px-8 py-5">
+                      <div className="flex items-center gap-3">
+                        <input 
+                          className="w-full bg-transparent border border-border group-hover:border-primary/30 rounded-xl px-4 py-2 text-sm font-black text-foreground outline-none focus:bg-white dark:focus:bg-white/5 transition-all"
+                          value={m.division || ''}
+                          placeholder="Bidang..."
+                          onChange={(e) => {
+                             const newVal = e.target.value;
+                             setMappings(prev => prev.map(p => p.id === m.id ? {...p, division: newVal} : p));
+                          }}
+                          onBlur={() => handleSaveInline(m.code, m.name, m.division, m.id)}
+                        />
+                      </div>
                     </td>
                     <td className="px-8 py-5 text-center">
                       <button 
