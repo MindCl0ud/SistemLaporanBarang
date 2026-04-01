@@ -148,13 +148,13 @@ export async function addBkuBulk(data: any[], month: number, year: number) {
 // --- ACCOUNT MAPPING ACTIONS ---
 
 export async function getAccountMappings() {
-  return await prisma.accountCodeMapping.findMany({
+  return await (prisma as any).accountCodeMapping.findMany({
     orderBy: { code: 'asc' }
   })
 }
 
 export async function upsertAccountMapping(code: string, name: string) {
-  const result = await prisma.accountCodeMapping.upsert({
+  const result = await (prisma as any).accountCodeMapping.upsert({
     where: { code },
     update: { name },
     create: { code, name }
@@ -168,4 +168,47 @@ export async function deleteAccountMapping(id: string) {
   await prisma.accountCodeMapping.delete({ where: { id } })
   revalidatePath('/bku')
   revalidatePath('/settings/accounts')
+}
+
+export async function syncAccountCodesFromBku() {
+  const transactions = await prisma.bkuTransaction.findMany({
+    select: {
+      code: true,
+      description: true
+    },
+    where: {
+      AND: [
+        { code: { not: null } },
+        { code: { not: "" } }
+      ]
+    }
+  })
+
+  // Group by code and pick first description as default name
+  const uniqueMap = new Map<string, string>()
+  transactions.forEach((t: { code: string | null; description: string }) => {
+    if (t.code && !uniqueMap.has(t.code)) {
+      // Extract a decent name from description (before second segment or first part)
+      const name = t.description.split(' - ')[0].trim() || t.description
+      uniqueMap.set(t.code, name)
+    }
+  })
+
+  const existing = await (prisma as any).accountCodeMapping.findMany({
+    select: { code: true }
+  })
+  const existingCodes = new Set(existing.map((e: any) => e.code))
+
+  let count = 0
+  for (const [code, name] of uniqueMap.entries()) {
+    if (!existingCodes.has(code)) {
+      await (prisma as any).accountCodeMapping.create({
+        data: { code, name }
+      })
+      count++
+    }
+  }
+
+  revalidatePath('/settings/accounts')
+  return { count }
 }

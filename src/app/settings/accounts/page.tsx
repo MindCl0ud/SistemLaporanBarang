@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ListTree, Plus, Save, Trash2, Loader2, Search, Pencil } from 'lucide-react'
-import { getAccountMappings, upsertAccountMapping, deleteAccountMapping } from '@/app/actions/bkuActions'
+import { ListTree, Plus, Save, Trash2, Loader2, Search, Pencil, RefreshCw } from 'lucide-react'
+import { getAccountMappings, upsertAccountMapping, deleteAccountMapping, syncAccountCodesFromBku } from '@/app/actions/bkuActions'
 
 export default function AccountMappingPage() {
   const [mappings, setMappings] = useState<any[]>([])
@@ -49,6 +49,17 @@ export default function AccountMappingPage() {
     m.code.toLowerCase().includes(search.toLowerCase()) || 
     m.name.toLowerCase().includes(search.toLowerCase())
   )
+
+  const handleSync = async () => {
+    setLoading(true)
+    try {
+      const { count } = await syncAccountCodesFromBku()
+      alert(`Berhasil sinkronisasi ${count} kode rekening baru!`)
+      fetchMappings()
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
@@ -105,15 +116,25 @@ export default function AccountMappingPage() {
 
         {/* List */}
         <div className="md:col-span-2 space-y-4">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
-            <input
-              type="text"
-              placeholder="Cari kode atau nama..."
-              className="w-full bg-card border border-border rounded-2xl pl-12 pr-4 py-3 text-sm font-bold text-foreground outline-none focus:ring-2 focus:ring-primary transition-all shadow-sm"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
+          <div className="flex gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+              <input
+                type="text"
+                placeholder="Cari kode atau nama..."
+                className="w-full bg-card border border-border rounded-2xl pl-12 pr-4 py-3 text-sm font-bold text-foreground outline-none focus:ring-2 focus:ring-primary transition-all shadow-sm"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+            </div>
+            <button
+              onClick={handleSync}
+              disabled={loading}
+              className="flex items-center gap-2 px-6 py-3 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 rounded-2xl text-sm font-black border border-indigo-500/20 transition-all"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              Sync BKU
+            </button>
           </div>
 
           <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm">
