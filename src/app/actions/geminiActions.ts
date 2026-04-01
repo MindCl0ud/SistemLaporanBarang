@@ -47,8 +47,6 @@ export async function parseWithGemini(formData: FormData) {
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" })
-
     const imageParts = base64Images.map(imgData => {
       // Split "data:image/jpeg;base64,..."
       const split = imgData.split(',')
@@ -63,10 +61,19 @@ export async function parseWithGemini(formData: FormData) {
       }
     })
 
-    const result = await model.generateContent([
-      promptString,
-      ...imageParts
-    ])
+    let result: any;
+    try {
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+      result = await model.generateContent([promptString, ...imageParts])
+    } catch (err: any) {
+      if (err.status === 404 || err.message?.includes('404')) {
+        console.warn("gemini-1.5-flash 404 error, falling back to gemini-pro-vision...")
+        const fallbackModel = genAI.getGenerativeModel({ model: "gemini-pro-vision" })
+        result = await fallbackModel.generateContent([promptString, ...imageParts])
+      } else {
+        throw err;
+      }
+    }
     
     // We expect valid JSON in the response.
     const textRes = result.response.text()
