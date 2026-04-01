@@ -514,12 +514,15 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                                         </tr>
                                       )
                                     })}
-                                    <tr className="bg-input/10">
-                                      <td colSpan={3} className="px-4 py-2.5 text-right font-bold text-foreground/50 text-[10px] uppercase tracking-widest border-t border-border">Total Keseluruhan</td>
-                                      <td className="px-3 py-2.5 text-right font-black text-emerald-600 dark:text-emerald-400 font-mono border-t border-border text-sm">
-                                        Rp {formatCurrency(doc.totalAmount)}
+                                    <tr className="bg-primary/5 font-black text-foreground">
+                                      <td colSpan={5} className="px-6 py-4 text-right border-t-2 border-primary/20 uppercase tracking-[0.2em] text-[11px] text-primary">
+                                        Total Keseluruhan
                                       </td>
-                                      <td className="px-3 py-2.5 border-t border-border"></td>
+                                      <td className="px-3 py-4 text-right border-t-2 border-primary/20 font-mono text-xl text-primary">
+                                        <span className="text-[10px] mr-1 opacity-70">Rp</span>
+                                        {formatCurrency(doc.totalAmount)}
+                                      </td>
+                                      <td className="px-6 py-4 border-t-2 border-primary/20"></td>
                                     </tr>
                                   </tbody>
                                 </table>
