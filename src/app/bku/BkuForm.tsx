@@ -126,7 +126,7 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
       <input type="hidden" name="year" value={currentYear} />
       
       <div className="flex flex-col gap-2 mb-4">
-        <label className={`w-full py-2.5 bg-input border border-border text-indigo-600 dark:text-indigo-400 hover:bg-input/80 rounded-xl text-sm font-bold transition-colors flex justify-center items-center gap-2 cursor-pointer ${(loading || isUploading) ? 'opacity-50 cursor-not-allowed' : ''}`}>
+        <label className={`w-full py-2.5 bg-input border border-border text-primary hover:bg-accent rounded-xl text-sm font-bold transition-colors flex justify-center items-center gap-2 cursor-pointer ${(loading || isUploading) ? 'opacity-50 cursor-not-allowed' : ''}`}>
           {(loading || isUploading) ? <Loader2 className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
           {isUploading ? `Mengunggah... (${uploadProgress}%)` : loading ? 'Memproses Excel...' : 'Impor dari Excel (.xlsx)'}
           <input type="file" accept=".xlsx, .xls, .csv" className="hidden" onChange={handleExcelUpload} disabled={loading || isUploading} />
@@ -145,7 +145,7 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
         )}
         <div className="relative flex items-center py-2">
           <div className="flex-grow border-t border-border"></div>
-          <span className="flex-shrink-0 mx-4 text-foreground/50 text-[10px] font-bold uppercase tracking-widest">atau isi manual</span>
+          <span className="flex-shrink-0 mx-4 text-muted text-[10px] font-bold uppercase tracking-widest">atau isi manual</span>
           <div className="flex-grow border-t border-border"></div>
         </div>
       </div>
@@ -153,17 +153,17 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
           <label className="text-[10px] font-bold text-foreground/60 uppercase">Tanggal</label>
-          <input name="date" type="text" className="w-full bg-input border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono" placeholder="01-01-2026" />
+          <input name="date" type="text" className="w-full bg-input border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary transition-all font-mono" placeholder="01-01-2026" />
         </div>
         <div className="space-y-1">
           <label className="text-[10px] font-bold text-foreground/60 uppercase">Kode Rekening</label>
-          <input name="code" required className="w-full bg-input border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono" placeholder="1.2.3.4" />
+          <input name="code" required className="w-full bg-input border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary transition-all font-mono" placeholder="1.2.3.4" />
         </div>
       </div>
 
       <div className="space-y-1">
         <label className="text-[10px] font-bold text-foreground/60 uppercase">Uraian / Deskripsi</label>
-        <textarea name="description" required rows={3} className="w-full bg-input border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="Belanja Makan Minum Rapat..." />
+        <textarea name="description" required rows={3} className="w-full bg-input border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary transition-all" placeholder="Belanja Makan Minum Rapat..." />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -177,7 +177,7 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
         </div>
       </div>
 
-      <button type="submit" disabled={loading} className="w-full mt-4 py-2.5 bg-indigo-500 hover:bg-indigo-400 disabled:opacity-50 text-white rounded-xl text-sm font-medium transition-colors flex justify-center items-center gap-2 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+      <button type="submit" disabled={loading} className="w-full mt-4 py-2.5 bg-primary hover:bg-primary/90 disabled:opacity-50 text-white rounded-xl text-sm font-medium transition-colors flex justify-center items-center gap-2 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Simpan Data"}
       </button>
     </form>

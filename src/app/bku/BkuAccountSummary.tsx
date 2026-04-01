@@ -106,7 +106,7 @@ export default function BkuAccountSummary({ monthlyRecords, yearlyRecords }: { m
 
   if (summary.length === 0) return (
      <div className="flex items-center justify-between">
-       <span className="text-xs text-slate-500 italic">Belum ada data pengeluaran dengan kode rekening.</span>
+       <span className="text-xs text-muted italic">Belum ada data pengeluaran dengan kode rekening.</span>
      </div>
   )
 
@@ -114,19 +114,19 @@ export default function BkuAccountSummary({ monthlyRecords, yearlyRecords }: { m
     <div className="animate-in fade-in slide-in-from-bottom-2">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-          <PieChart className="w-5 h-5 text-indigo-500" />
+          <PieChart className="w-5 h-5 text-primary" />
           Pengeluaran per Rekening
         </h3>
         <div className="flex bg-input/40 border border-border p-1 rounded-lg">
            <button 
              onClick={() => setAggrLevel('prefix')}
-             className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-md transition-all ${aggrLevel === 'prefix' ? 'bg-indigo-500 text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-foreground'}`}
+             className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-md transition-all ${aggrLevel === 'prefix' ? 'bg-primary text-white shadow-sm' : 'text-muted hover:text-foreground'}`}
            >
              Agregat Sub-Kegiatan
            </button>
            <button 
              onClick={() => setAggrLevel('full')}
-             className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-md transition-all ${aggrLevel === 'full' ? 'bg-indigo-500 text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-foreground'}`}
+             className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-md transition-all ${aggrLevel === 'full' ? 'bg-primary text-white shadow-sm' : 'text-muted hover:text-foreground'}`}
            >
              Full Detail
            </button>
@@ -135,21 +135,21 @@ export default function BkuAccountSummary({ monthlyRecords, yearlyRecords }: { m
       
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 bg-transparent max-h-[400px] overflow-y-auto custom-scrollbar p-1">
         {summary.map(([code, data]) => (
-          <div key={code} className="flex flex-col p-4 rounded-2xl bg-input/20 border border-border/50 hover:bg-indigo-500/10 transition-colors gap-3">
+          <div key={code} className="flex flex-col p-4 rounded-2xl bg-input/20 border border-border/50 hover:bg-primary/5 transition-colors gap-3">
              <div className="flex flex-col gap-1 min-w-0">
                <span className="text-sm font-bold text-foreground truncate" title={data.name}>{data.name}</span>
-               <span className="font-mono text-[10px] text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+               <span className="font-mono text-[10px] text-primary flex items-center gap-1">
                  <ListTree className="w-3 h-3 opacity-70" /> {code}
                </span>
              </div>
              
              <div className="flex items-center justify-between mt-2 pt-3 border-t border-border/50">
                 <div className="flex flex-col">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Bulan Ini</span>
+                  <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Bulan Ini</span>
                   <span className="text-sm font-black text-rose-600 dark:text-rose-400">{formatCurrency(data.monthlyTotal)}</span>
                 </div>
                 <div className="flex flex-col items-end">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Tahunan</span>
+                  <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Total Tahunan</span>
                   <span className="text-sm font-black text-rose-700 dark:text-rose-500">{formatCurrency(data.yearlyTotal)}</span>
                 </div>
              </div>

@@ -54,15 +54,15 @@ export default function Sidebar() {
       <div className="px-6 mb-8 flex items-center justify-between">
         {!isCollapsed && (
           <div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-500 bg-clip-text text-transparent tracking-tight whitespace-nowrap">
+            <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-indigo-600 dark:from-primary dark:to-indigo-500 bg-clip-text text-transparent tracking-tight whitespace-nowrap">
               DocuMatch AI
             </h1>
-            <p className="text-[10px] text-foreground/50 dark:text-foreground/40 mt-1 whitespace-nowrap tracking-wider font-bold">SISTEM LAPORAN BARANG</p>
+            <p className="text-[10px] text-muted mt-1 whitespace-nowrap tracking-wider font-bold">SISTEM LAPORAN BARANG</p>
           </div>
         )}
         <button 
           onClick={toggleSidebar} 
-          className="p-1.5 rounded-lg bg-input hover:bg-slate-200 dark:hover:bg-white/10 text-foreground/50 hover:text-foreground transition-all border border-border active:scale-95 transition-all duration-200"
+          className="p-1.5 rounded-lg bg-input hover:bg-accent text-foreground/50 hover:text-foreground transition-all border border-border active:scale-95 transition-all duration-200"
         >
           {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
@@ -75,8 +75,8 @@ export default function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-300 relative group ${
-                isActive ? "text-indigo-600 dark:text-white font-semibold" : "text-foreground/50 hover:text-indigo-600 dark:hover:text-white"
+              className={`flex items-center gap-3 px-4 py-1.5 rounded-xl transition-all duration-300 relative group ${
+                isActive ? "text-primary dark:text-white font-semibold" : "text-muted hover:text-primary dark:hover:text-white"
               }`}
             >
               {isActive && (
@@ -88,7 +88,7 @@ export default function Sidebar() {
               )}
               <item.icon
                 className={`w-5 h-5 shrink-0 transition-transform duration-300 ${
-                  isActive ? "text-indigo-600 dark:text-blue-400" : "group-hover:text-indigo-500 dark:group-hover:text-blue-300 group-hover:scale-110"
+                  isActive ? "text-primary" : "group-hover:text-primary group-hover:scale-110"
                 } ${isCollapsed ? 'mx-auto' : ''}`}
               />
               {!isCollapsed && <span className="text-sm font-medium whitespace-nowrap transition-opacity duration-300">{item.name}</span>}
@@ -117,17 +117,17 @@ export default function Sidebar() {
 
       {mounted && !isCollapsed && (
         <div className="px-6 space-y-3">
-          <div className="p-4 rounded-xl bg-input border border-border backdrop-blur-md">
-            <h4 className="text-[10px] font-bold text-indigo-600 dark:text-indigo-300 mb-1 uppercase tracking-widest">Status Sistem</h4>
+          <div className="p-4 rounded-xl bg-input border border-border">
+            <h4 className="text-[10px] font-bold text-primary mb-1 uppercase tracking-widest">Status Sistem</h4>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.3)] shrink-0"></div>
-              <p className="text-[11px] text-foreground/80 dark:text-foreground/60 font-medium tracking-tight">AI Engine Ready</p>
+              <p className="text-[11px] text-muted-foreground font-medium tracking-tight">AI Engine Ready</p>
             </div>
           </div>
           
           {/* VERSION PROOF BADGE */}
-          <div className="px-1 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-lg flex items-center justify-center">
-            <span className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-tighter">V2.5 - DATA ARITHMETIC PRO</span>
+          <div className="px-1 py-1 bg-primary/10 border border-primary/20 rounded-lg flex items-center justify-center">
+            <span className="text-[9px] font-black text-primary uppercase tracking-tighter">V2.5 - DATA ARITHMETIC PRO</span>
           </div>
         </div>
       )}

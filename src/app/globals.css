@@ -1,12 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f1f5f9;
-  --foreground: #0f172a;
+  --background: #f8fafc;
+  --foreground: #020617;
   --card-bg: #ffffff;
-  --card-border: rgba(0,0,0,0.08);
-  --input-bg: #e2e8f0;
+  --card-border: rgba(0,0,0,0.06);
+  --input-bg: #f1f5f9;
+  --input-border: #e2e8f0;
   --primary: #4f46e5;
+  --primary-foreground: #ffffff;
+  --muted: #64748b;
+  --muted-foreground: #94a3b8;
+  --accent: #f1f5f9;
+  --accent-foreground: #0f172a;
+  
   --sidebar-width: 260px;
   --sidebar-collapsed: 80px;
 }
@@ -15,9 +22,15 @@
   --background: #020617;
   --foreground: #f8fafc;
   --card-bg: #0f172a;
-  --card-border: rgba(255,255,255,0.08);
+  --card-border: rgba(255,255,255,0.06);
   --input-bg: #1e293b;
+  --input-border: #334155;
   --primary: #6366f1;
+  --primary-foreground: #ffffff;
+  --muted: #94a3b8;
+  --muted-foreground: #64748b;
+  --accent: #1e293b;
+  --accent-foreground: #f8fafc;
 }
 
 @theme inline {
@@ -26,8 +39,8 @@
   --color-card: var(--card-bg);
   --color-input: var(--input-bg);
   --color-border: var(--card-border);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
 }
 
 body {

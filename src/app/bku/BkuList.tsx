@@ -72,7 +72,7 @@ function ResizableHeader({ colKey, width, label, onResize, isLast }: {
       {!isLast && (
         <div onMouseDown={onMouseDown}
           className="absolute right-0 top-0 h-full w-2 cursor-col-resize flex items-center justify-center group z-10">
-          <div className="w-0.5 h-4 bg-slate-400 dark:bg-slate-600 group-hover:bg-indigo-500 dark:group-hover:bg-indigo-400 rounded-full transition-colors" />
+          <div className="w-0.5 h-4 bg-foreground/20 group-hover:bg-primary rounded-full transition-colors" />
         </div>
       )}
     </th>
@@ -101,8 +101,8 @@ export default function BkuList({ initialRecords, openingBalance = 0 }: {
 
   if (initialRecords.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 mt-4 border border-dashed border-slate-200 dark:border-white/10 rounded-2xl bg-slate-50 dark:bg-slate-900/30">
-        <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Belum ada data BKU untuk bulan ini.</p>
+      <div className="flex flex-col items-center justify-center p-12 mt-4 border border-dashed border-border rounded-2xl bg-card/30">
+        <p className="text-muted text-sm font-medium">Belum ada data BKU untuk bulan ini.</p>
       </div>
     )
   }
@@ -126,8 +126,8 @@ export default function BkuList({ initialRecords, openingBalance = 0 }: {
       {/* Toolbar */}
       <div className="flex items-center gap-2 px-1">
         <button onClick={() => setSortDesc(d => !d)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-input text-foreground/60 border border-border hover:border-slate-300 dark:hover:border-white/20 hover:text-foreground transition-all shadow-sm">
-          <ArrowUpDown className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-input text-foreground/70 border border-border hover:bg-accent hover:text-foreground transition-all shadow-sm">
+          <ArrowUpDown className="w-3.5 h-3.5 text-primary" />
           {sortDesc ? 'Dari Terbaru' : 'Dari Awal'}
         </button>
         <button onClick={() => setWrapText(w => !w)}
@@ -138,7 +138,7 @@ export default function BkuList({ initialRecords, openingBalance = 0 }: {
           Wrap Text
         </button>
         <button onClick={() => setColWidths(DEFAULT_WIDTHS)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-input text-foreground/60 border border-border hover:border-slate-300 dark:hover:border-white/20 hover:text-foreground transition-all shadow-sm">
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-input text-foreground/70 border border-border hover:bg-accent hover:text-foreground transition-all shadow-sm">
           <AlignJustify className="w-3.5 h-3.5" />
           Reset Lebar
         </button>
@@ -164,21 +164,21 @@ export default function BkuList({ initialRecords, openingBalance = 0 }: {
           <tbody>
             {/* Saldo Bulan Lalu row */}
             {!sortDesc && (
-              <tr className="bg-indigo-500/5 dark:bg-indigo-500/10 italic">
-                <td className={`${cellBase} text-slate-400 dark:text-slate-500 text-center`}>—</td>
-                <td className={`${cellBase} text-slate-400 dark:text-slate-500 text-center`}>—</td>
-                <td className={`${cellBase} text-slate-400 dark:text-slate-500`}>—</td>
-                <td className={`${cellBase} text-indigo-600 dark:text-indigo-300 font-bold uppercase tracking-wider`}>
+              <tr className="bg-primary/5 italic">
+                <td className={`${cellBase} text-foreground/30 text-center`}>—</td>
+                <td className={`${cellBase} text-foreground/30 text-center`}>—</td>
+                <td className={`${cellBase} text-foreground/30`}>—</td>
+                <td className={`${cellBase} text-primary font-bold uppercase tracking-wider`}>
                   Saldo Bulan Lalu
                 </td>
                 <td className={`${cellBase} text-right text-emerald-600 dark:text-emerald-400 font-bold font-mono`}>
                   {formatNum(openingBalance)}
                 </td>
                 <td className={`${cellBase} text-slate-400 dark:text-slate-500 text-right`}>—</td>
-                <td className={`${cellBase} text-right text-indigo-600 dark:text-indigo-300 font-bold font-mono`}>
+                <td className={`${cellBase} text-right text-primary font-bold font-mono`}>
                   {formatNum(openingBalance)}
                 </td>
-                <td className={`${cellBase} text-center font-bold text-slate-400`}>—</td>
+                <td className={`${cellBase} text-center font-bold text-foreground/20`}>—</td>
                 <td className={`${cellBase} text-center`}></td>
               </tr>
             )}
@@ -186,7 +186,7 @@ export default function BkuList({ initialRecords, openingBalance = 0 }: {
             {displayed.map((record, rowIdx) => {
               const rowBg = rowIdx % 2 === 0 ? 'bg-card' : 'bg-input/20'
               return (
-                <tr key={record.id} className={`${rowBg} hover:bg-indigo-950/40 transition-colors group`}>
+                <tr key={record.id} className={`${rowBg} hover:bg-primary/5 transition-colors group`}>
                   {/* No */}
                   <td className={`${cellBase} text-foreground/50 text-center font-mono`}>{rowIdx + 1}</td>
 
@@ -196,7 +196,7 @@ export default function BkuList({ initialRecords, openingBalance = 0 }: {
                   </td>
 
                   {/* Kode */}
-                  <td className={`${cellBase} font-mono text-indigo-600 dark:text-indigo-300 text-[11px]`}>
+                  <td className={`${cellBase} font-mono text-primary text-[11px]`}>
                     {record.code || '—'}
                   </td>
 
@@ -236,7 +236,7 @@ export default function BkuList({ initialRecords, openingBalance = 0 }: {
                   {/* Aksi */}
                   <td className={`${cellBase} text-center`}>
                     <button onClick={() => handleDelete(record.id)} disabled={deletingId === record.id}
-                      className="p-1 text-slate-600 hover:text-rose-400 hover:bg-rose-400/10 rounded transition-colors disabled:opacity-40">
+                      className="p-1 text-foreground/40 hover:text-rose-500 hover:bg-rose-500/10 rounded transition-colors disabled:opacity-40">
                       {deletingId === record.id
                         ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                         : <Trash2 className="w-3.5 h-3.5" />}

@@ -153,7 +153,7 @@ export default function DocumentUploader() {
             setCapturedImageUrl('')
             setShowManualForm(true)
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 rounded-xl text-sm font-bold hover:bg-indigo-500/20 transition-all"
+          className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary border border-primary/20 rounded-xl text-sm font-bold hover:bg-primary/20 transition-all"
         >
           <Plus className="w-4 h-4" /> Input Manual
         </button>
@@ -163,27 +163,27 @@ export default function DocumentUploader() {
 
         <div
           {...getRootProps()}
-          className={`relative overflow-hidden border-2 border-dashed rounded-2xl p-12 text-center transition-all cursor-pointer bg-input/20 duration-300 flex flex-col items-center justify-center min-h-[250px] ${isDragActive ? 'border-indigo-400 bg-indigo-500/10 scale-[1.02]' : 'border-border dark:border-indigo-500/30 hover:border-indigo-400 hover:bg-input/40 dark:hover:bg-black/40'}`}
+          className={`relative overflow-hidden border-2 border-dashed rounded-2xl p-12 text-center transition-all cursor-pointer bg-input/20 duration-300 flex flex-col items-center justify-center min-h-[250px] ${isDragActive ? 'border-primary bg-primary/10 scale-[1.02]' : 'border-border dark:border-primary/30 hover:border-primary hover:bg-input/40 dark:hover:bg-black/40'}`}
         >
           <input {...getInputProps()} />
-          <Upload className={`w-16 h-16 mb-4 transition-colors ${isDragActive ? 'text-indigo-500' : 'text-slate-300 dark:text-slate-400'}`} />
+          <Upload className={`w-16 h-16 mb-4 transition-colors ${isDragActive ? 'text-primary' : 'text-muted-foreground opacity-50'}`} />
           <div className="space-y-1">
             <p className="text-base font-bold text-foreground opacity-90">
               {isDragActive ? "Lepaskan file di sini..." : "Tarik & Lepas Gambar Dokumen atau PDF"}
             </p>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Mendukung JPG, PNG, WEBP, dan PDF</p>
+            <p className="text-sm text-muted">Mendukung JPG, PNG, WEBP, dan PDF</p>
           </div>
         </div>
 
         {/* AI ENGINE TOGGLE */}
         <div className="flex items-center justify-center p-2">
-          <div className="inline-flex bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-1">
+          <div className="inline-flex bg-input border border-border rounded-xl p-1">
             <button
               onClick={() => setAiEngine('tesseract')}
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                 aiEngine === 'tesseract' 
-                  ? 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 shadow-sm border-slate-200 dark:border-slate-700' 
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+                  ? 'bg-card text-foreground shadow-sm border border-border' 
+                  : 'text-muted hover:text-foreground'
               }`}
             >
               🚀 Lokal (Tesseract)
@@ -192,8 +192,8 @@ export default function DocumentUploader() {
               onClick={() => setAiEngine('gemini')}
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                 aiEngine === 'gemini' 
-                  ? 'bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 shadow-sm border-indigo-200 dark:border-indigo-500/30' 
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+                  ? 'bg-primary text-white shadow-sm' 
+                  : 'text-muted hover:text-foreground'
               }`}
             >
               ✨ Super Presisi (Gemini Cloud)
@@ -203,15 +203,15 @@ export default function DocumentUploader() {
 
         {loading && (
           <div className="mt-6 space-y-4">
-            <div className="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center gap-3">
-              <Loader2 className="w-5 h-5 text-indigo-500 dark:text-indigo-400 animate-spin" />
-              <p className="text-sm text-indigo-700 dark:text-indigo-200 font-medium">{statusText}</p>
+            <div className="p-4 rounded-xl bg-primary/10 border border-primary/20 flex items-center gap-3">
+              <Loader2 className="w-5 h-5 text-primary animate-spin" />
+              <p className="text-sm text-primary font-medium">{statusText}</p>
             </div>
             
             {rawText && (
-              <div className="p-4 rounded-xl bg-slate-100 dark:bg-slate-900 border border-border animate-in fade-in">
-                <p className="text-[10px] font-bold text-slate-500 uppercase mb-2">Hasil Ekstraksi Teks (Raw)</p>
-                <pre className="text-[10px] font-mono text-slate-600 dark:text-slate-400 overflow-x-auto whitespace-pre-wrap max-h-[150px] overflow-y-auto">
+              <div className="p-4 rounded-xl bg-input border border-border animate-in fade-in">
+                <p className="text-[10px] font-bold text-muted uppercase mb-2">Hasil Ekstraksi Teks (Raw)</p>
+                <pre className="text-[10px] font-mono text-muted-foreground overflow-x-auto whitespace-pre-wrap max-h-[150px] overflow-y-auto">
                   {rawText}
                 </pre>
               </div>
