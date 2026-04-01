@@ -1,7 +1,6 @@
 import BkuFilter from "./BkuFilter"
 import BkuDashboardContent from "./BkuDashboardContent"
-import { Suspense } from "react"
-import { BookOpen, Loader2 } from "lucide-react"
+import { BookOpen } from "lucide-react"
 
 export const dynamic = 'force-dynamic'
 
@@ -29,17 +28,7 @@ export default async function BkuPage({
         <BkuFilter currentMonth={currentMonth} currentYear={currentYear} />
       </header>
 
-      <Suspense 
-        key={`${currentMonth}-${currentYear}`} 
-        fallback={
-          <div className="flex flex-col items-center justify-center p-32 text-slate-500 dark:text-slate-400 animate-pulse">
-            <Loader2 className="w-10 h-10 animate-spin mb-4 text-indigo-500" /> 
-            <p className="font-bold tracking-tight">Menyiapkan Rekapitulasi Pembukuan...</p>
-          </div>
-        }
-      >
-        <BkuDashboardContent month={currentMonth} year={currentYear} />
-      </Suspense>
+      <BkuDashboardContent month={currentMonth} year={currentYear} />
     </div>
   )
 }
