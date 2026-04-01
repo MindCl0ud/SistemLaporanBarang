@@ -40,13 +40,55 @@ export default function DocumentItemsReport({ documents }: { documents: any[] })
   const [items, setItems] = useState<any[]>([])
   
   // Column Management (ORDER MATTERS)
-  const [visibleColumns, setVisibleColumns] = useState<string[]>(
-    ['no', 'date', 'desc', 'vendor', 'qty', 'unit', 'price', 'total']
-  )
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(['no', 'date', 'desc', 'vendor', 'qty', 'unit', 'price', 'total'])
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(
     Object.fromEntries(AVAILABLE_COLUMNS.map(c => [c.id, c.defaultWidth]))
   )
   const [showColumnPicker, setShowColumnPicker] = useState(false)
+
+  // Memoized Column List for Settings Menu
+  const orderedMenu = useMemo(() => {
+    const visible = visibleColumns.map(id => AVAILABLE_COLUMNS.find(c => c.id === id)!).filter(Boolean)
+    const hidden = AVAILABLE_COLUMNS.filter(c => !visibleColumns.includes(c.id))
+    return { visible, hidden }
+  }, [visibleColumns])
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedCols = localStorage.getItem('report_visible_cols')
+      const savedWidths = localStorage.getItem('report_col_widths')
+      if (savedCols) {
+        try {
+          const parsed = JSON.parse(savedCols)
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setVisibleColumns(parsed)
+          }
+        } catch (e) { console.error(e) }
+      }
+      if (savedWidths) {
+        try {
+          const parsed = JSON.parse(savedWidths)
+          if (typeof parsed === 'object' && parsed !== null) {
+            setColumnWidths(prev => ({ ...prev, ...parsed }))
+          }
+        } catch (e) { console.error(e) }
+      }
+    }
+  }, [])
+
+  // Save to localStorage on change
+  useEffect(() => {
+    if (typeof window !== 'undefined' && visibleColumns.length > 0) {
+      localStorage.setItem('report_visible_cols', JSON.stringify(visibleColumns))
+    }
+  }, [visibleColumns])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('report_col_widths', JSON.stringify(columnWidths))
+    }
+  }, [columnWidths])
 
   // Resizing state
   const resizingCol = useRef<string | null>(null)
@@ -149,18 +191,20 @@ export default function DocumentItemsReport({ documents }: { documents: any[] })
   const handleAddRow = () => {
     const newItem = {
       id: Math.random().toString(36).substr(2, 9),
-      description: 'Item Baru...',
-      quantity: 1,
+      desc: 'Item Baru...',
+      qty: 1,
       unit: 'Pcs',
       price: 0,
       total: 0,
-      docNumber: 'Manual',
+      date: new Date().toLocaleDateString('id-ID'),
+      docNo: 'Manual',
+      vendor: '-',
+      kodeRek: '-',
+      subKeg: '-',
+      itemCode: '-',
       baNumber: '-',
       baDate: '-',
-      vendorName: '-',
-      docDate: new Date().toLocaleDateString('id-ID'),
-      kodeRek: '-',
-      subKegiatan: '-',
+      bidang: '-',
     }
     setItems([newItem, ...items])
   }
@@ -233,41 +277,61 @@ export default function DocumentItemsReport({ documents }: { documents: any[] })
                 <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-card border border-border rounded-2xl shadow-2xl z-20 p-4 animate-in fade-in slide-in-from-top-2 duration-200">
                   <p className="text-[10px] font-black text-muted uppercase tracking-widest mb-4 border-b border-border pb-2 px-1">Pilih & Urutkan Kolom</p>
                   <div className="space-y-1.5 max-h-[400px] overflow-y-auto custom-scrollbar px-1">
-                    {AVAILABLE_COLUMNS.map((col, idx) => {
-                      const isVisible = visibleColumns.includes(col.id);
-                      return (
-                        <div key={col.id} className="flex items-center justify-between group p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
-                          <div 
-                            onClick={() => toggleColumn(col.id)}
-                            className="flex items-center gap-3 cursor-pointer flex-1"
-                          >
-                            <div className={`w-4 h-4 rounded border ${isVisible ? 'bg-primary border-primary flex items-center justify-center' : 'border-border'}`}>
-                               {isVisible && <Check className="w-2.5 h-2.5 text-white" />}
-                            </div>
-                            <span className={`text-[11px] font-bold ${isVisible ? 'text-foreground' : 'text-muted-foreground'}`}>{col.label}</span>
+                    {/* VISIBLE COLUMNS SECTION */}
+                    {orderedMenu.visible.map((col, idx) => (
+                      <div key={col.id} className="flex items-center justify-between group p-1.5 rounded-lg bg-primary/5 border border-primary/20 hover:bg-primary/10 transition-colors">
+                        <div 
+                          onClick={() => toggleColumn(col.id)}
+                          className="flex items-center gap-3 cursor-pointer flex-1"
+                        >
+                          <div className={`w-4 h-4 rounded border bg-primary border-primary flex items-center justify-center shadow-lg shadow-primary/20`}>
+                             <Check className="w-2.5 h-2.5 text-white" />
                           </div>
-                          
-                          {isVisible && (
-                            <div className="flex items-center gap-1">
-                               <button 
-                                 onClick={() => moveColumn(col.id, 'up')}
-                                 className="p-1 hover:bg-primary/10 rounded-md text-muted hover:text-primary transition-all"
-                                 title="Pindah ke Kiri"
-                               >
-                                 <ArrowUp className="w-3 h-3" />
-                               </button>
-                               <button 
-                                 onClick={() => moveColumn(col.id, 'down')}
-                                 className="p-1 hover:bg-primary/10 rounded-md text-muted hover:text-primary transition-all"
-                                 title="Pindah ke Kanan"
-                               >
-                                 <ArrowDown className="w-3 h-3" />
-                               </button>
-                            </div>
-                          )}
+                          <span className="text-[11px] font-black text-foreground">{col.label}</span>
                         </div>
-                      )
-                    })}
+                        
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                           <button 
+                             onClick={(e) => { e.stopPropagation(); moveColumn(col.id, 'up'); }}
+                             className="p-1 hover:bg-primary/20 rounded-md text-primary disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+                             disabled={idx === 0}
+                             title="Pindah ke Atas/Kiri"
+                           >
+                             <ArrowUp className="w-3 h-3" />
+                           </button>
+                           <button 
+                             onClick={(e) => { e.stopPropagation(); moveColumn(col.id, 'down'); }}
+                             className="p-1 hover:bg-primary/20 rounded-md text-primary disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+                             disabled={idx === orderedMenu.visible.length - 1}
+                             title="Pindah ke Bawah/Kanan"
+                           >
+                             <ArrowDown className="w-3 h-3" />
+                           </button>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* DIVIDER */}
+                    {orderedMenu.hidden.length > 0 && (
+                      <div className="py-2 flex items-center gap-2">
+                        <div className="h-[1px] flex-1 bg-border"></div>
+                        <span className="text-[9px] font-black text-muted uppercase tracking-widest">Kolom Lainnya</span>
+                        <div className="h-[1px] flex-1 bg-border"></div>
+                      </div>
+                    )}
+
+                    {/* HIDDEN COLUMNS SECTION */}
+                    {orderedMenu.hidden.map((col) => (
+                      <div key={col.id} className="flex items-center justify-between group p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-white/5 transition-colors border border-transparent hover:border-border grayscale opacity-60 hover:grayscale-0 hover:opacity-100">
+                        <div 
+                          onClick={() => toggleColumn(col.id)}
+                          className="flex items-center gap-3 cursor-pointer flex-1"
+                        >
+                          <div className="w-4 h-4 rounded border border-border"></div>
+                          <span className="text-[11px] font-bold text-muted-foreground">{col.label}</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </>
