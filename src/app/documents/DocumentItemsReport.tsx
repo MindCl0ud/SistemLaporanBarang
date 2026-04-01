@@ -55,15 +55,20 @@ export default function DocumentItemsReport({ documents }: { documents: any[] })
   // Initialize report items from documents
   useEffect(() => {
     const flattened = documents.flatMap(doc => (doc.items || []).map((item: any) => ({
-      ...item,
       id: item.id || Math.random().toString(36).substr(2, 9),
-      docNumber: doc.docNumber || '-',
+      docNo: doc.docNumber || '-',
       baNumber: doc.baNumber || '-',
       baDate: doc.baDate ? new Date(doc.baDate).toLocaleDateString('id-ID') : '-',
-      vendorName: doc.vendorName || 'Tidak Diketahui',
-      docDate: doc.date ? new Date(doc.date).toLocaleDateString('id-ID') : '-',
+      vendor: doc.vendorName || 'Tidak Diketahui',
+      date: doc.date ? new Date(doc.date).toLocaleDateString('id-ID') : '-',
       kodeRek: doc.kodeRek || '-',
-      subKegiatan: doc.subKegiatan || '-',
+      subKeg: doc.subKegiatan || '-',
+      desc: item.description,
+      qty: item.quantity || 0,
+      unit: item.unit || '-',
+      price: item.price || 0,
+      total: item.total || 0,
+      itemCode: item.itemCode || '-',
     })))
     setItems(flattened)
   }, [documents])
@@ -348,24 +353,14 @@ export default function DocumentItemsReport({ documents }: { documents: any[] })
                              {colId === 'no' ? (
                                viewIdx + 1
                              ) : (
-                               <input 
+                            <input 
                                  className={`w-full bg-transparent border-none p-2 outline-none focus:bg-white dark:focus:bg-white/5 ${colId === 'total' ? 'text-right font-black text-emerald-600 dark:text-emerald-400 font-mono text-xs' : 'text-[11px] font-bold text-foreground'} ${colId === 'price' ? 'text-right font-mono' : ''} ${colId === 'date' ? 'text-primary font-black' : ''}`}
                                  value={
                                    colId === 'total' ? formatCurrency(item[colId]) :
-                                   colId === 'desc' ? item.description :
-                                   colId === 'vendor' ? item.vendorName :
-                                   colId === 'docNo' ? item.docNumber :
-                                   colId === 'date' ? item.docDate :
                                    item[colId] || ''
                                  }
                                  onChange={e => {
-                                   let val: any = e.target.value
-                                   let key = colId
-                                   if (colId === 'desc') key = 'description'
-                                   if (colId === 'vendor') key = 'vendorName'
-                                   if (colId === 'docNo') key = 'docNumber'
-                                   if (colId === 'date') key = 'docDate'
-                                   handleUpdateItem(originalIdx, key, val)
+                                   handleUpdateItem(originalIdx, colId, e.target.value)
                                  }}
                                  readOnly={colId === 'total'}
                                />
