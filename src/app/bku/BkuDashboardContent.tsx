@@ -1,13 +1,27 @@
-import { getBkuRecords, getBkuComparison, getYearlyBkuRecords } from "@/app/actions/bkuActions"
+'use client'
+
+import { useState } from 'react'
 import BkuForm from "./BkuForm"
 import BkuList from "./BkuList"
 import BkuAccountSummary from "./BkuAccountSummary"
-import { Plus, TrendingUp, CalendarDays } from "lucide-react"
+import { Plus, TrendingUp, CalendarDays, List, PieChart } from "lucide-react"
 
-export default async function BkuDashboardContent({ month, year }: { month: number, year: number }) {
-  const records = await getBkuRecords(month, year)
-  const stats = await getBkuComparison(month, year)
-  const yearlyRecords = await getYearlyBkuRecords(year)
+export default function BkuDashboardContent({ 
+  month, 
+  year, 
+  records, 
+  stats, 
+  yearlyRecords,
+  accountMappings 
+}: { 
+  month: number, 
+  year: number,
+  records: any[],
+  stats: any,
+  yearlyRecords: any[],
+  accountMappings: any[]
+}) {
+  const [activeTab, setActiveTab] = useState<'transactions' | 'summary'>('transactions')
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount)
@@ -104,25 +118,42 @@ export default async function BkuDashboardContent({ month, year }: { month: numb
         </div>
       </div>
 
-      {/* Row 2: Account Summary (Full Width) */}
-      <div className="p-6 rounded-3xl bg-card border border-border backdrop-blur-md shadow-sm w-full">
-        <BkuAccountSummary monthlyRecords={records} yearlyRecords={yearlyRecords} />
+      <div className="flex items-center gap-2 bg-input/40 p-1 rounded-2xl w-fit border border-border">
+        <button
+          onClick={() => setActiveTab('transactions')}
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-black uppercase tracking-wider transition-all ${activeTab === 'transactions' ? 'bg-primary text-white shadow-lg' : 'text-muted hover:bg-accent'}`}
+        >
+          <List className="w-4 h-4" />
+          Daftar Transaksi
+        </button>
+        <button
+          onClick={() => setActiveTab('summary')}
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-black uppercase tracking-wider transition-all ${activeTab === 'summary' ? 'bg-primary text-white shadow-lg' : 'text-muted hover:bg-accent'}`}
+        >
+          <PieChart className="w-4 h-4" />
+          Ringkasan Rekening
+        </button>
       </div>
 
-      {/* Bottom Section: Data List Table (Full Width) */}
-      <div className="w-full">
-        <div className="p-6 rounded-3xl bg-card border border-border min-h-[500px] shadow-sm">
-           <div className="flex justify-between items-center mb-8">
-             <div className="flex items-center gap-3">
-               <div className="w-1.5 h-6 bg-primary rounded-full"></div>
-               <h2 className="text-xl font-black text-foreground tracking-tight">Data Transaksi BKU</h2>
-               <span className="bg-primary/10 text-primary text-[10px] px-2 py-1 rounded-full border border-primary/20 uppercase font-black">Periode: {month}/{year}</span>
+      {activeTab === 'transactions' ? (
+        <div className="w-full animate-in fade-in zoom-in-95 duration-300">
+          <div className="p-6 rounded-3xl bg-card border border-border min-h-[500px] shadow-sm">
+             <div className="flex justify-between items-center mb-8">
+               <div className="flex items-center gap-3">
+                 <div className="w-1.5 h-6 bg-primary rounded-full"></div>
+                 <h2 className="text-xl font-black text-foreground tracking-tight">Data Transaksi BKU</h2>
+                 <span className="bg-primary/10 text-primary text-[10px] px-2 py-1 rounded-full border border-primary/20 uppercase font-black">Periode: {month}/{year}</span>
+               </div>
              </div>
-           </div>
-           
-           <BkuList initialRecords={records} openingBalance={stats.openingBalance} />
+             
+             <BkuList initialRecords={records} openingBalance={stats.openingBalance} />
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="p-8 rounded-3xl bg-card border border-border backdrop-blur-md shadow-sm w-full animate-in fade-in zoom-in-95 duration-300">
+          <BkuAccountSummary monthlyRecords={records} yearlyRecords={yearlyRecords} accountMappings={accountMappings} />
+        </div>
+      )}
     </div>
   )
 }

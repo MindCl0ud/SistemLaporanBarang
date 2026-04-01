@@ -45,9 +45,23 @@ function extractName(description: string, isFull: boolean): string {
   return name
 }
 
-export default function BkuAccountSummary({ monthlyRecords, yearlyRecords }: { monthlyRecords: any[], yearlyRecords: any[] }) {
+export default function BkuAccountSummary({ 
+  monthlyRecords, 
+  yearlyRecords, 
+  accountMappings 
+}: { 
+  monthlyRecords: any[], 
+  yearlyRecords: any[], 
+  accountMappings: any[] 
+}) {
   // Aggregation level: 'full' (all segments) or 'prefix' (first 6 segments)
   const [aggrLevel, setAggrLevel] = useState<'prefix' | 'full'>('prefix')
+
+  const mappingMap = useMemo(() => {
+    const m = new Map<string, string>()
+    accountMappings.forEach(am => m.set(am.code, am.name))
+    return m
+  }, [accountMappings])
 
   const summary = useMemo(() => {
     const map = new Map<string, { monthlyTotal: number, yearlyTotal: number, name: string }>()
@@ -70,7 +84,8 @@ export default function BkuAccountSummary({ monthlyRecords, yearlyRecords }: { m
         const current = map.get(key) || { monthlyTotal: 0, yearlyTotal: 0, name: '' }
         current.yearlyTotal += amt
         if (!current.name) {
-          current.name = extractName(r.description, aggrLevel === 'full')
+          // Use mapping if exists, else extract from description
+          current.name = mappingMap.get(key) || extractName(r.description, aggrLevel === 'full')
         }
         map.set(key, current)
       }

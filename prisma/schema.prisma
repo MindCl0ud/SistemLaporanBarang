@@ -93,3 +93,13 @@ model MasterItem {
 
   @@index([code])
 }
+
+model AccountCodeMapping {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([code])
+}

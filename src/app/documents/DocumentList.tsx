@@ -3,7 +3,7 @@
 import React, { useState, useRef, useCallback, useEffect } from "react"
 import { format } from "date-fns"
 import { id } from "date-fns/locale"
-import { Trash2, Bot, Loader2, WrapText, AlignJustify, ChevronDown, ChevronRight, CheckCircle2, Circle, GripVertical, Pencil, Check, X } from "lucide-react"
+import { Trash2, Bot, Loader2, WrapText, AlignJustify, ChevronDown, ChevronRight, CheckCircle2, Circle, Pencil, Check, X, Save } from "lucide-react"
 import { deleteDocument, updateDocumentItem, deleteDocumentItem } from "@/app/actions/documentActions"
 
 // ──────────────────────────────────────────────────────────
@@ -110,6 +110,41 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
   const [editingItems, setEditingItems] = useState<Record<string, { description: string; quantity: number; unit: string; price: number; total: number; itemCode: string }>>({})
   const [savingItemId, setSavingItemId] = useState<string | null>(null)
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null)
+  
+  // Document-level editing
+  const [editingDocId, setEditingDocId] = useState<string | null>(null)
+  const [editingDocData, setEditingDocData] = useState<any>(null)
+  const [savingDoc, setSavingDoc] = useState(false)
+
+  const handleStartEditDoc = (doc: any) => {
+    setEditingDocId(doc.id)
+    setEditingDocData({
+      type: doc.type,
+      docNumber: doc.docNumber || '',
+      baNumber: doc.baNumber || '',
+      date: doc.date ? new Date(doc.date).toISOString().split('T')[0] : '',
+      baDate: doc.baDate ? new Date(doc.baDate).toISOString().split('T')[0] : '',
+      kodeRek: doc.kodeRek || '',
+      subKegiatan: doc.subKegiatan || '',
+      vendorName: doc.vendorName || '',
+      totalAmount: doc.totalAmount || 0,
+      paymentFor: doc.paymentFor || '',
+      unit: doc.unit || ''
+    })
+  }
+
+  const handleSaveDoc = async () => {
+    if (!editingDocId) return
+    setSavingDoc(true)
+    try {
+      const { updateDocument } = await import("@/app/actions/documentActions")
+      await updateDocument(editingDocId, editingDocData)
+      setEditingDocId(null)
+      setEditingDocData(null)
+    } finally {
+      setSavingDoc(false)
+    }
+  }
 
   const handleDelete = async (docId: string) => {
     setDeletingId(docId)
@@ -218,11 +253,11 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                     onClick={() => setExpandedId(isExpanded ? null : doc.id)}
                   >
                     {/* No */}
-                    <td className={`${cellClass} text-foreground/50 text-center font-mono border-slate-200 dark:border-slate-800`}>
+                    <td className={`${cellClass} text-foreground/70 text-center font-mono border-slate-200 dark:border-slate-800`}>
                       <div className="flex items-center justify-center gap-1.5">
                         {isExpanded
-                          ? <ChevronDown className="w-3.5 h-3.5 text-indigo-400" />
-                          : <ChevronRight className="w-3.5 h-3.5 text-foreground/40 group-hover:text-amber-500 transition-colors" />
+                          ? <ChevronDown className="w-3.5 h-3.5 text-primary" />
+                          : <ChevronRight className="w-3.5 h-3.5 text-foreground/60 group-hover:text-primary transition-colors" />
                         }
                         <span className="text-[11px] min-w-[12px]">{rowIdx + 1}</span>
                       </div>
@@ -232,17 +267,17 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                     <td className={`${cellClass} text-center`} style={{ overflow: 'hidden' }}>
                       {isMatched ? (
                         <div className="flex flex-col items-center gap-0.5" title={doc.matchRecord.bkuTransaction.description}>
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[9px] font-bold border border-emerald-200 dark:border-emerald-500/30 uppercase tracking-tighter shadow-sm shadow-emerald-500/10">
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[9px] font-black border border-emerald-300 dark:border-emerald-500/30 uppercase tracking-tighter shadow-sm shadow-emerald-500/10">
                             <CheckCircle2 className="w-2 h-2" />TERCOCOKKAN
                           </span>
-                          <span className="text-[9px] text-foreground/50 font-mono leading-none">
+                          <span className="text-[9px] text-foreground/60 font-black leading-none">
                             BKU {doc.matchRecord.bkuTransaction.date}
                           </span>
                         </div>
                       ) : (
-                        <div className="flex flex-col items-center gap-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
-                          <Circle className="w-2.5 h-2.5 text-slate-600" />
-                          <span className="text-[8px] text-slate-600 uppercase font-bold tracking-tighter">Pending</span>
+                        <div className="flex flex-col items-center gap-0.5 opacity-90 group-hover:opacity-100 transition-opacity">
+                          <Circle className="w-2.5 h-2.5 text-slate-700 dark:text-slate-400" />
+                          <span className="text-[8px] text-slate-700 dark:text-slate-400 uppercase font-black tracking-tighter">Pending</span>
                         </div>
                       )}
                     </td>
@@ -315,16 +350,24 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                       className={`${cellClass} text-center`}
                       onClick={e => e.stopPropagation()}
                     >
-                      <button
-                        onClick={() => handleDelete(doc.id)}
-                        disabled={deletingId === doc.id}
-                        className="p-1 text-slate-600 hover:text-rose-400 hover:bg-rose-400/10 rounded transition-colors disabled:opacity-40"
-                      >
-                        {deletingId === doc.id
-                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          : <Trash2 className="w-3.5 h-3.5" />
-                        }
-                      </button>
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={() => handleStartEditDoc(doc)}
+                          className="p-1 text-slate-600 hover:text-indigo-400 hover:bg-indigo-400/10 rounded transition-colors"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(doc.id)}
+                          disabled={deletingId === doc.id}
+                          className="p-1 text-slate-600 hover:text-rose-400 hover:bg-rose-400/10 rounded transition-colors disabled:opacity-40"
+                        >
+                          {deletingId === doc.id
+                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            : <Trash2 className="w-3.5 h-3.5" />
+                          }
+                        </button>
+                      </div>
                     </td>
                   </tr>
 
@@ -487,22 +530,67 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                           </div>
 
                           {/* Meta info (Horizontal Grid at Bottom) */}
-                          <div className="pt-4 border-t border-slate-800/60">
-                            <p className="text-[10px] font-bold text-indigo-400/80 uppercase tracking-widest mb-4 flex items-center gap-2">
-                              <Bot className="w-3 h-3" /> Informasi Metadata Dokumen
-                            </p>
+                          <div className="pt-4 border-t border-border">
+                            <div className="flex items-center justify-between mb-4">
+                              <p className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
+                                <Bot className="w-3 h-3" /> Informasi Metadata Dokumen
+                              </p>
+                              {editingDocId === doc.id ? (
+                                <div className="flex gap-2">
+                                   <button 
+                                     onClick={() => { setEditingDocId(null); setEditingDocData(null); }}
+                                     className="px-3 py-1 bg-input hover:bg-accent text-foreground text-[10px] font-black uppercase rounded-lg border border-border transition-all"
+                                   >
+                                     Batal
+                                   </button>
+                                   <button 
+                                     onClick={handleSaveDoc}
+                                     className="px-3 py-1 bg-primary text-white text-[10px] font-black uppercase rounded-lg shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all flex items-center gap-1.5"
+                                   >
+                                     {savingDoc ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                                     Simpan Perubahan
+                                   </button>
+                                </div>
+                              ) : (
+                                <button 
+                                  onClick={() => handleStartEditDoc(doc)}
+                                  className="px-3 py-1 bg-input hover:bg-accent text-foreground text-[10px] font-black uppercase rounded-lg border border-border transition-all flex items-center gap-1.5"
+                                >
+                                  <Pencil className="w-3 h-3 translate-y-[-0.5px]" />
+                                  Edit Metadata
+                                </button>
+                              )}
+                            </div>
+
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                               {[
-                                { label: 'Nomor Kwitansi', value: doc.docNumber || '—' },
-                                { label: 'Nomor BA', value: doc.baNumber || '—' },
-                                { label: 'Tgl Kwitansi', value: kwatDate },
-                                { label: 'Tgl Berita Acara', value: baDateStr || '—' },
-                                { label: 'Kode Rekening', value: doc.kodeRek || '—' },
-                                { label: 'Sub Kegiatan', value: doc.subKegiatan || '—' },
-                              ].map(({ label, value }) => (
-                                <div key={label} className="flex flex-col gap-1 group">
-                                  <span className="text-[9px] text-foreground/50 uppercase font-bold tracking-tight group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{label}</span>
-                                  <span className={`text-[11px] text-foreground font-mono bg-input/40 px-2 py-1.5 rounded-lg border border-border group-hover:border-indigo-300 dark:group-hover:border-indigo-500/30 transition-all ${label.includes('BA') ? 'text-amber-600 dark:text-amber-300/90' : ''}`}>{value}</span>
+                                { key: 'docNumber', label: 'Nomor Kwitansi', placeholder: 'Kwitansi...' },
+                                { key: 'baNumber', label: 'Nomor BA', placeholder: 'BA/...' },
+                                { key: 'date', label: 'Tgl Kwitansi', type: 'date' },
+                                { key: 'baDate', label: 'Tgl Berita Acara', type: 'date' },
+                                { key: 'kodeRek', label: 'Kode Rekening', placeholder: '5.01...' },
+                                { key: 'subKegiatan', label: 'Sub Kegiatan', placeholder: '5.01...' },
+                                { key: 'vendorName', label: 'Vendor / Penyedia', placeholder: 'Toko...' },
+                                { key: 'unit', label: 'Satuan Global', placeholder: 'Bulan / Paket' },
+                                { key: 'paymentFor', label: 'Untuk Pembayaran', placeholder: 'Belanja...', isFullWidth: true },
+                              ].map(({ key, label, type = 'text', placeholder, isFullWidth }) => (
+                                <div key={label} className={`flex flex-col gap-1 group ${isFullWidth ? 'lg:col-span-2' : ''}`}>
+                                  <span className="text-[9px] text-foreground/70 uppercase font-black tracking-tight group-hover:text-primary transition-colors">{label}</span>
+                                  {editingDocId === doc.id ? (
+                                    <input
+                                      type={type}
+                                      className="w-full bg-input border border-primary/30 rounded-xl px-2 py-1.5 text-[11px] font-bold text-foreground focus:ring-1 focus:ring-primary outline-none transition-all"
+                                      value={editingDocData[key] || ''}
+                                      onChange={e => setEditingDocData({ ...editingDocData, [key]: e.target.value })}
+                                      placeholder={placeholder}
+                                    />
+                                  ) : (
+                                    <span className={`text-[11px] text-foreground font-mono bg-input/40 px-2 py-1.5 rounded-lg border border-border group-hover:border-primary/30 transition-all ${label.includes('BA') ? 'text-amber-600 dark:text-amber-400 font-black' : ''}`}>
+                                      {key.includes('Date') || key === 'date' 
+                                        ? (doc[key] ? format(new Date(doc[key]), 'dd/MM/yyyy') : '—')
+                                        : (doc[key] || '—')}
+                                    </span>
+                                  )}
                                 </div>
                               ))}
                             </div>

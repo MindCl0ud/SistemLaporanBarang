@@ -139,9 +139,6 @@ export async function updateDocumentItem(id: string, data: z.infer<typeof Docume
 
 export async function updateDocument(id: string, rawData: any) {
   const data = DocumentSchema.partial().parse(rawData)
-  
-  // Destructure items so we don't pass it directly to prisma.update (which expects nested operations)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { items, ...updateData } = data
 
   const doc = await prisma.document.update({ 
@@ -154,7 +151,7 @@ export async function updateDocument(id: string, rawData: any) {
   })
   revalidatePath('/documents')
   revalidatePath('/')
-  return doc
+  return { success: true, doc }
 }
 
 export async function deleteDocumentItem(id: string) {

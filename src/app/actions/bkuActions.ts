@@ -144,3 +144,28 @@ export async function addBkuBulk(data: any[], month: number, year: number) {
   revalidatePath('/')
   return result.count
 }
+
+// --- ACCOUNT MAPPING ACTIONS ---
+
+export async function getAccountMappings() {
+  return await prisma.accountCodeMapping.findMany({
+    orderBy: { code: 'asc' }
+  })
+}
+
+export async function upsertAccountMapping(code: string, name: string) {
+  const result = await prisma.accountCodeMapping.upsert({
+    where: { code },
+    update: { name },
+    create: { code, name }
+  })
+  revalidatePath('/bku')
+  revalidatePath('/settings/accounts')
+  return result
+}
+
+export async function deleteAccountMapping(id: string) {
+  await prisma.accountCodeMapping.delete({ where: { id } })
+  revalidatePath('/bku')
+  revalidatePath('/settings/accounts')
+}
