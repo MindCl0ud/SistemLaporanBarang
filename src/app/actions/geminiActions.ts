@@ -63,19 +63,22 @@ export async function parseWithGemini(formData: FormData) {
 
     let result: any;
     try {
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" })
       result = await model.generateContent([promptString, ...imageParts])
     } catch (err: any) {
       if (err.status === 404 || err.message?.includes('404')) {
-        console.warn("gemini-1.5-flash 404 error, fetching available models for this API key...")
+        console.warn("gemini-2.5-flash 404 error, fetching available models for this API key...")
         
         try {
           const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`)
           const data = await res.json()
-          const availableModels = data.models ? data.models.map((m: any) => m.name).join(', ') : 'Tidak dapat memuat model'
-          throw new Error(`Model gemini-1.5-flash tidak tersedia untuk API Key Anda. Model yang diizinkan: ${availableModels}`);
+          if (!res.ok) {
+             throw new Error(data.error?.message || JSON.stringify(data))
+          }
+          const availableModels = data.models ? data.models.map((m: any) => m.name.replace('models/', '')).join(', ') : 'Tidak dapat memuat model'
+          throw new Error(`Model gemini-2.5-flash tidak tersedia. Model yang diizinkan untuk API Key Anda: ${availableModels}`);
         } catch (fetchErr: any) {
-          throw new Error("API Key Anda tidak memiliki akses ke Gemini 1.5 Flash dan pengecekan model gagal. " + err.message);
+          throw new Error(`Gagal mengecek model yang tersedia (Error: ${fetchErr.message}). Error awal: ${err.message}`);
         }
       } else {
         throw err;
