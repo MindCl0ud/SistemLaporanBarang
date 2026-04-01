@@ -2,6 +2,7 @@ import { getBkuRecords, getBkuComparison } from "@/app/actions/bkuActions"
 import BkuForm from "./BkuForm"
 import BkuList from "./BkuList"
 import BkuFilter from "./BkuFilter"
+import BkuAccountSummary from "./BkuAccountSummary"
 import { Suspense } from "react"
 import { BookOpen, Plus, TrendingUp, TrendingDown, Loader2 } from "lucide-react"
 
@@ -117,10 +118,7 @@ export default async function BkuPage({
               </div>
             </div>
 
-            <div className="mt-8 pt-4 border-t border-border flex items-center justify-between">
-              <span className="text-xs text-slate-500 italic">Data di sebelah kiri mewakili periode {currentMonth}/{currentYear}</span>
-              <div className="text-[10px] text-slate-500 uppercase font-black bg-input px-2 py-1 rounded tracking-widest border border-border">Analisis Komparatif</div>
-            </div>
+            <BkuAccountSummary records={records} />
         </div>
       </div>
 
