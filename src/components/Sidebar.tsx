@@ -72,19 +72,19 @@ export default function Sidebar() {
 
       <nav className="flex-1 px-4 space-y-2">
         {navItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+          const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href + "/"));
           return (
             <Link
               key={item.name}
               href={item.href}
               className={`flex items-center gap-3 px-4 py-1.5 rounded-xl transition-all duration-300 relative group ${
-                isActive ? "text-primary dark:text-white font-semibold" : "text-muted hover:text-primary dark:hover:text-white"
+                isActive ? "text-indigo-700 dark:text-white font-black" : "text-muted hover:text-primary dark:hover:text-white"
               }`}
             >
               {isActive && (
                 <motion.div
                   layoutId="sidebar-active"
-                  className="absolute inset-0 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl -z-10"
+                  className="absolute inset-0 bg-primary/10 dark:bg-indigo-500/20 border border-primary/20 dark:border-indigo-500/40 rounded-2xl -z-10"
                   transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 />
               )}
