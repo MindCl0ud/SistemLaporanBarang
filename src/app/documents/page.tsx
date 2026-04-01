@@ -1,7 +1,7 @@
 import { FileText, Bot } from "lucide-react"
 export const dynamic = 'force-dynamic'
 import DocumentUploader from "./DocumentUploader"
-import DocumentList from "./DocumentList"
+import DocumentViewContainer from "./DocumentViewContainer"
 import MatchTrigger from "./MatchTrigger"
 import { getDocuments } from "@/app/actions/documentActions"
 
@@ -33,15 +33,7 @@ export default async function DocumentsPage() {
         <DocumentUploader />
       </div>
 
-      {/* Full-width spreadsheet */}
-      <div className="p-4 rounded-3xl bg-card border border-border backdrop-blur-md shadow-sm">
-        <h2 className="text-base font-bold text-foreground mb-4 flex items-center gap-2">
-          <FileText className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
-          Dokumen Tersimpan
-          <span className="ml-2 text-xs text-slate-500 font-normal">({documents.length} dokumen)</span>
-        </h2>
-        <DocumentList initialDocuments={documents} />
-      </div>
+      <DocumentViewContainer initialDocuments={documents} />
     </div>
   )
 }
