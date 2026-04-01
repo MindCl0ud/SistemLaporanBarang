@@ -86,7 +86,10 @@ export default function DocumentUploader() {
         
         if (aiEngine === 'gemini') {
           setStatusText('Meminta Analisis dari Google Gemini AI...')
-          const geminiData = await parseWithGemini(base64Images)
+          const formData = new FormData()
+          base64Images.forEach((img) => formData.append('images', img))
+          
+          const geminiData = await parseWithGemini(formData)
           setRawText(JSON.stringify(geminiData, null, 2))
           setPendingData(geminiData)
         } else {
@@ -109,7 +112,9 @@ export default function DocumentUploader() {
           })
           
           setStatusText('Meminta Analisis dari Google Gemini AI...')
-          const geminiData = await parseWithGemini([base64])
+          const formData = new FormData()
+          formData.append('images', base64)
+          const geminiData = await parseWithGemini(formData)
           setRawText(JSON.stringify(geminiData, null, 2))
           setPendingData(geminiData)
           setShowManualForm(true)

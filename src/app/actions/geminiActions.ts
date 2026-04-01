@@ -39,7 +39,9 @@ PAY ATTENTION to table columns.
 Only output valid item lines. 
 `
 
-export async function parseWithGemini(base64Images: string[]) {
+export async function parseWithGemini(formData: FormData) {
+  const base64Images = formData.getAll('images') as string[]
+  
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY belum dikonfigurasi di pengaturan Vercel (Penting!).")
   }
