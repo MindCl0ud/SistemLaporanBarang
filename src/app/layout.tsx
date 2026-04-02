@@ -7,8 +7,8 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "DocuMatch AI - Sistem Laporan Barang",
-  description: "AI-powered document analyzer and BKU matching application.",
+  title: "SIPAGU AI - Sistem Pelaporan Anggaran",
+  description: "AI-powered financial budgeting and BKU reporting system.",
 };
 
 export default function RootLayout({

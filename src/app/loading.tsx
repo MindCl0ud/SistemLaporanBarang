@@ -15,7 +15,7 @@ export default function GlobalLoading() {
               Menyiapkan Halaman
             </h3>
             <p className="text-[10px] text-slate-500 dark:text-slate-400 font-black tracking-widest uppercase">
-              DocuMatch AI Engine
+              SIPAGU AI Engine
             </p>
          </div>
        </div>

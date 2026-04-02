@@ -14,6 +14,7 @@ import {
   Sun,
   Moon,
   ListTree,
+  Landmark
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
@@ -54,14 +55,19 @@ export default function Sidebar() {
   return (
     <aside className={`h-screen sticky top-0 bg-card backdrop-blur-xl border-r border-border flex flex-col py-6 text-foreground transition-all duration-300 z-50 ${isCollapsed ? 'w-[var(--sidebar-collapsed)]' : 'w-[var(--sidebar-width)]'}`}>
       <div className="px-6 mb-8 flex items-center justify-between">
-        {!isCollapsed && (
-          <div>
-            <h1 className="text-xl font-black text-foreground tracking-tight whitespace-nowrap">
-              DocuMatch AI
-            </h1>
-            <p className="text-[10px] text-primary mt-1 whitespace-nowrap tracking-wider font-extrabold uppercase">SISTEM LAPORAN BARANG</p>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
+              <Landmark className="w-6 h-6 text-primary" />
+            </div>
+            {!isCollapsed && (
+              <div>
+                <h1 className="text-xl font-black text-foreground tracking-tight whitespace-nowrap">
+                  SIPAGU AI
+                </h1>
+                <p className="text-[10px] text-primary mt-0.5 whitespace-nowrap tracking-wider font-extrabold uppercase">SISTEM PELAPORAN ANGGARAN</p>
+              </div>
+            )}
           </div>
-        )}
         <button 
           onClick={toggleSidebar} 
           className="p-1.5 rounded-lg bg-input hover:bg-accent text-foreground/70 hover:text-foreground transition-all border border-border shadow-sm active:scale-95 transition-all duration-200"

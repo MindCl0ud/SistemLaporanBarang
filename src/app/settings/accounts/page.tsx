@@ -98,6 +98,7 @@ export default function AccountMappingPage() {
   // Inline editing states
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
+  const [savedId, setSavedId] = useState<string | null>(null)
 
   // Filter settings
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
@@ -167,6 +168,12 @@ export default function AccountMappingPage() {
       setEditingId(null)
       setShowAddRow(false)
       setNewRow({ code: '', name: '', division: '', budget: '', revisedBudget: '', subKegiatan: '' })
+      
+      // Show success feedback
+      const currentId = id || 'new'
+      setSavedId(currentId)
+      setTimeout(() => setSavedId(null), 3000)
+
       fetchMappings()
     } finally {
       setSavingId(null)
@@ -498,11 +505,17 @@ export default function AccountMappingPage() {
                       />
                     </td>
                     <td className={cellBase}>
-                      <input 
-                        className="w-full bg-white dark:bg-input border border-primary/30 rounded-lg px-2 py-1.5 text-xs font-bold text-foreground outline-none focus:ring-1 focus:ring-primary shadow-sm"
+                      <textarea 
+                        className="w-full bg-white dark:bg-input border border-primary/30 rounded-lg px-2 py-1.5 text-xs font-bold text-foreground outline-none focus:ring-1 focus:ring-primary shadow-sm resize-none overflow-hidden min-h-[2.5rem]"
                         placeholder="Nama Rekening..."
+                        rows={2}
                         value={newRow.name}
-                        onChange={e => setNewRow({...newRow, name: e.target.value})}
+                        onChange={e => {
+                          setNewRow({...newRow, name: e.target.value});
+                          // Auto-resize
+                          e.target.style.height = 'auto';
+                          e.target.style.height = e.target.scrollHeight + 'px';
+                        }}
                       />
                     </td>
                     <td className={cellBase}>
@@ -596,23 +609,48 @@ export default function AccountMappingPage() {
                     {/* NAME */}
                     <td className={cellBase}>
                       {editingId === m.id ? (
-                        <div className="flex items-center gap-2">
-                          <input 
-                            className="flex-1 bg-white dark:bg-input border border-primary rounded-lg px-2 py-1 text-xs font-bold text-foreground outline-none"
+                        <div className="flex flex-col gap-1">
+                          <textarea 
+                            className="w-full bg-white dark:bg-input border border-primary rounded-lg px-2 py-1 text-xs font-bold text-foreground outline-none resize-none overflow-hidden min-h-[2.5rem]"
                             value={editValue}
-                            onChange={e => setEditValue(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && handleSaveInline(m.code, editValue, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
-                            onKeyDownCapture={e => e.key === 'Escape' && setEditingId(null)}
+                            rows={Math.max(1, editValue.split('\n').length)}
+                            onChange={e => {
+                              setEditValue(e.target.value);
+                              e.target.style.height = 'auto';
+                              e.target.style.height = e.target.scrollHeight + 'px';
+                            }}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSaveInline(m.code, editValue, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget);
+                              }
+                              if (e.key === 'Escape') setEditingId(null);
+                            }}
                             autoFocus
+                            onFocus={e => {
+                              e.target.style.height = 'auto';
+                              e.target.style.height = e.target.scrollHeight + 'px';
+                            }}
                           />
+                          <div className="flex items-center justify-end gap-1">
+                             <span className="text-[8px] text-muted-foreground uppercase font-black tracking-tighter">Shift+Enter for newline</span>
+                          </div>
                         </div>
                       ) : (
                         <div 
-                          className="flex items-center gap-2 cursor-pointer group/n min-h-[1.5rem]"
+                          className="flex items-start gap-2 cursor-pointer group/n min-h-[1.5rem]"
                           onClick={() => { setEditingId(m.id); setEditValue(m.name); }}
                         >
-                          <span className="flex-1 font-medium">{m.name}</span>
-                          <PencilIcon className="w-3 h-3 text-primary opacity-0 group-hover/n:opacity-100 transition-opacity" />
+                          <span className="flex-1 font-medium whitespace-pre-wrap leading-relaxed">{m.name}</span>
+                          <div className="shrink-0 flex items-center gap-1">
+                            {savingId === m.id ? (
+                              <Loader2 className="w-3 h-3 text-primary animate-spin" />
+                            ) : savedId === m.id ? (
+                              <CheckCircle2 className="w-3 h-3 text-emerald-500 animate-in fade-in zoom-in duration-300" />
+                            ) : (
+                              <PencilIcon className="w-3 h-3 text-primary opacity-0 group-hover/n:opacity-100 transition-opacity" />
+                            )}
+                          </div>
                         </div>
                       )}
                     </td>
