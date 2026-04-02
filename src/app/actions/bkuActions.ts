@@ -153,11 +153,11 @@ export async function getAccountMappings() {
   })
 }
 
-export async function upsertAccountMapping(code: string, name: string, division?: string, budget?: number) {
+export async function upsertAccountMapping(code: string, name: string, division?: string, budget?: number, subKegiatan?: string) {
   const result = await (prisma as any).accountCodeMapping.upsert({
     where: { code },
-    update: { name, division, budget: budget || 0 },
-    create: { code, name, division, budget: budget || 0 }
+    update: { name, division, budget: budget || 0, subKegiatan },
+    create: { code, name, division, budget: budget || 0, subKegiatan }
   })
   revalidatePath('/bku')
   revalidatePath('/settings/accounts')
@@ -198,12 +198,20 @@ export async function syncAccountCodesFromBku() {
     select: { code: true }
   })
   const existingCodes = new Set(existing.map((e: any) => e.code))
-
   let count = 0
-  for (const [code, name] of uniqueMap.entries()) {
+  for (let [code, name] of uniqueMap.entries()) {
+    let subKegiatan: string | undefined = undefined
+    
+    // Auto-split if it looks like a combined code
+    const parts = code.split('.')
+    if (parts.length >= 7 && (code.startsWith('5.') || code.startsWith('5.01'))) {
+      subKegiatan = parts.slice(0, 6).join('.')
+      code = parts.slice(6).join('.')
+    }
+
     if (!existingCodes.has(code)) {
       await (prisma as any).accountCodeMapping.create({
-        data: { code, name, budget: 0 }
+        data: { code, name, budget: 0, subKegiatan }
       })
       count++
     }

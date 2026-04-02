@@ -105,6 +105,29 @@ function ResizableHeader({
 // Main Component
 // ──────────────────────────────────────────────────────────
 export default function DocumentList({ initialDocuments }: { initialDocuments: any[] }) {
+  const [documents, setDocuments] = useState(initialDocuments)
+  const [editingCell, setEditingCell] = useState<{ id: string, field: string } | null>(null)
+  const [savingDocId, setSavingDocId] = useState<string | null>(null)
+
+  // 1. Initial hydration & Local Caching
+  useEffect(() => {
+    if (initialDocuments && initialDocuments.length > 0) {
+      setDocuments(initialDocuments)
+      localStorage.setItem('cached_documents', JSON.stringify(initialDocuments))
+    }
+  }, [initialDocuments])
+
+  useEffect(() => {
+    const cached = localStorage.getItem('cached_documents')
+    if (cached && documents.length === 0) {
+      try {
+        setDocuments(JSON.parse(cached))
+      } catch (e) {
+        console.error("Failed to parse cached documents", e)
+      }
+    }
+  }, [])
+
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [wrapText, setWrapText] = useState(false)
@@ -119,6 +142,32 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
   const [savingDoc, setSavingDoc] = useState(false)
   const [showManualForm, setShowManualForm] = useState(false)
   const [showExcelForm, setShowExcelForm] = useState(false)
+
+  const handleInlineSave = async (id: string, field: string, value: any) => {
+    setSavingDocId(id)
+    try {
+      const { updateDocument } = await import("@/app/actions/documentActions")
+      
+      // Auto-split logic for account codes
+      let updatePayload: any = { [field]: value }
+      if (field === 'kodeRek' && (value.startsWith('5.') || value.startsWith('5.01'))) {
+        const parts = value.split('.')
+        if (parts.length >= 7) {
+          updatePayload = {
+            subKegiatan: parts.slice(0, 6).join('.'),
+            kodeRek: parts.slice(6).join('.')
+          }
+        }
+      }
+
+      await updateDocument(id, updatePayload)
+      // Update local state for immediate feedback
+      setDocuments((prev: any[]) => prev.map((d: any) => d.id === id ? { ...d, ...updatePayload } : d))
+      setEditingCell(null)
+    } finally {
+      setSavingDocId(null)
+    }
+  }
 
   const handleStartEditDoc = (doc: any) => {
     setEditingDocId(doc.id)
@@ -209,7 +258,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
           Impor Excel
         </button>
         <span className="text-foreground/60 text-xs ml-auto font-medium">
-          {initialDocuments.length} dokumen · Seret batas kolom untuk mengubah lebar
+          {documents.length} dokumen · Seret batas kolom untuk mengubah lebar
         </span>
       </div>
 
@@ -245,7 +294,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
           </thead>
 
           <tbody>
-            {initialDocuments.map((doc, rowIdx) => {
+            {documents.map((doc, rowIdx) => {
               const showBA = !!doc.baNumber || !!doc.baDate
               const isExpanded = expandedId === doc.id
               const isMatched = !!doc.matchRecord
@@ -263,15 +312,49 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                 wrapText ? 'whitespace-pre-wrap break-words' : 'truncate'
               }`
 
+              const isEditing = (field: string) => editingCell?.id === doc.id && editingCell?.field === field
+
+              const InlineInput = ({ field, value, type = 'text' }: { field: string, value: any, type?: string }) => {
+                const [localVal, setLocalVal] = useState(value)
+                return isEditing(field) ? (
+                  <div className="flex items-center gap-1">
+                    <input
+                      type={type}
+                      autoFocus
+                      className="w-full bg-white dark:bg-input border border-primary rounded px-1 py-0.5 text-xs outline-none"
+                      value={localVal === null ? '' : localVal}
+                      onChange={e => setLocalVal(e.target.value)}
+                      onBlur={() => handleInlineSave(doc.id, field, localVal)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') handleInlineSave(doc.id, field, localVal)
+                        if (e.key === 'Escape') setEditingCell(null)
+                      }}
+                    />
+                    {savingDocId === doc.id && <Loader2 className="w-2.5 h-2.5 animate-spin text-primary" />}
+                  </div>
+                ) : (
+                  <div 
+                    className="cursor-text hover:bg-primary/5 transition-all p-0.5 rounded -m-0.5"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setEditingCell({ id: doc.id, field })
+                    }}
+                  >
+                    {value || <span className="opacity-20">—</span>}
+                  </div>
+                )
+              }
+
               return (
                 <React.Fragment key={doc.id}>
                   {/* ── Main data row ── */}
                   <tr
-                    className={`${rowBg} hover:bg-primary/5 transition-colors cursor-pointer group`}
-                    onClick={() => setExpandedId(isExpanded ? null : doc.id)}
+                    className={`${rowBg} hover:bg-primary/5 border-l-2 ${isExpanded ? 'border-primary' : 'border-transparent'} transition-all group`}
                   >
                     {/* No */}
-                    <td className={`${cellClass} text-foreground/70 text-center font-mono border-border`}>
+                    <td className={`${cellClass} text-foreground/70 text-center font-mono border-border cursor-pointer`}
+                        onClick={() => setExpandedId(isExpanded ? null : doc.id)}
+                    >
                       <div className="flex items-center justify-center gap-1.5">
                         {isExpanded
                           ? <ChevronDown className="w-3.5 h-3.5 text-primary" />
@@ -303,33 +386,41 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                     {/* Tanggal */}
                     <td className={cellClass + ' font-mono'}>
                       <div className="flex flex-col gap-0.5">
-                        <span title="Tanggal Kwitansi/Nota">{kwatDate}</span>
-                        {baDateStr && (
-                          <span className="text-[9px] text-amber-500/70" title="Tanggal Berita Acara">BA: {baDateStr}</span>
-                        )}
+                        <div className="text-[11px]">
+                          <InlineInput 
+                            field="date" 
+                            type="date"
+                            value={doc.date ? new Date(doc.date).toISOString().split('T')[0] : ''} 
+                          />
+                        </div>
+                        <div className="text-[9px] text-amber-500/70">
+                          <InlineInput 
+                            field="baDate" 
+                            type="date"
+                            value={doc.baDate ? new Date(doc.baDate).toISOString().split('T')[0] : ''} 
+                          />
+                        </div>
                       </div>
                     </td>
 
                     {/* Nomor Dokumen */}
                     <td className={cellClass + ' font-mono text-foreground/80 text-[11px] font-black'}>
                       <div className="flex flex-col gap-0.5">
-                        <span title="Nomor Kwitansi/Nota">{doc.docNumber || '—'}</span>
-                        {doc.baNumber && (
-                          <span className="text-[10px] text-amber-700 dark:text-amber-500 font-black" title="Nomor Berita Acara">
-                             {doc.baNumber}
-                          </span>
-                        )}
+                        <InlineInput field="docNumber" value={doc.docNumber} />
+                        <div className="text-[10px] text-amber-700 dark:text-amber-500">
+                          <InlineInput field="baNumber" value={doc.baNumber} />
+                        </div>
                       </div>
                     </td>
 
                     {/* Kode Rek */}
                     <td className={cellClass + ' font-mono text-indigo-600 dark:text-indigo-300 text-[11px]'}>
-                      {doc.kodeRek || '—'}
+                      <InlineInput field="kodeRek" value={doc.kodeRek} />
                     </td>
 
                     {/* Sub Kegiatan */}
                     <td className={cellClass + ' font-mono text-indigo-800 dark:text-indigo-200 text-[11px] font-black'}>
-                      {doc.subKegiatan || '—'}
+                      <InlineInput field="subKegiatan" value={doc.subKegiatan} />
                     </td>
 
                     {/* Tipe */}
@@ -346,21 +437,23 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                     </td>
 
                     {/* Vendor */}
-                    <td className={cellClass + ' font-black text-foreground'}>{doc.vendorName}</td>
+                    <td className={cellClass + ' font-black text-foreground'}>
+                      <InlineInput field="vendorName" value={doc.vendorName} />
+                    </td>
 
                     {/* Satuan */}
                     <td className={cellClass + ' text-center text-foreground font-bold'}>
-                      {doc.unit || '—'}
+                      <InlineInput field="unit" value={doc.unit} />
                     </td>
 
                     {/* Total */}
                     <td className={`${cellClass} text-right font-mono font-black text-foreground text-sm`}>
-                      Rp {formatCurrency(doc.totalAmount)}
+                      <InlineInput field="totalAmount" type="number" value={doc.totalAmount} />
                     </td>
 
                     {/* Items -> Payment Description */}
                     <td className={cellClass + ' text-foreground/80 text-[11px] font-medium'}>
-                      {doc.paymentFor || '—'}
+                      <InlineInput field="paymentFor" value={doc.paymentFor} />
                     </td>
 
                     {/* Aksi */}
@@ -636,7 +729,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
 
       {/* Footer */}
       <div className="flex items-center justify-between px-1 text-xs text-foreground/60 font-medium">
-        <span>{initialDocuments.length} baris · {COL_KEYS.length} kolom</span>
+        <span>{documents.length} baris · {COL_KEYS.length} kolom</span>
         <span>💡 Klik baris untuk melihat detail · Seret batas kolom untuk resize</span>
       </div>
 

@@ -97,6 +97,7 @@ model MasterItem {
 
 model AccountCodeMapping {
   id        String   @id @default(cuid())
+  subKegiatan String?
   code      String   @unique
   name      String
   division  String?        // New field for Bidang

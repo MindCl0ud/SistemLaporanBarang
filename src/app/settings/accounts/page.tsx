@@ -34,7 +34,7 @@ export default function AccountMappingPage() {
 
   // New row states
   const [showAddRow, setShowAddRow] = useState(false)
-  const [newRow, setNewRow] = useState({ code: '', name: '', division: '', budget: '' })
+  const [newRow, setNewRow] = useState({ code: '', name: '', division: '', budget: '', subKegiatan: '' })
 
   useEffect(() => {
     fetchMappings()
@@ -50,14 +50,14 @@ export default function AccountMappingPage() {
     }
   }
 
-  const handleSaveInline = async (code: string, name: string, division: string | null = null, budget: number | null = 0, id: string | null = null) => {
+  const handleSaveInline = async (code: string, name: string, division: string | null = null, budget: number | null = 0, id: string | null = null, subKegiatan: string | null = null) => {
     if (!code || !name) return
     setSavingId(id || 'new')
     try {
-      await upsertAccountMapping(code, name, division || undefined, budget || 0)
+      await upsertAccountMapping(code, name, division || undefined, budget || 0, subKegiatan || undefined)
       setEditingId(null)
       setShowAddRow(false)
-      setNewRow({ code: '', name: '', division: '', budget: '' })
+      setNewRow({ code: '', name: '', division: '', budget: '', subKegiatan: '' })
       fetchMappings()
     } finally {
       setSavingId(null)
@@ -181,10 +181,11 @@ export default function AccountMappingPage() {
             <thead>
               <tr className="bg-table-header border-b border-border">
                 {[
-                  { id: 'code', label: 'Kode Rekening', width: 'w-64' },
+                  { id: 'subKegiatan', label: 'Sub Kegiatan', width: 'w-48' },
+                  { id: 'code', label: 'Kode Belanja', width: 'w-48' },
                   { id: 'name', label: 'Nama Kustom', width: '' },
                   { id: 'budget', label: 'Total Pagu (Rp)', width: 'w-48', align: 'text-right' },
-                  { id: 'division', label: 'Bidang (Keterangan)', width: 'w-64' },
+                  { id: 'division', label: 'Bidang (Keterangan)', width: 'w-48' },
                 ].map((col) => (
                   <th 
                     key={col.id} 
@@ -216,9 +217,29 @@ export default function AccountMappingPage() {
                     <td className="px-8 py-4">
                       <input 
                         className="w-full bg-white dark:bg-input border border-primary/30 rounded-xl px-4 py-2.5 text-xs font-mono font-black text-primary outline-none focus:ring-2 focus:ring-primary shadow-sm"
-                        placeholder="Kode: 5.x.x..."
+                        placeholder="5.01..."
+                        value={newRow.subKegiatan || ''}
+                        onChange={e => setNewRow({...newRow, subKegiatan: e.target.value})}
+                      />
+                    </td>
+                    <td className="px-8 py-4">
+                      <input 
+                        className="w-full bg-white dark:bg-input border border-primary/30 rounded-xl px-4 py-2.5 text-xs font-mono font-black text-primary outline-none focus:ring-2 focus:ring-primary shadow-sm"
+                        placeholder="5.1.02..."
                         value={newRow.code}
-                        onChange={e => setNewRow({...newRow, code: e.target.value})}
+                        onChange={e => {
+                           const val = e.target.value;
+                           const parts = val.split('.');
+                           if (parts.length >= 7 && (val.startsWith('5.') || val.startsWith('5.01'))) {
+                              setNewRow({
+                                 ...newRow,
+                                 subKegiatan: parts.slice(0, 6).join('.'),
+                                 code: parts.slice(6).join('.')
+                              });
+                           } else {
+                              setNewRow({...newRow, code: val});
+                           }
+                        }}
                       />
                     </td>
                     <td className="px-8 py-4">
@@ -250,7 +271,7 @@ export default function AccountMappingPage() {
                     <td className="px-8 py-4">
                       <div className="flex items-center justify-center gap-2">
                         <button 
-                          onClick={() => handleSaveInline(newRow.code, newRow.name, newRow.division, Number(newRow.budget))}
+                          onClick={() => handleSaveInline(newRow.code, newRow.name, newRow.division, Number(newRow.budget), null, newRow.subKegiatan)}
                           disabled={savingId === 'new'}
                           className="p-2.5 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 hover:scale-110 transition-all disabled:opacity-50"
                         >
@@ -289,7 +310,34 @@ export default function AccountMappingPage() {
                 sortedAndFiltered.map((m) => (
                   <tr key={m.id} className="group hover:bg-primary/5 transition-colors border-b border-border last:border-0">
                     <td className="px-8 py-5 font-mono text-[11px] text-primary font-black">
-                      {m.code}
+                      <input 
+                        className="w-full bg-transparent border border-border group-hover:border-primary/30 rounded-xl px-2 py-1 text-xs font-mono font-black outline-none focus:bg-primary/5"
+                        value={m.subKegiatan || ''}
+                        onChange={e => {
+                           const val = e.target.value;
+                           setMappings(prev => prev.map(p => p.id === m.id ? {...p, subKegiatan: val} : p));
+                        }}
+                        onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan)}
+                      />
+                    </td>
+                    <td className="px-8 py-5 font-mono text-[11px] text-primary font-black">
+                      <input 
+                        className="w-full bg-transparent border border-border group-hover:border-primary/30 rounded-xl px-2 py-1 text-xs font-mono font-black outline-none focus:bg-primary/5"
+                        value={m.code}
+                        onChange={e => {
+                           const val = e.target.value;
+                           // Auto-split in existing row too if they paste a combined code
+                           const parts = val.split('.');
+                           if (parts.length >= 7 && (val.startsWith('5.') || val.startsWith('5.01'))) {
+                              const sub = parts.slice(0, 6).join('.');
+                              const rek = parts.slice(6).join('.');
+                              setMappings(prev => prev.map(p => p.id === m.id ? {...p, subKegiatan: sub, code: rek} : p));
+                           } else {
+                              setMappings(prev => prev.map(p => p.id === m.id ? {...p, code: val} : p));
+                           }
+                        }}
+                        onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan)}
+                      />
                     </td>
                     <td className="px-8 py-5">
                       {editingId === m.id ? (
@@ -298,7 +346,7 @@ export default function AccountMappingPage() {
                             className="flex-1 bg-white dark:bg-input border border-primary rounded-xl px-4 py-2.5 text-sm font-black text-foreground outline-none shadow-lg shadow-primary/5"
                             value={editValue}
                             onChange={e => setEditValue(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && handleSaveInline(m.code, editValue, m.division, m.id)}
+                            onKeyDown={e => e.key === 'Enter' && handleSaveInline(m.code, editValue, m.division, m.budget, m.id, m.subKegiatan)}
                             onKeyDownCapture={e => e.key === 'Escape' && setEditingId(null)}
                             autoFocus
                           />

@@ -234,7 +234,18 @@ export default function ManualDocumentForm({ onClose, onSuccess, initialData, im
                     <input
                       type="text"
                       value={formData.kodeRek}
-                      onChange={e => setFormData({ ...formData, kodeRek: e.target.value })}
+                      onChange={e => {
+                        const val = e.target.value;
+                        // Splitting logic: If it contains many dots, it's likely a combined code
+                        const parts = val.split('.');
+                        if (parts.length >= 7 && (val.startsWith('5.') || val.startsWith('5.01'))) {
+                          const sub = parts.slice(0, 6).join('.');
+                          const rek = parts.slice(6).join('.');
+                          setFormData({ ...formData, subKegiatan: sub, kodeRek: rek });
+                        } else {
+                          setFormData({ ...formData, kodeRek: val });
+                        }
+                      }}
                       className="w-full bg-input border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:ring-2 focus:ring-primary focus:outline-none"
                     />
                   </div>
