@@ -621,16 +621,16 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                               ].map(({ key, label, type = 'text', placeholder, isFullWidth }) => (
                                 <div key={label} className={`flex flex-col gap-1 group ${isFullWidth ? 'lg:col-span-full' : ''}`}>
                                   <span className="text-[9px] text-foreground/70 uppercase font-black tracking-tight group-hover:text-primary transition-colors">{label}</span>
-                                    <span 
-                                      className="text-[11px] text-foreground font-mono bg-input/40 px-2 py-1.5 rounded-lg border border-border group-hover:border-primary/30 transition-all cursor-text"
+                                    <div 
+                                      className={`text-[11px] font-mono transition-all cursor-text min-h-[30px] flex items-center ${isEditing(key) ? '' : 'bg-input/40 px-2 py-1.5 rounded-lg border border-border group-hover:border-primary/30'}`}
                                       onClick={() => setEditingCell({ id: doc.id, field: key })}
                                     >
                                       {isEditing(key) ? (
                                         key === 'paymentFor' ? (
                                           <textarea
                                             autoFocus
-                                            rows={2}
-                                            className="w-full bg-white dark:bg-input border border-primary rounded p-1 text-[11px] outline-none resize-none"
+                                            rows={4}
+                                            className="w-full bg-white dark:bg-slate-900 border border-primary rounded-lg p-2 text-[11px] font-mono outline-none resize-none shadow-lg shadow-primary/10"
                                             value={doc[key] || ''}
                                             onChange={e => handleInlineSave(doc.id, key, e.target.value)}
                                             onBlur={() => setEditingCell(null)}
@@ -639,20 +639,20 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                                           <input
                                             autoFocus
                                             type={type}
-                                            className="w-full bg-white dark:bg-input border border-primary rounded p-0 text-[11px] outline-none"
+                                            className="w-full bg-white dark:bg-slate-900 border border-primary rounded-lg px-2 py-1 text-[11px] font-mono outline-none shadow-lg shadow-primary/10"
                                             value={doc[key] || ''}
                                             onChange={e => handleInlineSave(doc.id, key, e.target.value)}
                                             onBlur={() => setEditingCell(null)}
                                           />
                                         )
                                       ) : (
-                                        <>
+                                        <div className="w-full">
                                           {key.includes('Date') || key === 'date' 
                                             ? (doc[key] ? format(new Date(doc[key]), 'dd/MM/yyyy') : '—')
                                             : (doc[key] || <span className="opacity-20">—</span>)}
-                                        </>
+                                        </div>
                                       )}
-                                    </span>
+                                    </div>
                                 </div>
                               ))}
                               </div>
