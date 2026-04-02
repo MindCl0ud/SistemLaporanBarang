@@ -35,11 +35,7 @@ function extractName(description: string, isFull: boolean): string {
     if (lower.includes("bpjs")) return "Pembayaran BPJS"
     if (lower.includes("tunjangan")) return "Pembayaran Tunjangan"
 
-    // If no match, just take up to first 4 words
-    const words = name.split(' ')
-    if (words.length > 4) {
-      return words.slice(0, 4).join(' ') + '...'
-    }
+    // If no match, just return the name without word limit
   }
 
   return name
@@ -214,7 +210,7 @@ export default function BkuAccountSummary({
                         </div>
                       </td>
                       <td className="px-4 py-5 border-r border-border/10">
-                        <div className="font-bold text-foreground text-sm tracking-tight leading-snug group-hover:translate-x-1 transition-transform">
+                        <div className="font-bold text-foreground text-sm tracking-tight leading-normal group-hover:translate-x-1 transition-all whitespace-normal break-words max-w-[400px]">
                           {data.name}
                         </div>
                       </td>
