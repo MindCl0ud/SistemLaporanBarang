@@ -3,9 +3,10 @@
 import React, { useState, useRef, useCallback, useEffect } from "react"
 import { format } from "date-fns"
 import { id } from "date-fns/locale"
-import { Plus, Trash2, Bot, Loader2, WrapText, AlignJustify, ChevronDown, ChevronRight, CheckCircle2, Circle, Pencil, Check, X, Save } from "lucide-react"
+import { Plus, Trash2, Bot, Loader2, WrapText, AlignJustify, ChevronDown, ChevronRight, CheckCircle2, Circle, Pencil, Check, X, Save, FileSpreadsheet } from "lucide-react"
 import { deleteDocument, updateDocumentItem, deleteDocumentItem } from "@/app/actions/documentActions"
 import ManualDocumentForm from "./ManualDocumentForm"
+import ExcelImportModal from "./ExcelImportModal"
 
 // ──────────────────────────────────────────────────────────
 // Column definitions
@@ -117,6 +118,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
   const [editingDocData, setEditingDocData] = useState<any>(null)
   const [savingDoc, setSavingDoc] = useState(false)
   const [showManualForm, setShowManualForm] = useState(false)
+  const [showExcelForm, setShowExcelForm] = useState(false)
 
   const handleStartEditDoc = (doc: any) => {
     setEditingDocId(doc.id)
@@ -198,6 +200,13 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
         >
           <Plus className="w-4 h-4" />
           Tambah Manual
+        </button>
+        <button
+          onClick={() => setShowExcelForm(true)}
+          className="flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-black bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-500 transition-all active:scale-95"
+        >
+          <FileSpreadsheet className="w-4 h-4" />
+          Impor Excel
         </button>
         <span className="text-foreground/60 text-xs ml-auto font-medium">
           {initialDocuments.length} dokumen · Seret batas kolom untuk mengubah lebar
@@ -636,6 +645,16 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
           onClose={() => setShowManualForm(false)}
           onSuccess={() => {
             setShowManualForm(false);
+            window.location.reload();
+          }}
+        />
+      )}
+
+      {showExcelForm && (
+        <ExcelImportModal 
+          onClose={() => setShowExcelForm(false)}
+          onSuccess={() => {
+            setShowExcelForm(false);
             window.location.reload();
           }}
         />

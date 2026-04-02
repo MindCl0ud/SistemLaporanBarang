@@ -161,3 +161,72 @@ export async function deleteDocumentItem(id: string) {
   revalidatePath('/documents')
 }
 
+export async function batchImportDocuments(rows: any[]) {
+  try {
+    // 1. Grouping Logic
+    // Kita kelompokkan berdasarkan DocNumber + Vendor + Date
+    const groups = new Map<string, any>()
+
+    rows.forEach(row => {
+      const docKey = `${row.docNumber || 'NO_DOC'}_${row.vendorName || 'NO_VENDOR'}_${row.date || 'NO_DATE'}`
+      
+      if (!groups.has(docKey)) {
+        groups.set(docKey, {
+          type: row.type || "Nota",
+          docNumber: row.docNumber || "",
+          baNumber: row.baNumber || "",
+          baDate: row.baDate ? new Date(row.baDate) : null,
+          vendorName: row.vendorName || "Tidak Diketahui",
+          date: row.date ? new Date(row.date) : new Date(),
+          kodeRek: row.kodeRek || "",
+          subKegiatan: row.subKegiatan || "",
+          paymentFor: row.paymentFor || "",
+          unit: row.unit || "", // Global unit
+          division: row.division || "",
+          items: []
+        })
+      }
+
+      const group = groups.get(docKey)
+      if (row.itemDescription) {
+        group.items.push({
+          description: row.itemDescription,
+          itemCode: row.itemCode || "",
+          quantity: Number(row.itemQty) || 0,
+          unit: row.itemUnit || "",
+          price: Number(row.itemPrice) || 0,
+          total: (Number(row.itemQty) || 0) * (Number(row.itemPrice) || 0)
+        })
+      }
+    })
+
+    // 2. Database Transaction
+    const results = await prisma.$transaction(async (tx) => {
+      const createdDocs = []
+      for (const docData of groups.values()) {
+        const totalAmount = docData.items.reduce((sum: number, it: any) => sum + it.total, 0)
+        
+        const doc = await tx.document.create({
+          data: {
+            ...docData,
+            totalAmount,
+            items: {
+              create: docData.items
+            }
+          }
+        })
+        createdDocs.push(doc)
+      }
+      return createdDocs
+    })
+
+    revalidatePath('/documents')
+    revalidatePath('/')
+    
+    return { success: true, count: results.length }
+  } catch (error: any) {
+    console.error("BATCH IMPORT ERROR:", error)
+    return { success: false, error: error.message || "Gagal mengimpor data batch." }
+  }
+}
+
