@@ -212,7 +212,7 @@ export default function BkuAccountSummary({
                         </div>
                       </td>
                       <td className="px-4 py-5 border-r border-border/10">
-                        <div className="font-bold text-foreground text-sm tracking-tight leading-normal group-hover:translate-x-1 transition-all whitespace-normal break-words max-w-[400px]">
+                        <div className="font-bold text-foreground text-sm tracking-tight leading-normal whitespace-normal break-words">
                           {data.name}
                         </div>
                       </td>
