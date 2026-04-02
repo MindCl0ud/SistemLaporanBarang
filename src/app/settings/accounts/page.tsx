@@ -29,7 +29,7 @@ export default function AccountMappingPage() {
 
   // New row states
   const [showAddRow, setShowAddRow] = useState(false)
-  const [newRow, setNewRow] = useState({ code: '', name: '', division: '' })
+  const [newRow, setNewRow] = useState({ code: '', name: '', division: '', budget: '' })
 
   useEffect(() => {
     fetchMappings()
@@ -45,14 +45,14 @@ export default function AccountMappingPage() {
     }
   }
 
-  const handleSaveInline = async (code: string, name: string, division: string | null = null, id: string | null = null) => {
+  const handleSaveInline = async (code: string, name: string, division: string | null = null, budget: number | null = 0, id: string | null = null) => {
     if (!code || !name) return
     setSavingId(id || 'new')
     try {
-      await upsertAccountMapping(code, name, division || undefined)
+      await upsertAccountMapping(code, name, division || undefined, budget || 0)
       setEditingId(null)
       setShowAddRow(false)
-      setNewRow({ code: '', name: '', division: '' })
+      setNewRow({ code: '', name: '', division: '', budget: '' })
       fetchMappings()
     } finally {
       setSavingId(null)
@@ -82,6 +82,12 @@ export default function AccountMappingPage() {
     m.division?.toLowerCase().includes(search.toLowerCase())
   )
 
+  const totalPagu = mappings.reduce((sum, m) => sum + (m.budget || 0), 0)
+
+  const formatCurrency = (amt: number) => {
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(amt)
+  }
+
   return (
     <div className="max-w-[1400px] mx-auto px-4 py-8 space-y-8 min-h-screen">
       {/* HEADER */}
@@ -96,9 +102,15 @@ export default function AccountMappingPage() {
             </div>
             Master Rekening
           </h1>
-          <p className="text-foreground/70 font-black text-lg max-w-2xl leading-tight">
-            Klik pada sel <span className="text-primary italic">Nama Kustom</span> untuk mengedit data secara langsung.
-          </p>
+          <div className="flex items-center gap-6 mt-4">
+            <p className="text-foreground/70 font-black text-lg max-w-2xl leading-tight">
+              Klik pada sel <span className="text-primary italic">Nama</span> atau <span className="text-primary italic">Pagu</span> untuk mengedit data secara langsung.
+            </p>
+            <div className="flex flex-col border-l-2 border-primary/20 pl-6">
+              <span className="text-[10px] font-black text-muted uppercase tracking-widest">Total Pagu Terdaftar</span>
+              <span className="text-2xl font-black text-primary tracking-tighter">{formatCurrency(totalPagu)}</span>
+            </div>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
@@ -140,7 +152,8 @@ export default function AccountMappingPage() {
             <thead>
               <tr className="bg-slate-50 dark:bg-input/50 border-b border-border">
                 <th className="px-8 py-5 text-left text-[10px] uppercase font-black tracking-widest text-muted w-64">Kode Rekening</th>
-                <th className="px-8 py-5 text-left text-[10px] uppercase font-black tracking-widest text-muted">Nama Kustom (Edit Langsung)</th>
+                <th className="px-8 py-5 text-left text-[10px] uppercase font-black tracking-widest text-muted">Nama Kustom</th>
+                <th className="px-8 py-5 text-right text-[10px] uppercase font-black tracking-widest text-muted w-48">Total Pagu (Rp)</th>
                 <th className="px-8 py-5 text-left text-[10px] uppercase font-black tracking-widest text-muted w-64">Bidang (Keterangan)</th>
                 <th className="px-8 py-5 text-center text-[10px] uppercase font-black tracking-widest text-muted w-32">Aksi</th>
               </tr>
@@ -173,6 +186,15 @@ export default function AccountMappingPage() {
                     </td>
                     <td className="px-8 py-4">
                       <input 
+                        type="number"
+                        className="w-full bg-white dark:bg-input border border-primary/30 rounded-xl px-4 py-2.5 text-sm font-black text-foreground outline-none focus:ring-2 focus:ring-primary shadow-sm text-right"
+                        placeholder="Pagu: 1.000.000"
+                        value={newRow.budget}
+                        onChange={e => setNewRow({...newRow, budget: e.target.value})}
+                      />
+                    </td>
+                    <td className="px-8 py-4">
+                      <input 
                         className="w-full bg-white dark:bg-input border border-primary/30 rounded-xl px-4 py-2.5 text-sm font-black text-foreground outline-none focus:ring-2 focus:ring-primary shadow-sm"
                         placeholder="Bidang..."
                         value={newRow.division}
@@ -182,7 +204,7 @@ export default function AccountMappingPage() {
                     <td className="px-8 py-4">
                       <div className="flex items-center justify-center gap-2">
                         <button 
-                          onClick={() => handleSaveInline(newRow.code, newRow.name, newRow.division)}
+                          onClick={() => handleSaveInline(newRow.code, newRow.name, newRow.division, Number(newRow.budget))}
                           disabled={savingId === 'new'}
                           className="p-2.5 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 hover:scale-110 transition-all disabled:opacity-50"
                         >
@@ -262,6 +284,20 @@ export default function AccountMappingPage() {
                       )}
                     </td>
                     <td className="px-8 py-5">
+                      <div className="flex items-center gap-3 justify-end group/pagu">
+                        <input 
+                          type="number"
+                          className="w-full bg-transparent border border-border group-hover:border-primary/50 group-hover:bg-primary/5 rounded-xl px-4 py-2 text-sm font-black text-foreground text-right outline-none focus:ring-2 focus:ring-primary transition-all tabular-nums"
+                          value={m.budget || 0}
+                          onChange={(e) => {
+                             const newVal = Number(e.target.value);
+                             setMappings(prev => prev.map(p => p.id === m.id ? {...p, budget: newVal} : p));
+                          }}
+                          onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id)}
+                        />
+                      </div>
+                    </td>
+                    <td className="px-8 py-5">
                       <div className="flex items-center gap-3">
                         <input 
                           className="w-full bg-transparent border border-border group-hover:border-primary/30 rounded-xl px-4 py-2 text-sm font-black text-foreground outline-none focus:bg-white dark:focus:bg-white/5 transition-all"
@@ -271,7 +307,7 @@ export default function AccountMappingPage() {
                              const newVal = e.target.value;
                              setMappings(prev => prev.map(p => p.id === m.id ? {...p, division: newVal} : p));
                           }}
-                          onBlur={() => handleSaveInline(m.code, m.name, m.division, m.id)}
+                          onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id)}
                         />
                       </div>
                     </td>

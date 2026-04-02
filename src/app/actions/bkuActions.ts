@@ -153,11 +153,11 @@ export async function getAccountMappings() {
   })
 }
 
-export async function upsertAccountMapping(code: string, name: string, division?: string) {
+export async function upsertAccountMapping(code: string, name: string, division?: string, budget?: number) {
   const result = await (prisma as any).accountCodeMapping.upsert({
     where: { code },
-    update: { name, division },
-    create: { code, name, division }
+    update: { name, division, budget: budget || 0 },
+    create: { code, name, division, budget: budget || 0 }
   })
   revalidatePath('/bku')
   revalidatePath('/settings/accounts')
@@ -203,7 +203,7 @@ export async function syncAccountCodesFromBku() {
   for (const [code, name] of uniqueMap.entries()) {
     if (!existingCodes.has(code)) {
       await (prisma as any).accountCodeMapping.create({
-        data: { code, name }
+        data: { code, name, budget: 0 }
       })
       count++
     }

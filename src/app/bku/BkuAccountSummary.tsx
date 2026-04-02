@@ -55,13 +55,13 @@ export default function BkuAccountSummary({
   const [aggrLevel, setAggrLevel] = useState<'prefix' | 'full'>('prefix')
 
   const mappingMap = useMemo(() => {
-    const m = new Map<string, string>()
-    accountMappings.forEach(am => m.set(am.code, am.name))
+    const m = new Map<string, { name: string, budget: number }>()
+    accountMappings.forEach(am => m.set(am.code, { name: am.name, budget: am.budget || 0 }))
     return m
   }, [accountMappings])
 
   const summary = useMemo(() => {
-    const map = new Map<string, { monthlyTotal: number, yearlyTotal: number, name: string }>()
+    const map = new Map<string, { monthlyTotal: number, yearlyTotal: number, name: string, budget: number }>()
     
     // Process yearly records first
     yearlyRecords.forEach(r => {
@@ -78,11 +78,12 @@ export default function BkuAccountSummary({
       
       const amt = r.expenseTotal || 0
       if (amt > 0) {
-        const current = map.get(key) || { monthlyTotal: 0, yearlyTotal: 0, name: '' }
+        const current = map.get(key) || { monthlyTotal: 0, yearlyTotal: 0, name: '', budget: 0 }
         current.yearlyTotal += amt
         if (!current.name) {
-          // Use mapping if exists, else extract from description
-          current.name = mappingMap.get(key) || extractName(r.description, aggrLevel === 'full')
+          const mapping = mappingMap.get(key)
+          current.name = mapping?.name || extractName(r.description, aggrLevel === 'full')
+          current.budget = mapping?.budget || 0
         }
         map.set(key, current)
       }
@@ -180,10 +181,11 @@ export default function BkuAccountSummary({
           <table className="w-full text-sm border-collapse min-w-[700px] table-fixed">
             <thead className="sticky top-0 z-[10] shadow-sm">
               <tr className="bg-slate-200 dark:bg-slate-800 text-foreground">
-                <th className="px-4 py-4 text-left text-[10px] uppercase font-black tracking-[0.2em] text-foreground/70 border-r border-border/20 w-48">Kode Rekening</th>
-                <th className="px-4 py-4 text-left text-[10px] uppercase font-black tracking-[0.2em] text-foreground/70 border-r border-border/20">Nama / Uraian Kustom</th>
-                <th className="px-4 py-4 text-right text-[10px] uppercase font-black tracking-[0.2em] text-foreground/70 border-r border-border/20 w-44">Bulan Ini</th>
-                <th className="px-4 py-4 text-right text-[10px] uppercase font-black tracking-[0.2em] text-foreground/70 w-48">Total Tahunan</th>
+                <th className="px-4 py-4 text-left text-[10px] uppercase font-black tracking-[0.2em] text-foreground/70 border-r border-border/20 w-44">Kode Rekening</th>
+                <th className="px-4 py-4 text-left text-[10px] uppercase font-black tracking-[0.2em] text-foreground/70 border-r border-border/20">Nama Rekening</th>
+                <th className="px-4 py-4 text-right text-[10px] uppercase font-black tracking-[0.2em] text-foreground/70 border-r border-border/20 w-36">Total Pagu</th>
+                <th className="px-4 py-4 text-right text-[10px] uppercase font-black tracking-[0.2em] text-foreground/70 border-r border-border/20 w-36">Realisasi</th>
+                <th className="px-4 py-4 text-right text-[10px] uppercase font-black tracking-[0.2em] text-foreground/70 w-40">Sisa / Penyerapan</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/30">
@@ -214,23 +216,39 @@ export default function BkuAccountSummary({
                           {data.name}
                         </div>
                       </td>
+                      <td className="px-4 py-5 text-right font-black text-foreground border-r border-border/10 tabular-nums">
+                        {formatCurrency(data.budget)}
+                      </td>
                       <td className="px-4 py-5 text-right font-black text-rose-600 dark:text-rose-400 border-r border-border/10 tabular-nums">
-                        {formatCurrency(data.monthlyTotal)}
+                        {formatCurrency(data.yearlyTotal)}
                       </td>
                       <td className="px-4 py-5 text-right">
                         <div className="inline-flex flex-col items-end w-full">
-                          <div className="flex items-center gap-2 mb-1.5">
-                             <span className="font-black text-rose-700 dark:text-rose-500 tabular-nums">{formatCurrency(data.yearlyTotal)}</span>
+                          <div className="flex items-center gap-2 mb-1.5 leading-none">
+                             <span className={`font-black tabular-nums transition-colors ${data.budget - data.yearlyTotal < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                               {formatCurrency(data.budget - data.yearlyTotal)}
+                             </span>
                              <ArrowRight className="w-3 h-3 text-muted-foreground/30 opacity-0 group-hover:opacity-100 transition-all" />
                           </div>
                           
-                          <div className="w-full max-w-[120px] h-1.5 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden border border-border/5">
-                             <div 
-                               className={`h-full transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(225,29,72,0.3)] ${percentage > 80 ? 'bg-rose-600' : 'bg-rose-500'}`}
-                               style={{ width: `${percentage}%` }}
-                             />
-                          </div>
-                          <span className="text-[9px] font-black text-muted-foreground mt-1 opacity-50">{percentage.toFixed(1)}% Penyerapan</span>
+                          {data.budget > 0 ? (
+                            <>
+                              <div className="w-full max-w-[120px] h-1.5 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden border border-border/5">
+                                 <div 
+                                   className={`h-full transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(225,29,72,0.3)] ${
+                                     (data.yearlyTotal / data.budget) > 1 ? 'bg-rose-600' : 
+                                     (data.yearlyTotal / data.budget) > 0.8 ? 'bg-amber-500' : 'bg-emerald-500'
+                                   }`}
+                                   style={{ width: `${Math.min((data.yearlyTotal / data.budget) * 100, 100)}%` }}
+                                 />
+                              </div>
+                              <span className="text-[9px] font-black text-muted-foreground mt-1 opacity-50">
+                                {((data.yearlyTotal / data.budget) * 100).toFixed(1)}% Penyerapan
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-[9px] font-black text-muted-foreground italic opacity-30">Pagu Belum Diatur</span>
+                          )}
                         </div>
                       </td>
                     </tr>
