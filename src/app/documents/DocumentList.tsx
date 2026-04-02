@@ -619,21 +619,32 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                                 { key: 'vendorName', label: 'Vendor / Penyedia', placeholder: 'Toko...' },
                                 { key: 'paymentFor', label: 'Untuk Pembayaran', placeholder: 'Belanja...', isFullWidth: true },
                               ].map(({ key, label, type = 'text', placeholder, isFullWidth }) => (
-                                <div key={label} className={`flex flex-col gap-1 group ${isFullWidth ? 'lg:col-span-2' : ''}`}>
+                                <div key={label} className={`flex flex-col gap-1 group ${isFullWidth ? 'lg:col-span-full' : ''}`}>
                                   <span className="text-[9px] text-foreground/70 uppercase font-black tracking-tight group-hover:text-primary transition-colors">{label}</span>
                                     <span 
                                       className="text-[11px] text-foreground font-mono bg-input/40 px-2 py-1.5 rounded-lg border border-border group-hover:border-primary/30 transition-all cursor-text"
                                       onClick={() => setEditingCell({ id: doc.id, field: key })}
                                     >
                                       {isEditing(key) ? (
-                                        <input
-                                          autoFocus
-                                          type={type}
-                                          className="w-full bg-white dark:bg-input border border-primary rounded p-0 text-[11px] outline-none"
-                                          value={doc[key] || ''}
-                                          onChange={e => handleInlineSave(doc.id, key, e.target.value)}
-                                          onBlur={() => setEditingCell(null)}
-                                        />
+                                        key === 'paymentFor' ? (
+                                          <textarea
+                                            autoFocus
+                                            rows={2}
+                                            className="w-full bg-white dark:bg-input border border-primary rounded p-1 text-[11px] outline-none resize-none"
+                                            value={doc[key] || ''}
+                                            onChange={e => handleInlineSave(doc.id, key, e.target.value)}
+                                            onBlur={() => setEditingCell(null)}
+                                          />
+                                        ) : (
+                                          <input
+                                            autoFocus
+                                            type={type}
+                                            className="w-full bg-white dark:bg-input border border-primary rounded p-0 text-[11px] outline-none"
+                                            value={doc[key] || ''}
+                                            onChange={e => handleInlineSave(doc.id, key, e.target.value)}
+                                            onBlur={() => setEditingCell(null)}
+                                          />
+                                        )
                                       ) : (
                                         <>
                                           {key.includes('Date') || key === 'date' 
