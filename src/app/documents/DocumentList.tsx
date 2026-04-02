@@ -166,8 +166,8 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
 
   if (initialDocuments.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 mt-4 border border-dashed border-slate-200 dark:border-white/10 rounded-2xl bg-slate-50 dark:bg-slate-900/30">
-        <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Belum ada dokumen yang diproses AI.</p>
+      <div className="flex flex-col items-center justify-center p-12 mt-4 border border-dashed border-border rounded-2xl bg-accent/30">
+        <p className="text-muted-foreground text-sm font-medium">Belum ada dokumen yang diproses AI.</p>
       </div>
     )
   }
@@ -180,8 +180,8 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
           onClick={() => setWrapText(w => !w)}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
             wrapText
-              ? 'bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/40 shadow-sm'
-              : 'bg-card text-slate-500 dark:text-slate-400 border border-border hover:border-slate-300 dark:hover:border-white/20 hover:text-slate-900 dark:hover:text-white'
+              ? 'bg-primary/10 text-primary border-primary/30 shadow-sm'
+              : 'bg-card text-muted-foreground border border-border hover:border-primary/30 hover:text-foreground'
           }`}
         >
           <WrapText className="w-3.5 h-3.5" />
@@ -189,7 +189,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
         </button>
         <button
           onClick={() => setColWidths(DEFAULT_WIDTHS)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-card text-slate-500 dark:text-slate-400 border border-border hover:border-slate-300 dark:hover:border-white/20 hover:text-slate-900 dark:hover:text-white transition-all shadow-sm"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-card text-muted-foreground border border-border hover:border-primary/30 hover:text-foreground transition-all shadow-sm"
         >
           <AlignJustify className="w-3.5 h-3.5" />
           Reset Lebar
@@ -230,7 +230,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
           {/* ── Sticky Header ── */}
           <thead className="sticky top-0 z-20">
             {/* Row letters (Excel row 1) */}
-            <tr className="bg-input">
+            <tr className="bg-table-header">
               {COL_KEYS.map((k, i) => (
                 <ResizableHeader
                   key={k}
@@ -258,7 +258,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                 ? format(new Date(doc.baDate), 'dd/MM/yyyy', { locale: id })
                 : null
 
-              const rowBg = rowIdx % 2 === 0 ? 'bg-card' : 'bg-input/20'
+              const rowBg = rowIdx % 2 === 0 ? 'bg-card' : 'bg-accent/30'
               const cellClass = `border-r border-b border-border px-2 py-1.5 align-top text-foreground text-[12px] ${
                 wrapText ? 'whitespace-pre-wrap break-words' : 'truncate'
               }`
@@ -267,11 +267,11 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                 <React.Fragment key={doc.id}>
                   {/* ── Main data row ── */}
                   <tr
-                    className={`${rowBg} hover:bg-indigo-500/5 dark:hover:bg-indigo-950/40 transition-colors cursor-pointer group`}
+                    className={`${rowBg} hover:bg-primary/5 transition-colors cursor-pointer group`}
                     onClick={() => setExpandedId(isExpanded ? null : doc.id)}
                   >
                     {/* No */}
-                    <td className={`${cellClass} text-foreground/70 text-center font-mono border-slate-200 dark:border-slate-800`}>
+                    <td className={`${cellClass} text-foreground/70 text-center font-mono border-border`}>
                       <div className="flex items-center justify-center gap-1.5">
                         {isExpanded
                           ? <ChevronDown className="w-3.5 h-3.5 text-primary" />

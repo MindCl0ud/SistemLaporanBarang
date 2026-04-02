@@ -305,7 +305,7 @@ export default function DocumentItemsReport({ documents }: { documents: any[] })
           <div className="relative">
             <button
                onClick={() => setShowColumnPicker(!showColumnPicker)}
-               className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-card border border-border rounded-xl text-xs font-black text-foreground hover:bg-slate-50 transition-all shadow-sm"
+               className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border rounded-xl text-xs font-black text-foreground hover:bg-accent transition-all shadow-sm"
             >
               <ColumnsIcon className="w-4 h-4 text-primary" />
               Susunan Kolom
@@ -315,7 +315,7 @@ export default function DocumentItemsReport({ documents }: { documents: any[] })
             {showColumnPicker && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setShowColumnPicker(false)} />
-                <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-card border border-border rounded-2xl shadow-2xl z-20 p-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute right-0 mt-2 w-72 bg-card border border-border rounded-2xl shadow-2xl z-20 p-4 animate-in fade-in slide-in-from-top-2 duration-200">
                   <p className="text-[10px] font-black text-muted uppercase tracking-widest mb-4 border-b border-border pb-2 px-1">Pilih & Urutkan Kolom</p>
                   <div className="space-y-1.5 max-h-[400px] overflow-y-auto custom-scrollbar px-1">
                     {/* VISIBLE COLUMNS SECTION */}
@@ -363,7 +363,7 @@ export default function DocumentItemsReport({ documents }: { documents: any[] })
 
                     {/* HIDDEN COLUMNS SECTION */}
                     {orderedMenu.hidden.map((col) => (
-                      <div key={col.id} className="flex items-center justify-between group p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-white/5 transition-colors border border-transparent hover:border-border grayscale opacity-60 hover:grayscale-0 hover:opacity-100">
+                      <div key={col.id} className="flex items-center justify-between group p-1.5 rounded-lg hover:bg-accent transition-colors border border-transparent hover:border-border grayscale opacity-60 hover:grayscale-0 hover:opacity-100">
                         <div 
                           onClick={() => toggleColumn(col.id)}
                           className="flex items-center gap-3 cursor-pointer flex-1"
@@ -381,7 +381,7 @@ export default function DocumentItemsReport({ documents }: { documents: any[] })
 
           <button
             onClick={handleAddRow}
-            className="flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-card border border-border text-foreground rounded-xl text-xs font-black hover:bg-primary hover:text-white hover:border-primary transition-all shadow-sm active:scale-95"
+            className="flex items-center gap-2 px-5 py-2.5 bg-card border border-border text-foreground rounded-xl text-xs font-black hover:bg-primary hover:text-white hover:border-primary transition-all shadow-sm active:scale-95"
           >
             <Plus className="w-4 h-4" /> Baris Baru
           </button>
@@ -402,18 +402,18 @@ export default function DocumentItemsReport({ documents }: { documents: any[] })
            <span className="text-[10px] font-black uppercase tracking-tighter border-r border-border pr-2">Filter</span>
         </div>
         <input 
-          className="w-full bg-slate-50 dark:bg-card border border-border border-b-0 py-3 pl-24 pr-4 text-sm font-black text-foreground outline-none focus:bg-white transition-all"
+          className="w-full bg-accent/30 dark:bg-card border border-border border-b-0 py-3 pl-24 pr-4 text-sm font-black text-foreground outline-none focus:bg-card transition-all"
           placeholder="Cari kata kunci..."
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
       </div>
 
-      <div className="border-x border-b border-border bg-white dark:bg-black/10 overflow-hidden relative shadow-2xl shadow-indigo-500/5 select-none">
+      <div className="border-x border-b border-border bg-card overflow-hidden relative shadow-2xl shadow-indigo-500/5 select-none">
         <div className="overflow-x-auto custom-scrollbar max-h-[700px]">
           <table className="border-collapse table-fixed w-full min-w-full">
             <thead className="sticky top-0 z-[10] shadow-sm">
-              <tr className="bg-slate-200 dark:bg-slate-800 text-foreground">
+              <tr className="bg-table-header text-foreground">
                 {visibleColumns.map((colId) => {
                   const config = AVAILABLE_COLUMNS.find(c => c.id === colId)
                   if (!config) return null
@@ -421,7 +421,7 @@ export default function DocumentItemsReport({ documents }: { documents: any[] })
                   return (
                     <th 
                       key={colId} 
-                      className={`border border-border px-2 py-3 text-left text-[10px] font-black uppercase tracking-widest overflow-hidden relative group/header select-none ${colId !== 'no' ? 'cursor-pointer hover:bg-slate-300 dark:hover:bg-slate-700' : ''} transition-colors`}
+                      className={`border border-border px-2 py-3 text-left text-[10px] font-black uppercase tracking-widest overflow-hidden relative group/header select-none ${colId !== 'no' ? 'cursor-pointer hover:bg-accent' : ''} transition-colors`}
                       style={{ width: `${width}px` }}
                       onClick={() => colId !== 'no' && requestSort(colId)}
                     >
@@ -447,7 +447,7 @@ export default function DocumentItemsReport({ documents }: { documents: any[] })
             <tbody>
               {filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan={visibleColumns.length + 1} className="py-32 text-center bg-white dark:bg-card/50">
+                  <td colSpan={visibleColumns.length + 1} className="py-32 text-center bg-card">
                     <div className="flex flex-col items-center gap-4 opacity-30">
                        <TableIcon className="w-16 h-16" />
                        <p className="font-black text-xs uppercase tracking-[0.4em]">Data Kosong</p>

@@ -211,7 +211,7 @@ export default function BkuAccountSummary({
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 space-y-6">
       {/* PREMIUM HEADER & TOOLBAR */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4 bg-slate-100 dark:bg-black/20 border-b-2 border-primary/20 rounded-t-[1.5rem] select-none">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4 bg-accent/30 dark:bg-card/50 border-b-2 border-primary/20 rounded-t-[1.5rem] select-none">
         <div className="flex items-center gap-3">
           <div className="w-1.5 h-6 bg-primary rounded-full"></div>
           <h2 className="text-lg font-black text-foreground tracking-tight flex items-center gap-2">
@@ -252,11 +252,11 @@ export default function BkuAccountSummary({
         </div>
       </div>
       
-      <div className="border border-border bg-white dark:bg-black/10 overflow-hidden relative shadow-2xl shadow-indigo-500/5 select-none rounded-b-[1.5rem]">
+      <div className="border border-border bg-card overflow-hidden relative shadow-2xl shadow-indigo-500/5 select-none rounded-b-[1.5rem]">
         <div className="overflow-x-auto custom-scrollbar max-h-[700px]">
           <table className="w-full text-sm border-collapse min-w-full table-fixed">
             <thead className="sticky top-0 z-[10] shadow-sm">
-              <tr className="bg-slate-200 dark:bg-slate-800 text-foreground">
+              <tr className="bg-table-header text-foreground">
                 {[
                   { id: 'code', label: 'Kode Rekening' },
                   { id: 'name', label: 'Nama Rekening' },
@@ -267,7 +267,7 @@ export default function BkuAccountSummary({
                   <th 
                     key={col.id} 
                     style={{ width: `${columnWidths[col.id]}px` }}
-                    className={`px-4 py-4 ${col.align || 'text-left'} text-[10px] uppercase font-black tracking-[0.2em] text-foreground/70 border-r border-border/20 overflow-hidden relative group/header select-none cursor-pointer hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors`}
+                    className={`px-4 py-4 ${col.align || 'text-left'} text-[10px] uppercase font-black tracking-[0.2em] text-foreground/70 border-r border-border/20 overflow-hidden relative group/header select-none cursor-pointer hover:bg-accent transition-colors`}
                     onClick={() => requestSort(col.id)}
                   >
                     <div className="flex items-center gap-1">
@@ -332,7 +332,7 @@ export default function BkuAccountSummary({
                           
                           {data.budget > 0 ? (
                             <>
-                              <div className="w-full max-w-[120px] h-1.5 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden border border-border/5">
+                              <div className="w-full max-w-[120px] h-1.5 bg-input rounded-full overflow-hidden border border-border/5">
                                  <div 
                                    className={`h-full transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(225,29,72,0.3)] ${
                                      (data.yearlyTotal / data.budget) > 1 ? 'bg-rose-600' : 

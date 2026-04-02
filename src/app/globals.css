@@ -1,18 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f1f5f9;
-  --foreground: #000000;
+  --background: #f8fafc;
+  --foreground: #020617;
   --card-bg: #ffffff;
-  --card-border: rgba(0,0,0,0.15);
-  --input-bg: #e2e8f0;
-  --input-border: #cbd5e1;
+  --card-border: rgba(0,0,0,0.1);
+  --input-bg: #f1f5f9;
+  --input-border: #e2e8f0;
   --primary: #4f46e5;
   --primary-foreground: #ffffff;
-  --muted: #475569;
-  --muted-foreground: #1e293b;
+  --muted: #64748b;
+  --muted-foreground: #475569;
   --accent: #f1f5f9;
-  --accent-foreground: #000000;
+  --accent-foreground: #020617;
+  --table-header: #f1f5f9;
   
   --sidebar-width: 260px;
   --sidebar-collapsed: 80px;
@@ -31,6 +32,7 @@
   --muted-foreground: #64748b;
   --accent: #1e293b;
   --accent-foreground: #f8fafc;
+  --table-header: #1e293b;
 }
 
 @theme inline {
@@ -40,8 +42,10 @@
   --color-input: var(--input-bg);
   --color-border: var(--card-border);
   --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-primary: var(--primary);
+  --color-table-header: var(--table-header);
 }
 
 body {
