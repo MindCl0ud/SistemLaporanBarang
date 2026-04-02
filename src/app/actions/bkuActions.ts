@@ -19,16 +19,21 @@ export async function getYearlyBkuRecords(year: number) {
 }
 
 export async function getBkuComparison(month: number, year: number) {
-  const allPastRecords = await prisma.bkuTransaction.findMany({
+  // Optimal DB-side aggregation for Opening Balance
+  const aggPast = await prisma.bkuTransaction.aggregate({
     where: {
       OR: [
         { year: { lt: year } },
         { AND: [{ year: year }, { month: { lt: month } }] }
       ]
+    },
+    _sum: {
+      expenseTotal: true,
+      receiptTotal: true
     }
   })
   
-  const openingBalance = allPastRecords.reduce((sum, r) => sum + (r.receiptTotal || 0) - (r.expenseTotal || 0), 0)
+  const openingBalance = (aggPast._sum.receiptTotal || 0) - (aggPast._sum.expenseTotal || 0)
 
   const currentRecords = await prisma.bkuTransaction.findMany({ where: { month, year } })
   const currentExpense = currentRecords.reduce((sum, r) => sum + (r.expenseTotal || 0), 0)
@@ -46,15 +51,19 @@ export async function getBkuComparison(month: number, year: number) {
   const prevExpense = prevRecords.reduce((sum, r) => sum + (r.expenseTotal || 0), 0)
   const prevReceipt = prevRecords.reduce((sum, r) => sum + (r.receiptTotal || 0), 0)
 
-  const allPastRecordsBeforePrev = await prisma.bkuTransaction.findMany({
+  const aggPrevPast = await prisma.bkuTransaction.aggregate({
     where: {
       OR: [
         { year: { lt: prevYear } },
         { AND: [{ year: prevYear }, { month: { lt: prevMonth } }] }
       ]
+    },
+    _sum: {
+      expenseTotal: true,
+      receiptTotal: true
     }
   })
-  const prevOpeningBalance = allPastRecordsBeforePrev.reduce((sum, r) => sum + (r.receiptTotal || 0) - (r.expenseTotal || 0), 0)
+  const prevOpeningBalance = (aggPrevPast._sum.receiptTotal || 0) - (aggPrevPast._sum.expenseTotal || 0)
 
   const yearlyAgg = await prisma.bkuTransaction.aggregate({
     where: { year },
@@ -238,7 +247,12 @@ export async function upsertAccountMapping(code: string, name: string, division?
 
   revalidatePath('/bku')
   revalidatePath('/settings/accounts')
-  return result
+  
+  // Return the full updated object with logs
+  return await prisma.accountCodeMapping.findUnique({
+    where: { id: result.id },
+    include: { budgetLogs: { orderBy: { createdAt: 'desc' } } }
+  })
 }
 
 export async function upsertAccountMappingBulk(data: any[], year: number = 2026) {

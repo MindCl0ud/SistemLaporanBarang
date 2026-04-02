@@ -164,17 +164,29 @@ export default function AccountMappingPage() {
     if (!code || !name) return
     setSavingId(id || 'new')
     try {
-      await upsertAccountMapping(code, name, division || undefined, budget || 0, subKegiatan || undefined, selectedYear, revisedBudget || 0)
+      const updated = await upsertAccountMapping(code, name, division || undefined, budget || 0, subKegiatan || undefined, selectedYear, revisedBudget || 0)
+      
+      if (updated) {
+        setMappings(prev => {
+          const exists = prev.some(m => m.id === updated.id)
+          if (exists) {
+            return prev.map(m => m.id === updated.id ? updated : m)
+          } else {
+            return [...prev, updated]
+          }
+        })
+      }
+
       setEditingId(null)
       setShowAddRow(false)
       setNewRow({ code: '', name: '', division: '', budget: '', revisedBudget: '', subKegiatan: '' })
       
       // Show success feedback
-      const currentId = id || 'new'
+      const currentId = id || updated?.id || 'new'
       setSavedId(currentId)
       setTimeout(() => setSavedId(null), 3000)
 
-      fetchMappings()
+      // Removed fetchMappings() for "snappy" local update
     } finally {
       setSavingId(null)
     }
@@ -494,6 +506,7 @@ export default function AccountMappingPage() {
                         placeholder="5.01..."
                         value={newRow.subKegiatan}
                         onChange={e => setNewRow({...newRow, subKegiatan: e.target.value})}
+                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.code, newRow.name, newRow.division, Number(newRow.budget), null, newRow.subKegiatan, Number(newRow.revisedBudget))}
                       />
                     </td>
                     <td className={cellBase}>
@@ -502,6 +515,7 @@ export default function AccountMappingPage() {
                         placeholder="1.1.0..."
                         value={newRow.code}
                         onChange={e => setNewRow({...newRow, code: e.target.value})}
+                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.code, newRow.name, newRow.division, Number(newRow.budget), null, newRow.subKegiatan, Number(newRow.revisedBudget))}
                       />
                     </td>
                     <td className={cellBase}>
@@ -525,6 +539,7 @@ export default function AccountMappingPage() {
                         placeholder="0"
                         value={newRow.budget}
                         onChange={e => setNewRow({...newRow, budget: e.target.value})}
+                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.code, newRow.name, newRow.division, Number(newRow.budget), null, newRow.subKegiatan, Number(newRow.revisedBudget))}
                       />
                     </td>
                     <td className={cellBase}>
@@ -534,6 +549,7 @@ export default function AccountMappingPage() {
                         placeholder="0"
                         value={newRow.revisedBudget}
                         onChange={e => setNewRow({...newRow, revisedBudget: e.target.value})}
+                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.code, newRow.name, newRow.division, Number(newRow.budget), null, newRow.subKegiatan, Number(newRow.revisedBudget))}
                       />
                     </td>
                     <td className={cellBase}>
@@ -542,6 +558,7 @@ export default function AccountMappingPage() {
                         placeholder="Sekretariat..."
                         value={newRow.division}
                         onChange={e => setNewRow({...newRow, division: e.target.value})}
+                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.code, newRow.name, newRow.division, Number(newRow.budget), null, newRow.subKegiatan, Number(newRow.revisedBudget))}
                       />
                     </td>
                     <td className={cellBase}>
@@ -590,6 +607,7 @@ export default function AccountMappingPage() {
                            setMappings(prev => prev.map(p => p.id === m.id ? {...p, subKegiatan: val} : p));
                         }}
                         onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
+                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
                       />
                     </td>
 
@@ -603,6 +621,7 @@ export default function AccountMappingPage() {
                            setMappings(prev => prev.map(p => p.id === m.id ? {...p, code: val} : p));
                         }}
                         onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
+                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
                       />
                     </td>
 
@@ -667,6 +686,7 @@ export default function AccountMappingPage() {
                                setMappings(prev => prev.map(p => p.id === m.id ? {...p, budget: newVal} : p));
                             }}
                             onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
+                            onKeyDown={e => e.key === 'Enter' && handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
                           />
                           <div className="relative">
                             <button 
@@ -746,12 +766,16 @@ export default function AccountMappingPage() {
                              setMappings(prev => prev.map(p => p.id === m.id ? {...p, division: newVal} : p));
                           }}
                           onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
+                          onKeyDown={e => e.key === 'Enter' && handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
                         />
                     </td>
 
                     {/* AKSI */}
                     <td className={`${cellBase} text-center`}>
                        <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                           <div title="Simpan Perubahan" className="p-1.5 text-primary hover:bg-primary/10 rounded-lg cursor-pointer" onClick={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}>
+                             <Save className="w-3.5 h-3.5" />
+                           </div>
                          {m.revisedBudget > 0 && useRevisedBudgetMode && (
                            <div title="Pagu Perubahan Aktif" className="p-1.5 text-emerald-500">
                              <CheckCircle2 className="w-4 h-4" />

@@ -68,6 +68,8 @@ model BkuTransaction {
 
   @@index([month, year])
   @@index([date])
+  @@index([code])
+  @@index([year])
 }
 
 model MatchRecord {
