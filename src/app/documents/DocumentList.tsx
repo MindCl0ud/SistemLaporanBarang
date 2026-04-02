@@ -449,11 +449,11 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                             </p>
                             {doc.items && doc.items.length > 0 ? (
                               <div className="overflow-hidden rounded-xl border border-border shadow-sm">
-                                <table className="w-full text-xs border-collapse">
+                                <table className="w-full text-xs border-collapse table-fixed">
                                   <thead>
                                     <tr className="bg-input/80">
                                       <th className="text-left px-3 py-2 text-foreground/60 font-semibold border-b border-border w-32">Kode Barang</th>
-                                      <th className="text-left px-3 py-2 text-foreground/60 font-semibold border-b border-border">Uraian / Deskripsi</th>
+                                      <th className="text-left px-3 py-2 text-foreground/60 font-semibold border-b border-border min-w-[400px]">Uraian / Deskripsi</th>
                                       <th className="text-center px-3 py-2 text-foreground/60 font-semibold border-b border-border w-16">Qty</th>
                                       <th className="text-center px-3 py-2 text-foreground/60 font-semibold border-b border-border w-20">Satuan</th>
                                       <th className="text-right px-3 py-2 text-foreground/60 font-semibold border-b border-border w-32">Harga Satuan</th>
@@ -478,7 +478,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                                                   placeholder="Kode..."
                                                 />
                                               </td>
-                                              <td className="px-2 py-1 border-b border-border min-w-[300px]">
+                                              <td className="px-2 py-1 border-b border-border min-w-[400px]">
                                                 <input
                                                   className="w-full bg-input text-foreground text-xs px-2 py-1 rounded border border-indigo-500 outline-none"
                                                   value={editing.description}

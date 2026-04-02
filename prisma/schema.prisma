@@ -97,13 +97,29 @@ model MasterItem {
 
 model AccountCodeMapping {
   id        String   @id @default(cuid())
+  year      Int      @default(2026) // Multi-year support
   subKegiatan String?
-  code      String   @unique
+  code      String   
   name      String
   division  String?        // New field for Bidang
   budget    Float?         @default(0) // New field for Total Pagu
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  budgetLogs BudgetLog[]
 
+  @@unique([code, year])
   @@index([code])
+  @@index([year])
+}
+
+model BudgetLog {
+  id        String   @id @default(cuid())
+  mappingId String
+  oldBudget Float
+  newBudget Float
+  reason    String?
+  createdAt DateTime @default(now())
+  mapping   AccountCodeMapping @relation(fields: [mappingId], references: [id], onDelete: Cascade)
+
+  @@index([mappingId])
 }

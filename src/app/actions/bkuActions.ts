@@ -147,18 +147,62 @@ export async function addBkuBulk(data: any[], month: number, year: number) {
 
 // --- ACCOUNT MAPPING ACTIONS ---
 
-export async function getAccountMappings() {
-  return await (prisma as any).accountCodeMapping.findMany({
-    orderBy: { code: 'asc' }
+export async function getAccountMappings(year: number = 2026) {
+  return await prisma.accountCodeMapping.findMany({
+    where: { year },
+    orderBy: { code: 'asc' },
+    include: { budgetLogs: { orderBy: { createdAt: 'desc' } } }
   })
 }
 
-export async function upsertAccountMapping(code: string, name: string, division?: string, budget?: number, subKegiatan?: string) {
-  const result = await (prisma as any).accountCodeMapping.upsert({
-    where: { code },
-    update: { name, division, budget: budget || 0, subKegiatan },
-    create: { code, name, division, budget: budget || 0, subKegiatan }
+export async function upsertAccountMapping(code: string, name: string, division?: string, budget?: number, subKegiatan?: string, year: number = 2026) {
+  // Find existing to check budget change
+  const existing = await prisma.accountCodeMapping.findUnique({
+    where: { code_year: { code, year } }
   })
+
+  const newBudget = budget || 0
+  
+  const result = await prisma.accountCodeMapping.upsert({
+    where: { code_year: { code, year } },
+    update: { 
+      name, 
+      division, 
+      budget: newBudget, 
+      subKegiatan 
+    },
+    create: { 
+      code, 
+      name, 
+      division, 
+      budget: newBudget, 
+      subKegiatan,
+      year
+    }
+  })
+
+  // Log budget change if applicable
+  if (existing && existing.budget !== newBudget) {
+    await prisma.budgetLog.create({
+      data: {
+        mappingId: existing.id,
+        oldBudget: existing.budget || 0,
+        newBudget: newBudget,
+        reason: "Update manual dari Master Rekening"
+      }
+    })
+  } else if (!existing && newBudget !== 0) {
+    // Initial budget log
+     await prisma.budgetLog.create({
+      data: {
+        mappingId: result.id,
+        oldBudget: 0,
+        newBudget: newBudget,
+        reason: "Pagu awal ditambahkan"
+      }
+    })
+  }
+
   revalidatePath('/bku')
   revalidatePath('/settings/accounts')
   return result
@@ -170,13 +214,14 @@ export async function deleteAccountMapping(id: string) {
   revalidatePath('/settings/accounts')
 }
 
-export async function syncAccountCodesFromBku() {
+export async function syncAccountCodesFromBku(year: number = 2026) {
   const transactions = await prisma.bkuTransaction.findMany({
     select: {
       code: true,
       description: true
     },
     where: {
+      year, // Only sync from target year
       AND: [
         { code: { not: null } },
         { code: { not: "" } }
@@ -194,7 +239,8 @@ export async function syncAccountCodesFromBku() {
     }
   })
 
-  const existing = await (prisma as any).accountCodeMapping.findMany({
+  const existing = await prisma.accountCodeMapping.findMany({
+    where: { year },
     select: { code: true }
   })
   const existingCodes = new Set(existing.map((e: any) => e.code))
@@ -210,8 +256,8 @@ export async function syncAccountCodesFromBku() {
     }
 
     if (!existingCodes.has(code)) {
-      await (prisma as any).accountCodeMapping.create({
-        data: { code, name, budget: 0, subKegiatan }
+      await prisma.accountCodeMapping.create({
+        data: { code, name, budget: 0, subKegiatan, year }
       })
       count++
     }

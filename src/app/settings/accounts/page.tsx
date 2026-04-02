@@ -32,18 +32,23 @@ export default function AccountMappingPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
 
+  // Filter settings
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
+
   // New row states
   const [showAddRow, setShowAddRow] = useState(false)
   const [newRow, setNewRow] = useState({ code: '', name: '', division: '', budget: '', subKegiatan: '' })
 
+  const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null)
+
   useEffect(() => {
     fetchMappings()
-  }, [])
+  }, [selectedYear])
 
   const fetchMappings = async () => {
     setLoading(true)
     try {
-      const data = await getAccountMappings()
+      const data = await getAccountMappings(selectedYear)
       setMappings(data)
     } finally {
       setLoading(false)
@@ -54,7 +59,7 @@ export default function AccountMappingPage() {
     if (!code || !name) return
     setSavingId(id || 'new')
     try {
-      await upsertAccountMapping(code, name, division || undefined, budget || 0, subKegiatan || undefined)
+      await upsertAccountMapping(code, name, division || undefined, budget || 0, subKegiatan || undefined, selectedYear)
       setEditingId(null)
       setShowAddRow(false)
       setNewRow({ code: '', name: '', division: '', budget: '', subKegiatan: '' })
@@ -73,8 +78,8 @@ export default function AccountMappingPage() {
   const handleSync = async () => {
     setLoading(true)
     try {
-      const { count } = await syncAccountCodesFromBku()
-      alert(`Berhasil sinkronisasi ${count} kode rekening baru!`)
+      const { count } = await syncAccountCodesFromBku(selectedYear)
+      alert(`Berhasil sinkronisasi ${count} kode rekening baru untuk tahun ${selectedYear}!`)
       fetchMappings()
     } finally {
       setLoading(false)
@@ -132,11 +137,20 @@ export default function AccountMappingPage() {
             Master Rekening
           </h1>
           <div className="flex items-center gap-6 mt-4">
-            <p className="text-foreground/70 font-black text-lg max-w-2xl leading-tight">
-              Klik pada sel <span className="text-primary italic">Nama</span> atau <span className="text-primary italic">Pagu</span> untuk mengedit data secara langsung.
-            </p>
             <div className="flex flex-col border-l-2 border-primary/20 pl-6">
-              <span className="text-[10px] font-black text-muted uppercase tracking-widest">Total Pagu Terdaftar</span>
+              <span className="text-[10px] font-black text-muted uppercase tracking-widest">Tahun Anggaran</span>
+              <select 
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                className="text-2xl font-black text-primary bg-transparent outline-none cursor-pointer hover:opacity-70 transition-opacity"
+              >
+                {[2024, 2025, 2026, 2027].map(y => (
+                  <option key={y} value={y} className="text-sm font-bold bg-white dark:bg-slate-900 text-foreground">{y}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col border-l-2 border-primary/20 pl-6">
+              <span className="text-[10px] font-black text-muted uppercase tracking-widest">Total Pagu ({selectedYear})</span>
               <span className="text-2xl font-black text-primary tracking-tighter">{formatCurrency(totalPagu)}</span>
             </div>
           </div>
@@ -378,7 +392,52 @@ export default function AccountMappingPage() {
                       )}
                     </td>
                     <td className="px-8 py-5">
-                      <div className="flex items-center gap-3 justify-end group/pagu">
+                      <div className="flex items-center gap-3 justify-end group/pagu relative">
+                        {m.budgetLogs?.length > 0 && (
+                          <div className="relative">
+                            <button 
+                              onClick={() => setActiveHistoryId(activeHistoryId === m.id ? null : m.id)}
+                              className={`p-1.5 rounded-lg border transition-all ${activeHistoryId === m.id ? 'bg-primary text-white border-primary' : 'bg-white dark:bg-input text-muted border-border hover:border-primary/50'}`}
+                              title="Lihat Riwayat Perubahan"
+                            >
+                              <RefreshCw className={`w-3 h-3 ${activeHistoryId === m.id ? 'animate-spin-slow' : ''}`} />
+                            </button>
+                            
+                            <AnimatePresence>
+                              {activeHistoryId === m.id && (
+                                <motion.div 
+                                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                                  exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                                  className="absolute bottom-full right-0 mb-3 w-80 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-primary/20 p-4 z-[100] backdrop-blur-xl"
+                                >
+                                  <div className="flex items-center justify-between mb-3">
+                                    <h4 className="text-[10px] font-black text-primary uppercase tracking-widest">Riwayat Anggaran ({selectedYear})</h4>
+                                    <button onClick={() => setActiveHistoryId(null)} className="text-muted hover:text-rose-500 transition-colors">
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                  <div className="space-y-3 max-h-60 overflow-y-auto custom-scrollbar pr-1">
+                                    {m.budgetLogs.map((log: any) => (
+                                      <div key={log.id} className="p-2.5 rounded-xl bg-primary/5 border border-primary/10">
+                                        <div className="flex justify-between items-center mb-1">
+                                          <span className="text-[9px] font-bold text-muted">{new Date(log.createdAt).toLocaleString('id-ID')}</span>
+                                          <span className="text-[9px] font-black text-primary uppercase tracking-tighter bg-primary/10 px-1.5 py-0.5 rounded">Revised</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 mb-1.5">
+                                          <span className="text-[10px] line-through text-muted/50 font-mono">{formatCurrency(log.oldBudget)}</span>
+                                          <ChevronDown className="w-3 h-3 text-emerald-500 -rotate-90" />
+                                          <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 font-mono">{formatCurrency(log.newBudget)}</span>
+                                        </div>
+                                        <p className="text-[10px] text-foreground/70 leading-tight italic">"{log.reason}"</p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        )}
                         <input 
                           type="number"
                           className="w-full bg-transparent border border-border group-hover:border-primary/50 group-hover:bg-primary/5 rounded-xl px-4 py-2 text-sm font-black text-foreground text-right outline-none focus:ring-2 focus:ring-primary transition-all tabular-nums"
@@ -387,7 +446,7 @@ export default function AccountMappingPage() {
                              const newVal = Number(e.target.value);
                              setMappings(prev => prev.map(p => p.id === m.id ? {...p, budget: newVal} : p));
                           }}
-                          onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id)}
+                          onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan)}
                         />
                       </div>
                     </td>

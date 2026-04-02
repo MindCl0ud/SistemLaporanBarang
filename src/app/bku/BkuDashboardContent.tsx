@@ -24,8 +24,12 @@ export default function BkuDashboardContent({
   const [activeTab, setActiveTab] = useState<'transactions' | 'summary'>('transactions')
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount)
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(amount)
   }
+
+  const yearlyPagu = accountMappings.reduce((sum, acc) => sum + (acc.budget || 0), 0)
+  const remainingPagu = yearlyPagu - stats.yearlyExpense
+  const usagePercentage = yearlyPagu > 0 ? (stats.yearlyExpense / yearlyPagu) * 100 : 0
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -99,19 +103,51 @@ export default function BkuDashboardContent({
                 </div>
               </div>
 
-               {/* YEARLY TOTAL */}
-              <div className="mt-8 pt-6 border-t border-border">
-                 <div className="p-5 rounded-2xl bg-gradient-to-br from-rose-50 to-rose-100/50 dark:from-rose-950/30 dark:to-slate-900 border border-rose-200 dark:border-rose-900/50 shadow-inner flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="p-3 bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-rose-100 dark:border-rose-900/50">
-                        <CalendarDays className="w-6 h-6 text-rose-500" />
+               {/* YEARLY TOTAL & PAGU */}
+              <div className="mt-8 pt-6 border-t border-border space-y-4">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-5 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-between shadow-sm">
+                        <div className="flex items-center gap-4">
+                          <div className="p-3 bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-indigo-100 dark:border-indigo-900/50">
+                            <PieChart className="w-6 h-6 text-indigo-500" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black text-indigo-800 dark:text-indigo-400 uppercase tracking-[0.2em]">Total Pagu Tahun {year}</p>
+                            <p className="text-[10px] text-muted font-bold mt-0.5">Anggaran terdaftar di Master Rekening</p>
+                          </div>
+                        </div>
+                        <p className="text-xl font-black text-indigo-600 dark:text-indigo-400 tracking-tight">{formatCurrency(yearlyPagu)}</p>
+                    </div>
+
+                    <div className={`p-5 rounded-2xl border flex items-center justify-between shadow-sm transition-colors ${usagePercentage > 90 ? 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/50' : 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-100 dark:border-emerald-900/50'}`}>
+                        <div className="flex items-center gap-4">
+                          <div className="p-3 bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-inherit">
+                            <TrendingUp className={`w-6 h-6 ${usagePercentage > 90 ? 'text-rose-500' : 'text-emerald-500'}`} />
+                          </div>
+                          <div>
+                            <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${usagePercentage > 90 ? 'text-rose-800 dark:text-rose-400' : 'text-emerald-800 dark:text-emerald-400'}`}>Sisa Pagu (Anggaran)</p>
+                            <p className="text-[10px] text-muted font-bold mt-0.5">Selisih Pagu - Pengeluaran</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className={`text-xl font-black tracking-tight ${usagePercentage > 90 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>{formatCurrency(remainingPagu)}</p>
+                          <p className={`text-[9px] font-black opacity-50 uppercase tracking-tighter ${usagePercentage > 90 ? 'text-rose-800' : 'text-emerald-800'}`}>{usagePercentage.toFixed(1)}% Terpakai</p>
+                        </div>
+                    </div>
+                 </div>
+
+                 <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 flex items-center justify-between overflow-hidden relative group">
+                    <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="flex items-center gap-4 relative z-10">
+                      <div className="p-3 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                        <CalendarDays className="w-6 h-6 text-primary" />
                       </div>
                       <div>
-                        <p className="text-xs font-black text-rose-800 dark:text-rose-400 uppercase tracking-widest">Total Pengeluaran Tahun {year}</p>
-                        <p className="text-xs text-muted font-bold mt-0.5">Akumulasi dari seluruh bulan dicatat</p>
+                        <p className="text-[10px] font-black text-foreground/70 uppercase tracking-[0.2em]">Total Pengeluaran Tahun {year}</p>
+                        <p className="text-[10px] text-muted font-bold mt-0.5">Akumulasi dari seluruh transaksi tercatat</p>
                       </div>
                     </div>
-                    <p className="text-2xl font-black text-rose-600 dark:text-rose-400 tracking-tight">{formatCurrency(stats.yearlyExpense)}</p>
+                    <p className="text-2xl font-black text-foreground tracking-tight relative z-10">{formatCurrency(stats.yearlyExpense)}</p>
                  </div>
               </div>
           </div>
