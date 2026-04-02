@@ -33,22 +33,23 @@ import { getBudgetMode, updateBudgetMode } from '@/app/actions/settingsActions'
 import * as XLSX from 'xlsx'
 
 const DEFAULT_WIDTHS = {
-  sub: 120,
+  sub: 160,
   code: 150,
-  name: 450,
-  awal: 150,
-  perubahan: 150,
-  bidang: 150
+  name: 510,
+  awal: 170,
+  perubahan: 170,
+  bidang: 140
 }
 
 function ResizableHeader({ colKey, width, label, onResize, align = 'text-left', isLast = false }: any) {
   const onMouseDown = (e: React.MouseEvent) => {
     e.preventDefault()
     const startX = e.pageX
+    const initialWidth = width
     
     const onMouseMove = (moveEvent: MouseEvent) => {
       const delta = moveEvent.pageX - startX
-      onResize(colKey, delta)
+      onResize(colKey, initialWidth + delta)
     }
     
     const onMouseUp = () => {
@@ -133,8 +134,8 @@ export default function AccountMappingPage() {
     }
   }
 
-  const handleResize = useCallback((key: string, delta: number) => {
-    setColWidths(prev => ({ ...prev, [key]: Math.max(40, prev[key] + delta) }))
+  const handleResize = useCallback((key: string, newWidth: number) => {
+    setColWidths(prev => ({ ...prev, [key]: Math.max(40, newWidth) }))
   }, [])
 
   const fetchMappings = async () => {
