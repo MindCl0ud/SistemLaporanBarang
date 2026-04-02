@@ -447,11 +447,6 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                       <InlineInput field="vendorName" value={doc.vendorName} />
                     </td>
 
-                    {/* Satuan */}
-                    <td className={cellClass + ' text-center text-foreground font-bold'}>
-                      <InlineInput field="unit" value={doc.unit} />
-                    </td>
-
                     {/* Total */}
                     <td className={`${cellClass} text-right font-mono font-black text-foreground text-sm`}>
                       <InlineInput field="totalAmount" type="number" value={displayTotal} />
