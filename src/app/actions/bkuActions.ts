@@ -208,6 +208,21 @@ export async function upsertAccountMapping(code: string, name: string, division?
   return result
 }
 
+export async function upsertAccountMappingBulk(data: any[], year: number = 2026) {
+  let count = 0
+  for (const item of data) {
+    const { code, name, division, budget, subKegiatan } = item
+    if (!code || !name) continue
+
+    // Reuse existing individual upsert logic to ensure logging
+    await upsertAccountMapping(code, name, division, budget, subKegiatan, year)
+    count++
+  }
+  revalidatePath('/bku')
+  revalidatePath('/settings/accounts')
+  return { count }
+}
+
 export async function deleteAccountMapping(id: string) {
   await prisma.accountCodeMapping.delete({ where: { id } })
   revalidatePath('/bku')

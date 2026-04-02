@@ -16,10 +16,13 @@ import {
   Check,
   ChevronUp,
   ChevronDown,
-  ArrowUpDown
+  ArrowUpDown,
+  UploadCloud,
+  Download,
+  FileSpreadsheet
 } from 'lucide-react'
 import { useMemo } from 'react'
-import { getAccountMappings, upsertAccountMapping, deleteAccountMapping, syncAccountCodesFromBku } from '@/app/actions/bkuActions'
+import { getAccountMappings, upsertAccountMapping, deleteAccountMapping, syncAccountCodesFromBku, upsertAccountMappingBulk } from '@/app/actions/bkuActions'
 
 export default function AccountMappingPage() {
   const [mappings, setMappings] = useState<any[]>([])
@@ -40,6 +43,8 @@ export default function AccountMappingPage() {
   const [newRow, setNewRow] = useState({ code: '', name: '', division: '', budget: '', subKegiatan: '' })
 
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null)
+  const [isImporting, setIsImporting] = useState(false)
+  const [importProgress, setImportProgress] = useState(0)
 
   useEffect(() => {
     fetchMappings()
@@ -83,6 +88,67 @@ export default function AccountMappingPage() {
       fetchMappings()
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleExportTemplate = async () => {
+    try {
+      const { utils, writeFile } = await import('xlsx')
+      const headers = [["Sub Kegiatan (Opsional)", "Kode Rekening", "Nama Rekening", "Bidang / Division (Opsional)", "Total Pagu / Budget"]]
+      const sample = [["5.01.01.2.01", "5.1.02.01.01.0001", "Belanja Alat Tulis Kantor", "Sekretariat", 5000000]]
+      const ws = utils.aoa_to_sheet([...headers, ...sample])
+      const wb = utils.book_new()
+      utils.book_append_sheet(wb, ws, "Template_Master_Rekening")
+      writeFile(wb, `Template_Master_Rekening_${selectedYear}.xlsx`)
+    } catch (e) {
+      alert("Gagal mengunduh template.")
+    }
+  }
+
+  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    
+    setLoading(true)
+    setIsImporting(true)
+    setImportProgress(0)
+
+    try {
+      const { read, utils } = await import('xlsx')
+      const buffer = await file.arrayBuffer()
+      const wb = read(buffer, { type: 'array' })
+      const ws = wb.Sheets[wb.SheetNames[0]]
+      const rows = utils.sheet_to_json(ws, { header: 1 }) as any[][]
+      
+      const parsedData = []
+      // Skip header row
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i]
+        if (!row || row.length < 2) continue
+        
+        parsedData.push({
+          subKegiatan: String(row[0] || "").trim() || undefined,
+          code: String(row[1] || "").trim(),
+          name: String(row[2] || "").trim(),
+          division: String(row[3] || "").trim() || undefined,
+          budget: Number(row[4] || 0)
+        })
+      }
+
+      if (parsedData.length > 0) {
+        const { count } = await upsertAccountMappingBulk(parsedData, selectedYear)
+        alert(`Berhasil mengimpor ${count} baris data ke tahun ${selectedYear}!`)
+        fetchMappings()
+      } else {
+        alert("Tidak ada data valid ditemukan di file Excel.")
+      }
+    } catch (error) {
+      console.error(error)
+      alert("Gagal mengimpor file Excel. Pastikan format kolom benar.")
+    } finally {
+      setIsImporting(false)
+      setLoading(false)
+      if (e.target) e.target.value = ''
     }
   }
 
@@ -163,6 +229,23 @@ export default function AccountMappingPage() {
           >
             <Plus className="w-4 h-4" /> Tambah Manual
           </button>
+          
+          <div className="flex items-center bg-white dark:bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+             <button
+                onClick={handleExportTemplate}
+                className="flex items-center gap-2 px-4 py-4 hover:bg-slate-50 transition-all text-xs font-black text-foreground border-r border-border"
+                title="Unduh Template Excel"
+              >
+                <Download className="w-4 h-4 text-primary" />
+                Template
+              </button>
+              <label className="flex items-center gap-2 px-4 py-4 hover:bg-slate-50 transition-all text-xs font-black text-foreground cursor-pointer">
+                <UploadCloud className="w-4 h-4 text-emerald-500" />
+                {isImporting ? "Mengimpor..." : "Impor Excel"}
+                <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleImportExcel} disabled={loading} />
+              </label>
+          </div>
+
           <button
             onClick={handleSync}
             disabled={loading}
