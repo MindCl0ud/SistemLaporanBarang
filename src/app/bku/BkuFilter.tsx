@@ -32,6 +32,9 @@ export default function BkuFilter({ currentMonth, currentYear }: { currentMonth:
       const savedYear = localStorage.getItem('bku_year')
       
       if (savedMonth && savedYear) {
+        // Sync Sidebar
+        window.dispatchEvent(new CustomEvent('bku-params-updated'));
+        
         const params = new URLSearchParams(searchParams.toString())
         params.set('month', savedMonth)
         params.set('year', savedYear)
@@ -45,6 +48,9 @@ export default function BkuFilter({ currentMonth, currentYear }: { currentMonth:
     // Save to local storage immediately for snappy persistence
     localStorage.setItem('bku_month', month.toString())
     localStorage.setItem('bku_year', year.toString())
+    
+    // Notify sidebar and other components to update their links
+    window.dispatchEvent(new CustomEvent('bku-params-updated'));
     
     const params = new URLSearchParams(searchParams.toString())
     params.set('month', month.toString())

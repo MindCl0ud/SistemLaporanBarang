@@ -42,12 +42,27 @@ export default function Sidebar() {
     const saved = localStorage.getItem("sidebarCollapsed");
     if (saved) setIsCollapsed(JSON.parse(saved));
 
-    // Get saved BKU filters
-    const savedMonth = localStorage.getItem("bku_month");
-    const savedYear = localStorage.getItem("bku_year");
-    if (savedMonth && savedYear) {
-      setBkuParams({ month: savedMonth, year: savedYear });
-    }
+    // Initial load
+    const syncParams = () => {
+      const month = localStorage.getItem("bku_month");
+      const year = localStorage.getItem("bku_year");
+      if (month && year) {
+        setBkuParams({ month, year });
+      }
+    };
+    
+    syncParams();
+
+    // Listen for changes in other tabs or within the same page
+    window.addEventListener("storage", syncParams);
+    
+    // Also listen for custom events because 'storage' only triggers for other windows
+    window.addEventListener("bku-params-updated", syncParams);
+
+    return () => {
+      window.removeEventListener("storage", syncParams);
+      window.removeEventListener("bku-params-updated", syncParams);
+    };
   }, []);
 
   const toggleSidebar = () => {
