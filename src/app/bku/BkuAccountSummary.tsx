@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { PieChart, ListTree, Search, ArrowRight } from 'lucide-react'
+import { useState, useMemo, useRef, useEffect } from 'react'
+import { PieChart, ListTree, Search, ArrowRight, ChevronUp, ChevronDown, ArrowUpDown } from 'lucide-react'
 
 // Helper function to extract names from descriptions
 function extractName(description: string, isFull: boolean): string {
@@ -53,6 +53,57 @@ export default function BkuAccountSummary({
   const [search, setSearch] = useState('')
   // Aggregation level: 'full' (all segments) or 'prefix' (first 6 segments)
   const [aggrLevel, setAggrLevel] = useState<'prefix' | 'full'>('prefix')
+
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' }>({
+    key: 'yearlyTotal',
+    direction: 'desc'
+  })
+
+  // Column Width Management
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({
+    code: 160,
+    name: 400,
+    budget: 150,
+    yearlyTotal: 150,
+    remaining: 180
+  })
+
+  // Resizing state
+  const resizingCol = useRef<string | null>(null)
+  const startX = useRef(0)
+  const startWidth = useRef(0)
+
+  const onMouseDownResize = (id: string, e: React.MouseEvent) => {
+    resizingCol.current = id
+    startX.current = e.clientX
+    startWidth.current = columnWidths[id]
+    
+    document.addEventListener('mousemove', onMouseMoveResize)
+    document.addEventListener('mouseup', onMouseUpResize)
+    document.body.style.cursor = 'col-resize'
+  }
+
+  const onMouseMoveResize = (e: MouseEvent) => {
+    if (!resizingCol.current) return
+    const delta = e.clientX - startX.current
+    const newWidth = Math.max(80, startWidth.current + delta)
+    setColumnWidths(prev => ({ ...prev, [resizingCol.current!]: newWidth }))
+  }
+
+  const onMouseUpResize = () => {
+    resizingCol.current = null
+    document.removeEventListener('mousemove', onMouseMoveResize)
+    document.removeEventListener('mouseup', onMouseUpResize)
+    document.body.style.cursor = 'default'
+  }
+
+  const requestSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc'
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc'
+    }
+    setSortConfig({ key, direction })
+  }
 
   const mappingMap = useMemo(() => {
     const m = new Map<string, { name: string, budget: number }>()
@@ -109,9 +160,34 @@ export default function BkuAccountSummary({
       }
     })
     
-    return Array.from(map.entries())
-      .sort((a,b) => b[1].yearlyTotal - a[1].yearlyTotal) // Sort descending by yearly amount
-  }, [monthlyRecords, yearlyRecords, aggrLevel, mappingMap])
+    const result = Array.from(map.entries())
+    
+    // Logika Pengurutan Dinamis
+    result.sort((a, b) => {
+      const codeA = a[0];
+      const codeB = b[0];
+      const dataA = a[1];
+      const dataB = b[1];
+      const remainingA = dataA.budget - dataA.yearlyTotal;
+      const remainingB = dataB.budget - dataB.yearlyTotal;
+
+      let valA: any, valB: any;
+      switch (sortConfig.key) {
+        case 'code': valA = codeA; valB = codeB; break;
+        case 'name': valA = dataA.name; valB = dataB; break;
+        case 'budget': valA = dataA.budget; valB = dataB.budget; break;
+        case 'yearlyTotal': valA = dataA.yearlyTotal; valB = dataB.yearlyTotal; break;
+        case 'remaining': valA = remainingA; valB = remainingB; break;
+        default: valA = dataA.yearlyTotal; valB = dataB.yearlyTotal;
+      }
+
+      if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return result;
+  }, [monthlyRecords, yearlyRecords, aggrLevel, mappingMap, sortConfig])
 
   const filteredSummary = useMemo(() => {
     if (!search.trim()) return summary;
@@ -178,14 +254,37 @@ export default function BkuAccountSummary({
       
       <div className="border border-border bg-white dark:bg-black/10 overflow-hidden relative shadow-2xl shadow-indigo-500/5 select-none rounded-b-[1.5rem]">
         <div className="overflow-x-auto custom-scrollbar max-h-[700px]">
-          <table className="w-full text-sm border-collapse min-w-[700px] table-fixed">
+          <table className="w-full text-sm border-collapse min-w-full table-fixed">
             <thead className="sticky top-0 z-[10] shadow-sm">
               <tr className="bg-slate-200 dark:bg-slate-800 text-foreground">
-                <th className="px-4 py-4 text-left text-[10px] uppercase font-black tracking-[0.2em] text-foreground/70 border-r border-border/20 w-44">Kode Rekening</th>
-                <th className="px-4 py-4 text-left text-[10px] uppercase font-black tracking-[0.2em] text-foreground/70 border-r border-border/20">Nama Rekening</th>
-                <th className="px-4 py-4 text-right text-[10px] uppercase font-black tracking-[0.2em] text-foreground/70 border-r border-border/20 w-36">Total Pagu</th>
-                <th className="px-4 py-4 text-right text-[10px] uppercase font-black tracking-[0.2em] text-foreground/70 border-r border-border/20 w-36">Realisasi</th>
-                <th className="px-4 py-4 text-right text-[10px] uppercase font-black tracking-[0.2em] text-foreground/70 w-40">Sisa / Penyerapan</th>
+                {[
+                  { id: 'code', label: 'Kode Rekening' },
+                  { id: 'name', label: 'Nama Rekening' },
+                  { id: 'budget', label: 'Total Pagu', align: 'text-right' },
+                  { id: 'yearlyTotal', label: 'Realisasi', align: 'text-right' },
+                  { id: 'remaining', label: 'Sisa / Penyerapan', align: 'text-right' },
+                ].map((col) => (
+                  <th 
+                    key={col.id} 
+                    style={{ width: `${columnWidths[col.id]}px` }}
+                    className={`px-4 py-4 ${col.align || 'text-left'} text-[10px] uppercase font-black tracking-[0.2em] text-foreground/70 border-r border-border/20 overflow-hidden relative group/header select-none cursor-pointer hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors`}
+                    onClick={() => requestSort(col.id)}
+                  >
+                    <div className="flex items-center gap-1">
+                      <span className="truncate">{col.label}</span>
+                      {sortConfig.key === col.id ? (
+                        sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3 text-primary shrink-0" /> : <ChevronDown className="w-3 h-3 text-primary shrink-0" />
+                      ) : (
+                        <ArrowUpDown className="w-2.5 h-2.5 opacity-0 group-hover/header:opacity-50 shrink-0 transition-opacity" />
+                      )}
+                    </div>
+                    {/* RESIZE HANDLE */}
+                    <div 
+                      onMouseDown={(e) => { e.stopPropagation(); onMouseDownResize(col.id, e); }}
+                      className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/50 active:bg-primary transition-colors z-20"
+                    />
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-border/30">
@@ -203,26 +302,26 @@ export default function BkuAccountSummary({
                   const percentage = Math.min((data.monthlyTotal / data.yearlyTotal) * 100, 100) || 0;
                   return (
                     <tr key={code} className="hover:bg-primary/5 transition-all group select-text">
-                      <td className="px-4 py-5 font-mono text-[11px] text-primary/80 font-black border-r border-border/10">
+                      <td className="px-4 py-5 font-mono text-[11px] text-primary/80 font-black border-r border-border/10 overflow-hidden" style={{ width: `${columnWidths.code}px` }}>
                         <div className="flex items-center gap-3">
-                          <div className="w-6 h-6 rounded-lg bg-primary/5 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">
+                          <div className="w-6 h-6 rounded-lg bg-primary/5 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all shrink-0">
                              <ListTree className="w-3.5 h-3.5" />
                           </div>
-                          <span className="tracking-tighter">{code}</span>
+                          <span className="tracking-tighter truncate">{code}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-5 border-r border-border/10">
+                      <td className="px-4 py-5 border-r border-border/10 overflow-hidden" style={{ width: `${columnWidths.name}px` }}>
                         <div className="font-bold text-foreground text-sm tracking-tight leading-normal whitespace-normal break-words">
                           {data.name}
                         </div>
                       </td>
-                      <td className="px-4 py-5 text-right font-black text-foreground border-r border-border/10 tabular-nums">
+                      <td className="px-4 py-5 text-right font-black text-foreground border-r border-border/10 tabular-nums overflow-hidden" style={{ width: `${columnWidths.budget}px` }}>
                         {formatCurrency(data.budget)}
                       </td>
-                      <td className="px-4 py-5 text-right font-black text-rose-600 dark:text-rose-400 border-r border-border/10 tabular-nums">
+                      <td className="px-4 py-5 text-right font-black text-rose-600 dark:text-rose-400 border-r border-border/10 tabular-nums overflow-hidden" style={{ width: `${columnWidths.yearlyTotal}px` }}>
                         {formatCurrency(data.yearlyTotal)}
                       </td>
-                      <td className="px-4 py-5 text-right">
+                      <td className="px-4 py-5 text-right overflow-hidden" style={{ width: `${columnWidths.remaining}px` }}>
                         <div className="inline-flex flex-col items-end w-full">
                           <div className="flex items-center gap-2 mb-1.5 leading-none">
                              <span className={`font-black tabular-nums transition-colors ${data.budget - data.yearlyTotal < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
@@ -242,7 +341,7 @@ export default function BkuAccountSummary({
                                    style={{ width: `${Math.min((data.yearlyTotal / data.budget) * 100, 100)}%` }}
                                  />
                               </div>
-                              <span className="text-[9px] font-black text-muted-foreground mt-1 opacity-50">
+                              <span className="text-[9px] font-black text-muted-foreground mt-1 opacity-50 whitespace-nowrap">
                                 {((data.yearlyTotal / data.budget) * 100).toFixed(1)}% Penyerapan
                               </span>
                             </>

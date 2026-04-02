@@ -11,8 +11,10 @@ import {
   Columns as ColumnsIcon,
   Check,
   ChevronDown,
+  ChevronUp,
   ArrowUp,
   ArrowDown,
+  ArrowUpDown,
   GripVertical
 } from 'lucide-react'
 
@@ -45,6 +47,7 @@ export default function DocumentItemsReport({ documents }: { documents: any[] })
     Object.fromEntries(AVAILABLE_COLUMNS.map(c => [c.id, c.defaultWidth]))
   )
   const [showColumnPicker, setShowColumnPicker] = useState(false)
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null)
 
   // Memoized Column List for Settings Menu
   const orderedMenu = useMemo(() => {
@@ -118,13 +121,51 @@ export default function DocumentItemsReport({ documents }: { documents: any[] })
   }, [documents])
 
   const filteredItems = useMemo(() => {
-    return items.filter(item => 
+    let result = items.filter(item => 
       item.description?.toLowerCase().includes(search.toLowerCase()) ||
-      item.vendorName?.toLowerCase().includes(search.toLowerCase()) ||
-      item.docNumber?.toLowerCase().includes(search.toLowerCase()) ||
+      item.vendor?.toLowerCase().includes(search.toLowerCase()) ||
+      item.docNo?.toLowerCase().includes(search.toLowerCase()) ||
       item.baNumber?.toLowerCase().includes(search.toLowerCase())
     )
-  }, [items, search])
+
+    if (sortConfig) {
+      result.sort((a, b) => {
+        let valA = a[sortConfig.key]
+        let valB = b[sortConfig.key]
+
+        // Handle specific types (dates, numbers)
+        if (sortConfig.key === 'date' || sortConfig.key === 'baDate') {
+          const parseDate = (d: string) => {
+            if (!d || d === '-') return 0
+            const parts = d.split('/')
+            return new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0])).getTime()
+          }
+          valA = parseDate(valA)
+          valB = parseDate(valB)
+        } else if (['qty', 'price', 'total'].includes(sortConfig.key)) {
+          valA = Number(valA) || 0
+          valB = Number(valB) || 0
+        } else if (typeof valA === 'string') {
+          valA = valA.toLowerCase()
+          valB = (valB || '').toLowerCase()
+        }
+
+        if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1
+        if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1
+        return 0
+      })
+    }
+
+    return result
+  }, [items, search, sortConfig])
+
+  const requestSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc'
+    if (sortConfig?.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc'
+    }
+    setSortConfig({ key, direction })
+  }
 
   // COLUMN MANAGEMENT ACTIONS
   const toggleColumn = (id: string) => {
@@ -380,13 +421,21 @@ export default function DocumentItemsReport({ documents }: { documents: any[] })
                   return (
                     <th 
                       key={colId} 
-                      className="border border-border px-2 py-3 text-left text-[10px] font-black uppercase tracking-widest overflow-hidden relative"
+                      className={`border border-border px-2 py-3 text-left text-[10px] font-black uppercase tracking-widest overflow-hidden relative group/header select-none ${colId !== 'no' ? 'cursor-pointer hover:bg-slate-300 dark:hover:bg-slate-700' : ''} transition-colors`}
                       style={{ width: `${width}px` }}
+                      onClick={() => colId !== 'no' && requestSort(colId)}
                     >
-                       <div className="truncate pr-4">{config.label}</div>
+                       <div className="flex items-center gap-1.5 truncate pr-2">
+                          <span className="truncate">{config.label}</span>
+                          {sortConfig?.key === colId ? (
+                            sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3 text-primary shrink-0" /> : <ChevronDown className="w-3 h-3 text-primary shrink-0" />
+                          ) : (
+                            colId !== 'no' && <ArrowUpDown className="w-2.5 h-2.5 opacity-0 group-hover/header:opacity-50 shrink-0 transition-opacity" />
+                          )}
+                       </div>
                        {/* RESIZE HANDLE */}
                        <div 
-                         onMouseDown={(e) => onMouseDownResize(colId, e)}
+                         onMouseDown={(e) => { e.stopPropagation(); onMouseDownResize(colId, e); }}
                          className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-primary/50 active:bg-primary transition-colors z-20"
                        />
                     </th>
