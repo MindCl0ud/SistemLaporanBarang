@@ -40,7 +40,14 @@ export default function AccountMappingPage() {
 
   // New row states
   const [showAddRow, setShowAddRow] = useState(false)
-  const [newRow, setNewRow] = useState({ code: '', name: '', division: '', budget: '', subKegiatan: '' })
+  const [newRow, setNewRow] = useState({ 
+    code: '', 
+    name: '', 
+    division: '', 
+    budget: '', 
+    revisedBudget: '', 
+    subKegiatan: '' 
+  })
 
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null)
   const [isImporting, setIsImporting] = useState(false)
@@ -60,14 +67,14 @@ export default function AccountMappingPage() {
     }
   }
 
-  const handleSaveInline = async (code: string, name: string, division: string | null = null, budget: number | null = 0, id: string | null = null, subKegiatan: string | null = null) => {
+  const handleSaveInline = async (code: string, name: string, division: string | null = null, budget: number | null = 0, id: string | null = null, subKegiatan: string | null = null, revisedBudget: number | null = 0) => {
     if (!code || !name) return
     setSavingId(id || 'new')
     try {
-      await upsertAccountMapping(code, name, division || undefined, budget || 0, subKegiatan || undefined, selectedYear)
+      await upsertAccountMapping(code, name, division || undefined, budget || 0, subKegiatan || undefined, selectedYear, revisedBudget || 0)
       setEditingId(null)
       setShowAddRow(false)
-      setNewRow({ code: '', name: '', division: '', budget: '', subKegiatan: '' })
+      setNewRow({ code: '', name: '', division: '', budget: '', revisedBudget: '', subKegiatan: '' })
       fetchMappings()
     } finally {
       setSavingId(null)
@@ -94,8 +101,8 @@ export default function AccountMappingPage() {
   const handleExportTemplate = async () => {
     try {
       const { utils, writeFile } = await import('xlsx')
-      const headers = [["Sub Kegiatan (Opsional)", "Kode Rekening", "Nama Rekening", "Bidang / Division (Opsional)", "Total Pagu / Budget"]]
-      const sample = [["5.01.01.2.01", "5.1.02.01.01.0001", "Belanja Alat Tulis Kantor", "Sekretariat", 5000000]]
+      const headers = [["Sub Kegiatan (Opsional)", "Kode Rekening", "Nama Rekening", "Bidang / Division (Opsional)", "Pagu Awal", "Pagu Perubahan"]]
+      const sample = [["5.01.01.2.01", "5.1.02.01.01.0001", "Belanja Alat Tulis Kantor", "Sekretariat", 5000000, 5500000]]
       const ws = utils.aoa_to_sheet([...headers, ...sample])
       const wb = utils.book_new()
       utils.book_append_sheet(wb, ws, "Template_Master_Rekening")
@@ -131,7 +138,8 @@ export default function AccountMappingPage() {
           code: String(row[1] || "").trim(),
           name: String(row[2] || "").trim(),
           division: String(row[3] || "").trim() || undefined,
-          budget: Number(row[4] || 0)
+          budget: Number(row[4] || 0),
+          revisedBudget: Number(row[5] || 0)
         })
       }
 
@@ -182,7 +190,10 @@ export default function AccountMappingPage() {
     return result
   }, [mappings, search, sortConfig])
 
-  const totalPagu = mappings.reduce((sum, m) => sum + (m.budget || 0), 0)
+  const totalPaguEffective = mappings.reduce((sum, m) => {
+    const effective = (m.revisedBudget && m.revisedBudget > 0) ? m.revisedBudget : (m.budget || 0)
+    return sum + effective
+  }, 0)
 
   const formatCurrency = (amt: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(amt)
@@ -216,8 +227,8 @@ export default function AccountMappingPage() {
               </select>
             </div>
             <div className="flex flex-col border-l-2 border-primary/20 pl-6">
-              <span className="text-[10px] font-black text-muted uppercase tracking-widest">Total Pagu ({selectedYear})</span>
-              <span className="text-2xl font-black text-primary tracking-tighter">{formatCurrency(totalPagu)}</span>
+              <span className="text-[10px] font-black text-muted uppercase tracking-widest">Total Pagu Efektif ({selectedYear})</span>
+              <span className="text-2xl font-black text-primary tracking-tighter">{formatCurrency(totalPaguEffective)}</span>
             </div>
           </div>
         </div>
@@ -281,8 +292,9 @@ export default function AccountMappingPage() {
                   { id: 'subKegiatan', label: 'Sub Kegiatan', width: 'w-48' },
                   { id: 'code', label: 'Kode Belanja', width: 'w-48' },
                   { id: 'name', label: 'Nama Kustom', width: '' },
-                  { id: 'budget', label: 'Total Pagu (Rp)', width: 'w-48', align: 'text-right' },
-                  { id: 'division', label: 'Bidang (Keterangan)', width: 'w-48' },
+                  { id: 'budget', label: 'Pagu Awal', width: 'w-40', align: 'text-right' },
+                  { id: 'revisedBudget', label: 'Pagu Perubahan', width: 'w-40', align: 'text-right' },
+                  { id: 'division', label: 'Bidang', width: 'w-32' },
                 ].map((col) => (
                   <th 
                     key={col.id} 
@@ -349,14 +361,23 @@ export default function AccountMappingPage() {
                       />
                     </td>
                     <td className="px-8 py-4">
-                      <input 
-                        type="number"
-                        className="w-full bg-white dark:bg-input border border-primary/30 rounded-xl px-4 py-2.5 text-sm font-black text-foreground outline-none focus:ring-2 focus:ring-primary shadow-sm text-right"
-                        placeholder="Pagu: 1.000.000"
-                        value={newRow.budget}
-                        onChange={e => setNewRow({...newRow, budget: e.target.value})}
-                      />
-                    </td>
+                       <input 
+                         type="number"
+                         className="w-full bg-white dark:bg-input border border-primary/30 rounded-xl px-4 py-2.5 text-sm font-black text-foreground outline-none focus:ring-2 focus:ring-primary shadow-sm text-right"
+                         placeholder="Awal"
+                         value={newRow.budget}
+                         onChange={e => setNewRow({...newRow, budget: e.target.value})}
+                       />
+                     </td>
+                     <td className="px-8 py-4">
+                       <input 
+                         type="number"
+                         className="w-full bg-white dark:bg-input border border-primary/30 rounded-xl px-4 py-2.5 text-sm font-black text-foreground outline-none focus:ring-2 focus:ring-primary shadow-sm text-right"
+                         placeholder="Perubahan"
+                         value={newRow.revisedBudget}
+                         onChange={e => setNewRow({...newRow, revisedBudget: e.target.value})}
+                       />
+                     </td>
                     <td className="px-8 py-4">
                       <input 
                         className="w-full bg-white dark:bg-input border border-primary/30 rounded-xl px-4 py-2.5 text-sm font-black text-foreground outline-none focus:ring-2 focus:ring-primary shadow-sm"
@@ -368,7 +389,7 @@ export default function AccountMappingPage() {
                     <td className="px-8 py-4">
                       <div className="flex items-center justify-center gap-2">
                         <button 
-                          onClick={() => handleSaveInline(newRow.code, newRow.name, newRow.division, Number(newRow.budget), null, newRow.subKegiatan)}
+                          onClick={() => handleSaveInline(newRow.code, newRow.name, newRow.division, Number(newRow.budget), null, newRow.subKegiatan, Number(newRow.revisedBudget))}
                           disabled={savingId === 'new'}
                           className="p-2.5 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 hover:scale-110 transition-all disabled:opacity-50"
                         >
@@ -388,14 +409,14 @@ export default function AccountMappingPage() {
 
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="px-8 py-20 text-center">
+                  <td colSpan={7} className="px-8 py-20 text-center">
                     <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-4 opacity-20" />
                     <p className="text-xs font-black text-muted uppercase tracking-[0.3em]">Memuat Data Master...</p>
                   </td>
                 </tr>
               ) : sortedAndFiltered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-8 py-20 text-center">
+                  <td colSpan={7} className="px-8 py-20 text-center">
                     <div className="w-16 h-16 bg-muted/10 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-dashed border-border">
                       <ListTree className="w-8 h-8 text-muted" />
                     </div>
@@ -414,7 +435,7 @@ export default function AccountMappingPage() {
                            const val = e.target.value;
                            setMappings(prev => prev.map(p => p.id === m.id ? {...p, subKegiatan: val} : p));
                         }}
-                        onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan)}
+                        onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
                       />
                     </td>
                     <td className="px-8 py-5 font-mono text-[11px] text-primary font-black">
@@ -423,7 +444,6 @@ export default function AccountMappingPage() {
                         value={m.code}
                         onChange={e => {
                            const val = e.target.value;
-                           // Auto-split in existing row too if they paste a combined code
                            const parts = val.split('.');
                            if (parts.length >= 7 && (val.startsWith('5.') || val.startsWith('5.01'))) {
                               const sub = parts.slice(0, 6).join('.');
@@ -433,7 +453,7 @@ export default function AccountMappingPage() {
                               setMappings(prev => prev.map(p => p.id === m.id ? {...p, code: val} : p));
                            }
                         }}
-                        onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan)}
+                        onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
                       />
                     </td>
                     <td className="px-8 py-5">
@@ -443,12 +463,12 @@ export default function AccountMappingPage() {
                             className="flex-1 bg-white dark:bg-input border border-primary rounded-xl px-4 py-2.5 text-sm font-black text-foreground outline-none shadow-lg shadow-primary/5"
                             value={editValue}
                             onChange={e => setEditValue(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && handleSaveInline(m.code, editValue, m.division, m.budget, m.id, m.subKegiatan)}
+                            onKeyDown={e => e.key === 'Enter' && handleSaveInline(m.code, editValue, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
                             onKeyDownCapture={e => e.key === 'Escape' && setEditingId(null)}
                             autoFocus
                           />
                           <button 
-                            onClick={() => handleSaveInline(m.code, editValue, m.division, m.id)}
+                            onClick={() => handleSaveInline(m.code, editValue, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
                             disabled={savingId === m.id}
                             className="p-2.5 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 hover:scale-110 transition-all disabled:opacity-50"
                           >
@@ -494,25 +514,35 @@ export default function AccountMappingPage() {
                                   exit={{ opacity: 0, scale: 0.95, y: 10 }}
                                   className="absolute bottom-full right-0 mb-3 w-80 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-primary/20 p-4 z-[100] backdrop-blur-xl"
                                 >
-                                  <div className="flex items-center justify-between mb-3">
-                                    <h4 className="text-[10px] font-black text-primary uppercase tracking-widest">Riwayat Anggaran ({selectedYear})</h4>
-                                    <button onClick={() => setActiveHistoryId(null)} className="text-muted hover:text-rose-500 transition-colors">
+                                  <div className="flex items-center justify-between mb-4 pb-2 border-b border-border">
+                                    <div className="flex flex-col">
+                                      <h4 className="text-[10px] font-black text-primary uppercase tracking-widest">Riwayat Anggaran</h4>
+                                      <p className="text-[9px] text-muted font-bold">{m.code}</p>
+                                    </div>
+                                    <button onClick={() => setActiveHistoryId(null)} className="p-1.5 bg-muted/10 hover:bg-rose-500/10 hover:text-rose-500 rounded-lg transition-colors">
                                       <X className="w-3.5 h-3.5" />
                                     </button>
                                   </div>
-                                  <div className="space-y-3 max-h-60 overflow-y-auto custom-scrollbar pr-1">
+                                  <div className="space-y-4 max-h-80 overflow-y-auto custom-scrollbar pr-2">
                                     {m.budgetLogs.map((log: any) => (
-                                      <div key={log.id} className="p-2.5 rounded-xl bg-primary/5 border border-primary/10">
-                                        <div className="flex justify-between items-center mb-1">
-                                          <span className="text-[9px] font-bold text-muted">{new Date(log.createdAt).toLocaleString('id-ID')}</span>
-                                          <span className="text-[9px] font-black text-primary uppercase tracking-tighter bg-primary/10 px-1.5 py-0.5 rounded">Revised</span>
+                                      <div key={log.id} className="relative pl-6 border-l-2 border-primary/20 pb-1">
+                                        <div className="absolute -left-[9px] top-0 w-4 h-4 bg-white dark:bg-slate-900 border-2 border-primary rounded-full flex items-center justify-center">
+                                          <div className={`w-1.5 h-1.5 rounded-full ${log.field === 'revisedBudget' ? 'bg-indigo-500' : 'bg-primary'}`} />
                                         </div>
-                                        <div className="flex items-center gap-2 mb-1.5">
-                                          <span className="text-[10px] line-through text-muted/50 font-mono">{formatCurrency(log.oldBudget)}</span>
-                                          <ChevronDown className="w-3 h-3 text-emerald-500 -rotate-90" />
-                                          <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 font-mono">{formatCurrency(log.newBudget)}</span>
+                                        <div className="flex items-center justify-between mb-1">
+                                          <span className="text-[10px] font-black text-foreground uppercase">
+                                            {log.field === 'revisedBudget' ? 'Pagu Perubahan' : 'Pagu Awal'}
+                                          </span>
+                                          <span className="text-[9px] font-bold text-muted">{new Date(log.createdAt).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
                                         </div>
-                                        <p className="text-[10px] text-foreground/70 leading-tight italic">"{log.reason}"</p>
+                                        <div className="flex items-center gap-2 mb-2 p-2 bg-slate-50 dark:bg-black/20 rounded-xl border border-border/50">
+                                          <span className="text-[10px] line-through text-muted/40 font-mono italic">{formatCurrency(log.oldBudget)}</span>
+                                          <ChevronDown className="w-3 h-3 text-emerald-500 -rotate-90 opacity-50" />
+                                          <span className={`text-[11px] font-black font-mono ${log.newBudget > log.oldBudget ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                            {formatCurrency(log.newBudget)}
+                                          </span>
+                                        </div>
+                                        <p className="text-[10px] text-foreground/70 leading-snug italic px-1">"{log.reason}"</p>
                                       </div>
                                     ))}
                                   </div>
@@ -529,7 +559,21 @@ export default function AccountMappingPage() {
                              const newVal = Number(e.target.value);
                              setMappings(prev => prev.map(p => p.id === m.id ? {...p, budget: newVal} : p));
                           }}
-                          onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan)}
+                          onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
+                        />
+                      </div>
+                    </td>
+                    <td className="px-8 py-5">
+                      <div className="flex items-center gap-3 justify-end group/pagu">
+                        <input 
+                          type="number"
+                          className="w-full bg-transparent border border-border group-hover:border-primary/50 group-hover:bg-primary/5 rounded-xl px-4 py-2 text-sm font-black text-foreground text-right outline-none focus:ring-2 focus:ring-primary transition-all tabular-nums"
+                          value={m.revisedBudget || 0}
+                          onChange={(e) => {
+                             const newVal = Number(e.target.value);
+                             setMappings(prev => prev.map(p => p.id === m.id ? {...p, revisedBudget: newVal} : p));
+                          }}
+                          onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
                         />
                       </div>
                     </td>
@@ -543,7 +587,7 @@ export default function AccountMappingPage() {
                              const newVal = e.target.value;
                              setMappings(prev => prev.map(p => p.id === m.id ? {...p, division: newVal} : p));
                           }}
-                          onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id)}
+                          onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
                         />
                       </div>
                     </td>

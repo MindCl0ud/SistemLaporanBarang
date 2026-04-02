@@ -27,7 +27,11 @@ export default function BkuDashboardContent({
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(amount)
   }
 
-  const yearlyPagu = accountMappings.reduce((sum, acc) => sum + (acc.budget || 0), 0)
+  const yearlyPagu = accountMappings.reduce((sum, acc) => {
+    // Gunakan Pagu Perubahan jika ada, jika tidak gunakan Pagu Awal
+    const effectiveBudget = (acc.revisedBudget && acc.revisedBudget > 0) ? acc.revisedBudget : (acc.budget || 0)
+    return sum + effectiveBudget
+  }, 0)
   const remainingPagu = yearlyPagu - stats.yearlyExpense
   const usagePercentage = yearlyPagu > 0 ? (stats.yearlyExpense / yearlyPagu) * 100 : 0
 

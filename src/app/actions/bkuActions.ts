@@ -155,13 +155,14 @@ export async function getAccountMappings(year: number = 2026) {
   })
 }
 
-export async function upsertAccountMapping(code: string, name: string, division?: string, budget?: number, subKegiatan?: string, year: number = 2026) {
+export async function upsertAccountMapping(code: string, name: string, division?: string, budget?: number, subKegiatan?: string, year: number = 2026, revisedBudget?: number) {
   // Find existing to check budget change
   const existing = await prisma.accountCodeMapping.findUnique({
     where: { code_year: { code, year } }
   })
 
-  const newBudget = budget || 0
+  const newBudget = budget || (existing?.budget || 0)
+  const newRevisedBudget = revisedBudget !== undefined ? revisedBudget : (existing?.revisedBudget || 0)
   
   const result = await prisma.accountCodeMapping.upsert({
     where: { code_year: { code, year } },
@@ -169,6 +170,7 @@ export async function upsertAccountMapping(code: string, name: string, division?
       name, 
       division, 
       budget: newBudget, 
+      revisedBudget: newRevisedBudget,
       subKegiatan 
     },
     create: { 
@@ -176,31 +178,62 @@ export async function upsertAccountMapping(code: string, name: string, division?
       name, 
       division, 
       budget: newBudget, 
+      revisedBudget: newRevisedBudget,
       subKegiatan,
       year
     }
   })
 
-  // Log budget change if applicable
-  if (existing && existing.budget !== newBudget) {
-    await prisma.budgetLog.create({
-      data: {
-        mappingId: existing.id,
-        oldBudget: existing.budget || 0,
-        newBudget: newBudget,
-        reason: "Update manual dari Master Rekening"
-      }
-    })
-  } else if (!existing && newBudget !== 0) {
-    // Initial budget log
-     await prisma.budgetLog.create({
-      data: {
-        mappingId: result.id,
-        oldBudget: 0,
-        newBudget: newBudget,
-        reason: "Pagu awal ditambahkan"
-      }
-    })
+  // Log budget changes if applicable
+  if (existing) {
+    // Check Original Budget
+    if (existing.budget !== newBudget) {
+      await prisma.budgetLog.create({
+        data: {
+          mappingId: existing.id,
+          field: "budget",
+          oldBudget: existing.budget || 0,
+          newBudget: newBudget,
+          reason: "Update manual Pagu Awal"
+        }
+      })
+    }
+    // Check Revised Budget
+    if (existing.revisedBudget !== newRevisedBudget) {
+      await prisma.budgetLog.create({
+        data: {
+          mappingId: existing.id,
+          field: "revisedBudget",
+          oldBudget: existing.revisedBudget || 0,
+          newBudget: newRevisedBudget,
+          reason: "Update manual Pagu Perubahan"
+        }
+      })
+    }
+  } else {
+    // Initial budget logs
+    if (newBudget !== 0) {
+      await prisma.budgetLog.create({
+        data: {
+          mappingId: result.id,
+          field: "budget",
+          oldBudget: 0,
+          newBudget: newBudget,
+          reason: "Pagu Awal pertama kali"
+        }
+      })
+    }
+    if (newRevisedBudget !== 0) {
+      await prisma.budgetLog.create({
+        data: {
+          mappingId: result.id,
+          field: "revisedBudget",
+          oldBudget: 0,
+          newBudget: newRevisedBudget,
+          reason: "Pagu Perubahan pertama kali"
+        }
+      })
+    }
   }
 
   revalidatePath('/bku')
@@ -211,11 +244,11 @@ export async function upsertAccountMapping(code: string, name: string, division?
 export async function upsertAccountMappingBulk(data: any[], year: number = 2026) {
   let count = 0
   for (const item of data) {
-    const { code, name, division, budget, subKegiatan } = item
+    const { code, name, division, budget, subKegiatan, revisedBudget } = item
     if (!code || !name) continue
 
     // Reuse existing individual upsert logic to ensure logging
-    await upsertAccountMapping(code, name, division, budget, subKegiatan, year)
+    await upsertAccountMapping(code, name, division, budget, subKegiatan, year, revisedBudget)
     count++
   }
   revalidatePath('/bku')
