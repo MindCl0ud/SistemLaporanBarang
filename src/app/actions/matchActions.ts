@@ -126,7 +126,13 @@ export async function runMatchingEngine(month?: number, year?: number) {
         });
         const tableNo = allMonthBkus.findIndex(b => b.id === bestMatchBku.id) + 1;
         if (tableNo > 0) {
-          bkuNomorKwitansi = `${tableNo} BKU`;
+          const monthNames = [
+            "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+            "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+          ];
+          const monthName = monthNames[bestMatchBku.month - 1] || "";
+          // Format requested: BKU (No BKU) (Bulan BKU)
+          bkuNomorKwitansi = `BKU ${tableNo} ${monthName}`;
         }
       } catch (e) {
         console.error("Gagal menghitung nomor tabel", e);
