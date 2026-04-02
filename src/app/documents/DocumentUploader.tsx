@@ -35,6 +35,45 @@ const loadJsPDF = (): Promise<any> => {
   });
 };
 
+// Helper to compress image on client-side before sending to Gemini
+const compressImage = (file: File, maxWidth = 1280, quality = 0.8): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.src = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(img.src)
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      
+      let width = img.width
+      let height = img.height
+
+      if (width > height) {
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width)
+          width = maxWidth
+        }
+      } else {
+        if (height > maxWidth) {
+          width = Math.round((width * maxWidth) / height)
+          height = maxWidth
+        }
+      }
+
+      canvas.width = width
+      canvas.height = height
+      
+      if (ctx) {
+         ctx.drawImage(img, 0, 0, width, height)
+         resolve(canvas.toDataURL('image/jpeg', quality))
+      } else {
+         reject(new Error("Unable to create canvas context for compression"))
+      }
+    }
+    img.onerror = () => reject(new Error("Failed to load image for compression"))
+  })
+}
+
 export default function DocumentUploader() {
   const [loading, setLoading] = useState(false)
   const [statusText, setStatusText] = useState('')
@@ -64,14 +103,12 @@ export default function DocumentUploader() {
       let aiResult: any = null;
       if (file.type.startsWith('image/')) {
         if (aiEngine === 'gemini') {
-          setStatusText('Menganalisis Gambar dengan Gemini AI...')
-          const base64 = await new Promise<string>((resolve) => {
-            const reader = new FileReader()
-            reader.readAsDataURL(file)
-            reader.onload = () => resolve(reader.result as string)
-          })
+          setStatusText('Mengompresi dan Menganalisis Gambar dengan Gemini AI...')
+          // Compress the image to save payload size and token usage (max width/height 1280px)
+          const compressedBase64 = await compressImage(file, 1280, 0.8)
+          
           const formData = new FormData()
-          formData.append('images', base64)
+          formData.append('images', compressedBase64)
           aiResult = await parseWithGemini(formData)
         } else {
           setStatusText('Menganalisis Gambar (Local OCR)...')
@@ -143,7 +180,8 @@ export default function DocumentUploader() {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: { 'image/*': [], 'application/pdf': ['.pdf'] },
-    multiple: false
+    multiple: false,
+    disabled: loading
   })
 
   return (
