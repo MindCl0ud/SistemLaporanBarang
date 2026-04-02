@@ -171,7 +171,7 @@ export const getDashboardStats = unstable_cache(
       where: { matchRecord: null, expenseTotal: { gt: 0 } }
     })
     
-    const accuracy = totalDocs > 0 ? ((matchedDocs / totalDocs) * 100).toFixed(1) : "0"
+    const accuracy = totalDocs > 0 ? Number(((matchedDocs / totalDocs) * 100).toFixed(1)) : 0
     
     const recentMatches = await prisma.matchRecord.findMany({
       take: 5,
@@ -179,8 +179,16 @@ export const getDashboardStats = unstable_cache(
       include: { bkuTransaction: true, document: true }
     })
 
-    return { totalDocs, matchedDocs, bkuWithoutDocs, accuracy, recentMatches }
+    // AI Pulse Logic
+    let aiPulse = "Sistem siap membantu Anda mencocokkan laporan."
+    if (totalDocs > 0 && bkuWithoutDocs > 0) {
+      aiPulse = `Halo! Saat ini ada ${totalDocs} nota terinput, namun masih ada ${bkuWithoutDocs} transaksi BKU yang belum memiliki bukti dukung. Mari kita selesaikan!`
+    } else if (totalDocs > 0 && bkuWithoutDocs === 0) {
+      aiPulse = "Luar biasa! Semua pengeluaran BKU Anda bulan ini telah memiliki bukti nota yang lengkap."
+    }
+
+    return { totalDocs, matchedDocs, bkuWithoutDocs, accuracy, recentMatches, aiPulse }
   },
   ['dashboard-stats'],
-  { tags: ['documents', 'bku', 'matches'] }
+  { revalidate: 60, tags: ['documents', 'bku', 'matches'] }
 )
