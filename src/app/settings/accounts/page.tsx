@@ -25,57 +25,45 @@ import {
   HelpCircle,
   Circle as CircleIcon,
   AlignJustify,
-  Pencil as PencilIcon
+  Pencil as PencilIcon,
+  Clock
 } from 'lucide-react'
 import { getAccountMappings, upsertAccountMapping, deleteAccountMapping, syncAccountCodesFromBku, upsertAccountMappingBulk } from '@/app/actions/bkuActions'
 import { getBudgetMode, updateBudgetMode } from '@/app/actions/settingsActions'
+import { toast } from 'sonner'
+import * as XLSX from 'xlsx'
 
-// ──────────────────────────────────────────────────────────
-// Column definitions & ResizableHeader (Unified Style)
-// ──────────────────────────────────────────────────────────
-const DEFAULT_WIDTHS: Record<string, number> = {
-  sub:         140,
-  code:        180,
-  name:        400,
-  awal:        130,
-  perubahan:   130,
-  bidang:      130,
-  aksi:        80
+const DEFAULT_WIDTHS = {
+  sub: 120,
+  code: 150,
+  name: 450,
+  awal: 150,
+  perubahan: 150,
+  bidang: 150
 }
 
-function ResizableHeader({ colKey, width, label, onResize, isLast, align = 'text-left', onSort }: {
-  colKey: string; width: number; label: string; align?: string;
-  onResize: (key: string, delta: number) => void; isLast?: boolean;
-  onSort?: (key: string) => void;
-}) {
-  const startX = useRef(0)
-  const dragging = useRef(false)
-
-  const onMouseDown = useCallback((e: React.MouseEvent) => {
+function ResizableHeader({ colKey, width, label, onResize, align = 'text-left', isLast = false }: any) {
+  const onMouseDown = (e: React.MouseEvent) => {
     e.preventDefault()
-    startX.current = e.clientX
-    dragging.current = true
-    const onMove = (ev: MouseEvent) => {
-      if (!dragging.current) return
-      onResize(colKey, ev.clientX - startX.current)
-      startX.current = ev.clientX
+    const startX = e.pageX
+    
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const delta = moveEvent.pageX - startX
+      onResize(colKey, delta)
     }
-    const onUp = () => {
-      dragging.current = false
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
+    
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
     }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-  }, [colKey, onResize])
+    
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+  }
 
   return (
-    <th style={{ width, minWidth: 40 }}
-      className={`relative bg-input border-r border-b border-border ${align} text-[11px] font-semibold text-foreground/70 uppercase tracking-wide select-none group/h`}>
-      <div 
-        className="px-3 py-2.5 truncate flex items-center gap-2 cursor-pointer hover:text-primary transition-colors"
-        onClick={() => onSort?.(colKey)}
-      >
+    <th className={`bg-input border-r border-b border-border p-0 relative transition-colors hover:bg-slate-100 dark:hover:bg-primary/5 group/h min-w-[${width}px]`} style={{ width }}>
+      <div className={`px-4 py-3 text-[11px] font-black text-foreground/70 uppercase tracking-wider ${align}`}>
         {label}
       </div>
       {!isLast && (
@@ -115,7 +103,7 @@ export default function AccountMappingPage() {
   })
 
   // Popover/Modal states
-  const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null)
+  const [historyData, setHistoryData] = useState<any | null>(null)
   const [isImporting, setIsImporting] = useState(false)
   
   // App-wide Settings
@@ -160,7 +148,7 @@ export default function AccountMappingPage() {
     }
   }
 
-  const handleSaveInline = async (code: string, name: string, division: string | null = null, budget: number | null = 0, id: string | null = null, subKegiatan: string | null = null, revisedBudget: number | null = 0) => {
+  const handleSaveInline = async (code: string, name: string, division?: string | null, budget?: number | null, id?: string, subKegiatan?: string | null, revisedBudget?: number | null) => {
     if (!code || !name) return
     setSavingId(id || 'new')
     try {
@@ -195,107 +183,84 @@ export default function AccountMappingPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Hapus pemetaan ini?')) return
     await deleteAccountMapping(id)
-    fetchMappings()
+    setMappings(prev => prev.filter(m => m.id !== id))
   }
 
   const handleSync = async () => {
     setLoading(true)
     try {
-      const { count } = await syncAccountCodesFromBku(selectedYear)
-      alert(`Berhasil sinkronisasi ${count} kode rekening baru untuk tahun ${selectedYear}!`)
+      const res = await syncAccountCodesFromBku(selectedYear)
+      toast.success(`${res.count} rekening baru disinkronkan`)
       fetchMappings()
     } finally {
       setLoading(false)
     }
   }
 
-  const handleExportTemplate = async () => {
-    try {
-      const { utils, writeFile } = await import('xlsx')
-      const headers = [["Sub Kegiatan (Opsional)", "Kode Rekening", "Nama Rekening", "Bidang / Division (Opsional)", "Pagu Awal", "Pagu Perubahan"]]
-      const sample = [["5.01.01.2.01", "5.1.02.01.01.0001", "Belanja Alat Tulis Kantor", "Sekretariat", 5000000, 5500000]]
-      const ws = utils.aoa_to_sheet([...headers, ...sample])
-      const wb = utils.book_new()
-      utils.book_append_sheet(wb, ws, "Template_Master_Rekening")
-      writeFile(wb, `Template_Master_Rekening_${selectedYear}.xlsx`)
-    } catch (e) {
-      alert("Gagal mengunduh template.")
-    }
+  const handleExportTemplate = () => {
+    const ws = XLSX.utils.json_to_sheet([
+      { "Sub Kegiatan": "5.01.01.2.02.5", "Kode Rekening": "1.1.03.07.5.1.02.02.01.0090", "Uraian": "Bayar biaya...", "Pagu Awal": 1000000, "Pagu Perubahan": 0, "Bidang": "Sekretariat" }
+    ])
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "Template")
+    XLSX.writeFile(wb, `Template_Master_Rekening_${selectedYear}.xlsx`)
   }
 
   const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     
-    setLoading(true)
     setIsImporting(true)
-
-    try {
-      const { read, utils } = await import('xlsx')
-      const buffer = await file.arrayBuffer()
-      const wb = read(buffer, { type: 'array' })
-      const ws = wb.Sheets[wb.SheetNames[0]]
-      const rows = utils.sheet_to_json(ws, { header: 1 }) as any[][]
-      
-      const parsedData = []
-      for (let i = 1; i < rows.length; i++) {
-        const row = rows[i]
-        if (!row || row.length < 2) continue
+    const reader = new FileReader()
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result
+        const wb = XLSX.read(bstr, { type: 'binary' })
+        const wsname = wb.SheetNames[0]
+        const ws = wb.Sheets[wsname]
+        const data = XLSX.utils.sheet_to_json(ws)
         
-        parsedData.push({
-          subKegiatan: String(row[0] || "").trim() || undefined,
-          code: String(row[1] || "").trim(),
-          name: String(row[2] || "").trim(),
-          division: String(row[3] || "").trim() || undefined,
-          budget: Number(row[4] || 0),
-          revisedBudget: Number(row[5] || 0)
-        })
-      }
+        const prepared = data.map((row: any) => ({
+          subKegiatan: row["Sub Kegiatan"]?.toString(),
+          code: row["Kode Rekening"]?.toString(),
+          name: row["Uraian"]?.toString(),
+          budget: Number(row["Pagu Awal"] || 0),
+          revisedBudget: Number(row["Pagu Perubahan"] || 0),
+          division: row["Bidang"]?.toString()
+        }))
 
-      if (parsedData.length > 0) {
-        const { count } = await upsertAccountMappingBulk(parsedData, selectedYear)
-        alert(`Berhasil mengimpor ${count} baris data ke tahun ${selectedYear}!`)
+        await upsertAccountMappingBulk(prepared, selectedYear)
+        toast.success("Impor data berhasil")
         fetchMappings()
-      } else {
-        alert("Tidak ada data valid ditemukan di file Excel.")
+      } catch (err) {
+        toast.error("Gagal mengimpor file")
+        console.error(err)
+      } finally {
+        setIsImporting(false)
       }
-    } catch (error) {
-      console.error(error)
-      alert("Gagal mengimpor file Excel. Pastikan format kolom benar.")
-    } finally {
-      setIsImporting(false)
-      setLoading(false)
-      if (e.target) e.target.value = ''
     }
-  }
-
-  const requestSort = (key: string) => {
-    let direction: 'asc' | 'desc' = 'asc'
-    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc'
-    }
-    setSortConfig({ key, direction })
+    reader.readAsBinaryString(file)
   }
 
   const sortedAndFiltered = useMemo(() => {
-    let result = mappings.filter(m => 
-      m.code.toLowerCase().includes(search.toLowerCase()) || 
-      m.name.toLowerCase().includes(search.toLowerCase()) ||
-      m.division?.toLowerCase().includes(search.toLowerCase()) ||
-      m.subKegiatan?.toLowerCase().includes(search.toLowerCase())
-    )
-
+    let result = [...mappings]
+    if (search) {
+      const s = search.toLowerCase()
+      result = result.filter(m => 
+        m.code.toLowerCase().includes(s) || 
+        m.name.toLowerCase().includes(s) ||
+        m.subKegiatan?.toLowerCase().includes(s) ||
+        m.division?.toLowerCase().includes(s)
+      )
+    }
     if (sortConfig) {
       result.sort((a, b) => {
-        const valA = a[sortConfig.key] || (typeof a[sortConfig.key] === 'number' ? 0 : '')
-        const valB = b[sortConfig.key] || (typeof b[sortConfig.key] === 'number' ? 0 : '')
-
-        if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1
-        if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1
+        const aVal = a[sortConfig.key] || ''
+        const bVal = b[sortConfig.key] || ''
+        if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1
+        if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1
         return 0
       })
-    } else {
-       result.sort((a, b) => a.code.localeCompare(b.code))
     }
     return result
   }, [mappings, search, sortConfig])
@@ -497,76 +462,71 @@ export default function AccountMappingPage() {
                   <motion.tr 
                     initial={{ opacity: 0, height: 0 }} 
                     animate={{ opacity: 1, height: 'auto' }} 
-                    className="bg-primary/5 group"
+                    exit={{ opacity: 0, height: 0 }}
+                    className="bg-primary/5 border-b-2 border-primary"
                   >
-                    <td className={`${cellBase} text-center opacity-30`}>+</td>
+                    <td className={`${cellBase} text-center font-mono font-black text-primary`}>NEW</td>
                     <td className={cellBase}>
                       <input 
-                        className="w-full bg-white dark:bg-input border border-primary/30 rounded-lg px-2 py-1.5 text-xs font-bold font-mono text-foreground outline-none focus:ring-1 focus:ring-primary shadow-sm"
+                        className="w-full bg-white dark:bg-input border border-primary/30 rounded px-1 outline-none font-mono text-[10px]"
                         placeholder="5.01..."
                         value={newRow.subKegiatan}
                         onChange={e => setNewRow({...newRow, subKegiatan: e.target.value})}
-                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.code, newRow.name, newRow.division, Number(newRow.budget), null, newRow.subKegiatan, Number(newRow.revisedBudget))}
+                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.code, newRow.name, newRow.division, Number(newRow.budget), undefined, newRow.subKegiatan, Number(newRow.revisedBudget))}
                       />
                     </td>
                     <td className={cellBase}>
                       <input 
-                        className="w-full bg-white dark:bg-input border border-primary/30 rounded-lg px-2 py-1.5 font-mono text-[11px] font-black text-foreground outline-none focus:ring-1 focus:ring-primary shadow-sm"
+                        className="w-full bg-white dark:bg-input border border-primary/30 rounded px-1 outline-none font-mono text-[11px]"
                         placeholder="1.1.0..."
                         value={newRow.code}
                         onChange={e => setNewRow({...newRow, code: e.target.value})}
-                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.code, newRow.name, newRow.division, Number(newRow.budget), null, newRow.subKegiatan, Number(newRow.revisedBudget))}
+                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.code, newRow.name, newRow.division, Number(newRow.budget), undefined, newRow.subKegiatan, Number(newRow.revisedBudget))}
                       />
                     </td>
                     <td className={cellBase}>
-                      <textarea 
-                        className="w-full bg-white dark:bg-input border border-primary/30 rounded-lg px-2 py-1.5 text-xs font-bold text-foreground outline-none focus:ring-1 focus:ring-primary shadow-sm resize-none overflow-hidden min-h-[2.5rem]"
-                        placeholder="Nama Rekening..."
-                        rows={2}
+                      <input 
+                        className="w-full bg-white dark:bg-input border border-primary/30 rounded px-1 outline-none font-bold"
+                        placeholder="Uraian baru..."
                         value={newRow.name}
-                        onChange={e => {
-                          setNewRow({...newRow, name: e.target.value});
-                          // Auto-resize
-                          e.target.style.height = 'auto';
-                          e.target.style.height = e.target.scrollHeight + 'px';
-                        }}
+                        onChange={e => setNewRow({...newRow, name: e.target.value})}
+                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.code, newRow.name, newRow.division, Number(newRow.budget), undefined, newRow.subKegiatan, Number(newRow.revisedBudget))}
                       />
                     </td>
                     <td className={cellBase}>
                       <input 
                         type="number"
-                        className="w-full bg-white dark:bg-input border border-primary/30 rounded-lg px-2 py-1.5 text-xs font-black text-foreground outline-none focus:ring-1 focus:ring-primary text-right shadow-sm"
+                        className="w-full bg-white dark:bg-input border border-primary/30 rounded px-1 outline-none text-right font-mono"
                         placeholder="0"
                         value={newRow.budget}
                         onChange={e => setNewRow({...newRow, budget: e.target.value})}
-                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.code, newRow.name, newRow.division, Number(newRow.budget), null, newRow.subKegiatan, Number(newRow.revisedBudget))}
+                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.code, newRow.name, newRow.division, Number(newRow.budget), undefined, newRow.subKegiatan, Number(newRow.revisedBudget))}
                       />
                     </td>
                     <td className={cellBase}>
                       <input 
                         type="number"
-                        className="w-full bg-white dark:bg-input border border-primary/30 rounded-lg px-2 py-1.5 text-xs font-black text-foreground outline-none focus:ring-1 focus:ring-primary text-right shadow-sm"
+                        className="w-full bg-white dark:bg-input border border-primary/30 rounded px-1 outline-none text-right font-mono"
                         placeholder="0"
                         value={newRow.revisedBudget}
                         onChange={e => setNewRow({...newRow, revisedBudget: e.target.value})}
-                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.code, newRow.name, newRow.division, Number(newRow.budget), null, newRow.subKegiatan, Number(newRow.revisedBudget))}
+                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.code, newRow.name, newRow.division, Number(newRow.budget), undefined, newRow.subKegiatan, Number(newRow.revisedBudget))}
                       />
                     </td>
                     <td className={cellBase}>
                       <input 
-                        className="w-full bg-white dark:bg-input border border-primary/30 rounded-lg px-2 py-1.5 text-xs font-bold text-foreground outline-none focus:ring-1 focus:ring-primary shadow-sm"
+                        className="w-full bg-white dark:bg-input border border-primary/30 rounded px-1 outline-none"
                         placeholder="Sekretariat..."
                         value={newRow.division}
                         onChange={e => setNewRow({...newRow, division: e.target.value})}
-                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.code, newRow.name, newRow.division, Number(newRow.budget), null, newRow.subKegiatan, Number(newRow.revisedBudget))}
+                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.code, newRow.name, newRow.division, Number(newRow.budget), undefined, newRow.subKegiatan, Number(newRow.revisedBudget))}
                       />
                     </td>
                     <td className={cellBase}>
-                      <div className="flex items-center justify-center gap-1.5">
+                      <div className="flex items-center justify-center gap-1">
                         <button 
-                          onClick={() => handleSaveInline(newRow.code, newRow.name, newRow.division, Number(newRow.budget), null, newRow.subKegiatan, Number(newRow.revisedBudget))}
-                          disabled={savingId === 'new'}
-                          className="p-1.5 bg-primary text-white rounded-lg shadow-sm hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
+                          onClick={() => handleSaveInline(newRow.code, newRow.name, newRow.division, Number(newRow.budget), undefined, newRow.subKegiatan, Number(newRow.revisedBudget))}
+                          className="p-1.5 bg-primary text-white rounded-lg shadow-sm hover:scale-110 transition-all font-black"
                         >
                           <Check className="w-3.5 h-3.5" />
                         </button>
@@ -634,21 +594,21 @@ export default function AccountMappingPage() {
                             value={editValue}
                             rows={Math.max(1, editValue.split('\n').length)}
                             onChange={e => {
-                              setEditValue(e.target.value);
-                              e.target.style.height = 'auto';
-                              e.target.style.height = e.target.scrollHeight + 'px';
+                               setEditValue(e.target.value);
+                               e.target.style.height = 'auto';
+                               e.target.style.height = e.target.scrollHeight + 'px';
                             }}
                             onKeyDown={e => {
-                              if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault();
-                                handleSaveInline(m.code, editValue, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget);
-                              }
-                              if (e.key === 'Escape') setEditingId(null);
+                               if (e.key === 'Enter' && !e.shiftKey) {
+                                 e.preventDefault();
+                                 handleSaveInline(m.code, editValue, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget);
+                               }
+                               if (e.key === 'Escape') setEditingId(null);
                             }}
                             autoFocus
                             onFocus={e => {
-                              e.target.style.height = 'auto';
-                              e.target.style.height = e.target.scrollHeight + 'px';
+                               e.target.style.height = 'auto';
+                               e.target.style.height = e.target.scrollHeight + 'px';
                             }}
                           />
                           <div className="flex items-center justify-end gap-1">
@@ -688,57 +648,12 @@ export default function AccountMappingPage() {
                             onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
                             onKeyDown={e => e.key === 'Enter' && handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
                           />
-                          <div className="relative">
                             <button 
-                              onClick={() => setActiveHistoryId(activeHistoryId === m.id ? null : m.id)}
-                              className={`p-1 rounded bg-primary/5 hover:bg-primary/10 transition-colors ${activeHistoryId === m.id ? 'text-primary bg-primary/20' : 'text-slate-400 opacity-0 group-hover/p:opacity-100'}`}
+                              onClick={() => setHistoryData(m)}
+                              className={`p-1 rounded bg-primary/5 hover:bg-primary/10 transition-colors ${savedId === m.id ? 'text-primary bg-primary/20' : 'text-slate-400 opacity-0 group-hover/p:opacity-100'}`}
                             >
                               <RefreshCw className="w-3 h-3" />
                             </button>
-                            <AnimatePresence>
-                              {activeHistoryId === m.id && (
-                                <motion.div 
-                                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                                  exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                                  className="absolute bottom-full right-0 mb-3 w-80 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-primary/20 p-4 z-[100] backdrop-blur-xl"
-                                >
-                                  <div className="flex items-center justify-between mb-4 pb-2 border-b border-border">
-                                    <div className="flex flex-col text-left">
-                                      <h4 className="text-[10px] font-black text-primary uppercase tracking-widest">Riwayat Anggaran</h4>
-                                      <p className="text-[9px] text-muted font-bold truncate max-w-[200px]">{m.code}</p>
-                                    </div>
-                                    <button onClick={() => setActiveHistoryId(null)} className="p-1.5 bg-muted/10 rounded-lg">
-                                      <X className="w-3.5 h-3.5" />
-                                    </button>
-                                  </div>
-                                  <div className="space-y-4 max-h-80 overflow-y-auto custom-scrollbar pr-2">
-                                    {m.budgetLogs.map((log: any) => (
-                                      <div key={log.id} className="relative pl-6 border-l-2 border-primary/20 pb-1 text-left">
-                                        <div className="absolute -left-[9px] top-0 w-4 h-4 bg-white dark:bg-slate-900 border-2 border-primary rounded-full flex items-center justify-center">
-                                          <div className={`w-1.5 h-1.5 rounded-full ${log.field === 'revisedBudget' ? 'bg-indigo-500' : 'bg-primary'}`} />
-                                        </div>
-                                        <div className="flex items-center justify-between mb-1">
-                                          <span className="text-[10px] font-black text-foreground uppercase tracking-tight">
-                                            {log.field === 'revisedBudget' ? 'Pagu Perubahan' : 'Pagu Awal'}
-                                          </span>
-                                          <span className="text-[8px] font-bold text-muted">{new Date(log.createdAt).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2 mb-2 p-2 bg-slate-50 dark:bg-black/20 rounded-xl border border-border/50">
-                                          <span className="text-[10px] line-through text-muted/30 font-mono italic">Rp{formatCurrency(log.oldBudget)}</span>
-                                          <ChevronDown className="w-3 h-3 text-emerald-500 -rotate-90 opacity-50" />
-                                          <span className={`text-[11px] font-black font-mono ${log.newBudget > log.oldBudget ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                            Rp{formatCurrency(log.newBudget)}
-                                          </span>
-                                        </div>
-                                        <p className="text-[9px] text-foreground/70 leading-snug italic px-1">"{log.reason}"</p>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-                          </div>
                        </div>
                     </td>
 
@@ -753,6 +668,7 @@ export default function AccountMappingPage() {
                             setMappings(prev => prev.map(p => p.id === m.id ? {...p, revisedBudget: newVal} : p));
                          }}
                          onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
+                         onKeyDown={e => e.key === 'Enter' && handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
                        />
                     </td>
 
@@ -802,6 +718,116 @@ export default function AccountMappingPage() {
           </div>
         </div>
       </div>
+
+      {/* History Modal Overlay */}
+      <AnimatePresence>
+        {historyData && (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setHistoryData(null)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-primary/20 overflow-hidden"
+            >
+              <div className="p-8 border-b border-border flex items-center justify-between bg-primary/5">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20">
+                    <Clock className="w-6 h-6 text-primary" />
+                  </div>
+                  <div className="flex flex-col">
+                    <h3 className="text-lg font-black text-foreground uppercase tracking-tight">Riwayat Anggaran</h3>
+                    <p className="text-xs text-muted font-bold tracking-widest uppercase opacity-50">{historyData.code}</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setHistoryData(null)}
+                  className="p-3 bg-muted/10 hover:bg-muted/20 rounded-2xl transition-all active:scale-95"
+                >
+                  <X className="w-5 h-5 text-muted-foreground" />
+                </button>
+              </div>
+
+              <div className="p-8 max-h-[60vh] overflow-y-auto custom-scrollbar space-y-6">
+                {historyData.name && (
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-black/20 border border-border/50 mb-6 font-medium text-xs text-foreground/80 leading-relaxed italic">
+                    "{historyData.name}"
+                  </div>
+                )}
+                
+                {historyData.budgetLogs?.length > 0 ? (
+                  <div className="space-y-8 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-primary/10">
+                    {historyData.budgetLogs.map((log: any) => (
+                      <div key={log.id} className="relative pl-10 group">
+                        <div className="absolute left-0 top-1 w-6 h-6 bg-white dark:bg-slate-900 border-2 border-primary rounded-full flex items-center justify-center z-10 shadow-sm group-hover:scale-110 transition-transform">
+                          <div className={`w-2 h-2 rounded-full ${log.field === 'revisedBudget' ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]' : 'bg-primary shadow-[0_0_8px_rgba(59,130,246,0.5)]'}`} />
+                        </div>
+                        
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center justify-between">
+                            <span className={`text-[10px] font-black uppercase tracking-widest ${log.field === 'revisedBudget' ? 'text-indigo-500' : 'text-primary'}`}>
+                              {log.field === 'revisedBudget' ? 'Update Pagu Perubahan' : 'Update Pagu Awal'}
+                            </span>
+                            <span className="text-[10px] font-bold text-muted tabular-nums">
+                              {new Date(log.createdAt).toLocaleString('id-ID', { 
+                                day: '2-digit', 
+                                month: 'long', 
+                                year: 'numeric',
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                              })}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-black/40 rounded-2xl border border-border/50">
+                            <div className="flex flex-col">
+                              <span className="text-[8px] font-black text-muted uppercase tracking-widest mb-1">Sebelum</span>
+                              <span className="text-xs font-mono text-muted/50 line-through">Rp{formatCurrency(log.oldBudget)}</span>
+                            </div>
+                            <ChevronDown className="w-4 h-4 text-emerald-500 -rotate-90 opacity-40 shrink-0" />
+                            <div className="flex flex-col">
+                              <span className="text-[8px] font-black text-primary uppercase tracking-widest mb-1">Sesudah</span>
+                              <span className={`text-sm font-black font-mono tracking-tight ${log.newBudget > log.oldBudget ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                Rp{formatCurrency(log.newBudget)}
+                              </span>
+                            </div>
+                          </div>
+
+                          {log.reason && (
+                            <p className="text-[11px] text-foreground/70 font-medium italic pl-1 leading-relaxed opacity-80">
+                              Laporan: "{log.reason}"
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-20 text-center">
+                    <Clock className="w-12 h-12 text-muted/20 mx-auto mb-4" />
+                    <p className="text-sm font-bold text-muted uppercase tracking-widest">Belum ada riwayat aktivitas</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-8 bg-slate-50 dark:bg-black/20 border-t border-border mt-auto">
+                 <button 
+                  onClick={() => setHistoryData(null)}
+                  className="w-full py-4 bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all active:scale-95"
+                 >
+                   Selesai Membaca
+                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
