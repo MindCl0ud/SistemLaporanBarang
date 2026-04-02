@@ -91,8 +91,15 @@ export default function BkuList({ initialRecords, openingBalance = 0 }: {
   const [colWidths, setColWidths] = useState<Record<string, number>>(DEFAULT_WIDTHS)
 
   const handleDelete = async (id: string) => {
+    if (!confirm("Hapus data BKU ini?")) return
     setDeletingId(id)
-    try { await deleteBkuRecord(id) } finally { setDeletingId(null) }
+    try { 
+      await deleteBkuRecord(id)
+      // Notify components to re-fetch
+      window.dispatchEvent(new CustomEvent('bku-data-changed'))
+    } finally { 
+      setDeletingId(null) 
+    }
   }
 
   const handleResize = useCallback((key: string, delta: number) => {

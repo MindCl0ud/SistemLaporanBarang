@@ -14,6 +14,8 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
     setLoading(true)
     try {
       await addBkuRecord(formData)
+      // Notify components to re-fetch
+      window.dispatchEvent(new CustomEvent('bku-data-changed'))
       alert("Berhasil menambahkan 1 data BKU manual (Otomatis masuk ke periode yang sesuai).")
       formRef.current?.reset()
     } catch (e) {
@@ -106,6 +108,8 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
         }
         
         alert(`Berhasil mengimpor ${addedTotal} data dari ${parsedData.length} baris.`)
+        // Notify components to re-fetch
+        window.dispatchEvent(new CustomEvent('bku-data-changed'))
       } else {
         alert("Tidak ada baris data valid ditemukan di file Excel.")
       }

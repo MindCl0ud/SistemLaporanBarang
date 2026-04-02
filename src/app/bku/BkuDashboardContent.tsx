@@ -1,58 +1,145 @@
-'use client'
-
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import BkuForm from "./BkuForm"
 import BkuList from "./BkuList"
 import BkuAccountSummary from "./BkuAccountSummary"
-import { Plus, TrendingUp, CalendarDays, List, PieChart, ShieldCheck } from "lucide-react"
-import { useEffect, useMemo } from 'react'
+import { Plus, TrendingUp, CalendarDays, List, PieChart, ShieldCheck, Loader2 } from "lucide-react"
 import { getBudgetMode } from '@/app/actions/settingsActions'
+import { getBkuRecords, getBkuComparison, getYearlyBkuRecords, getAccountMappings } from "@/app/actions/bkuActions"
 
 export default function BkuDashboardContent({ 
   month, 
   year, 
-  records, 
-  stats, 
-  yearlyRecords,
-  accountMappings 
+  records: initialRecords, 
+  stats: initialStats, 
+  yearlyRecords: initialYearlyRecords,
+  accountMappings: initialAccountMappings 
 }: { 
   month: number, 
   year: number,
-  records: any[],
-  stats: any,
-  yearlyRecords: any[],
-  accountMappings: any[]
+  records?: any[],
+  stats?: any,
+  yearlyRecords?: any[],
+  accountMappings?: any[]
 }) {
   const [activeTab, setActiveTab] = useState<'transactions' | 'summary'>('transactions')
   const [useRevisedBudgetMode, setUseRevisedBudgetMode] = useState(false)
+  
+  // Data States
+  const [records, setRecords] = useState<any[]>(initialRecords || [])
+  const [stats, setStats] = useState<any>(initialStats || null)
+  const [yearlyRecords, setYearlyRecords] = useState<any[]>(initialYearlyRecords || [])
+  const [accountMappings, setAccountMappings] = useState<any[]>(initialAccountMappings || [])
+  const [isSyncing, setIsSyncing] = useState(false)
 
+  // Load from Cache on mount or period change
   useEffect(() => {
-    const fetchSettings = async () => {
-      const mode = await getBudgetMode()
-      setUseRevisedBudgetMode(mode)
+    const cacheKey = `bku_cache_${month}_${year}`
+    const saved = localStorage.getItem(cacheKey)
+    if (saved && !initialRecords) {
+      try {
+        const parsed = JSON.parse(saved)
+        setRecords(parsed.records || [])
+        setStats(parsed.stats || null)
+        setYearlyRecords(parsed.yearlyRecords || [])
+        setAccountMappings(parsed.accountMappings || [])
+      } catch (e) {
+        console.error("Failed to parse BKU cache", e)
+      }
     }
-    fetchSettings()
-  }, [])
+
+    const fetchData = async () => {
+      setIsSyncing(true)
+      try {
+        const [r, s, y, a, mode] = await Promise.all([
+          getBkuRecords(month, year),
+          getBkuComparison(month, year),
+          getYearlyBkuRecords(year),
+          getAccountMappings(),
+          getBudgetMode()
+        ])
+        
+        setRecords(r)
+        setStats(s)
+        setYearlyRecords(y)
+        setAccountMappings(a)
+        setUseRevisedBudgetMode(mode)
+
+        // Save to cache
+        localStorage.setItem(cacheKey, JSON.stringify({
+          records: r,
+          stats: s,
+          yearlyRecords: y,
+          accountMappings: a
+        }))
+      } catch (e) {
+        console.error("Failed to sync BKU data", e)
+      } finally {
+        setIsSyncing(false)
+      }
+    }
+
+    fetchData()
+
+    // Listen for manual refresh requests
+    window.addEventListener('bku-data-changed', fetchData)
+    
+    // Listen for changes in other tabs or within the same page
+    window.addEventListener("storage", (e) => {
+      if (e.key === cacheKey) fetchData()
+    });
+
+    return () => {
+      window.removeEventListener('bku-data-changed', fetchData)
+    }
+  }, [month, year, initialRecords])
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(amount)
   }
 
-  const yearlyPagu = useMemo(() => {
-    return accountMappings.reduce((sum, acc) => {
-      const revised = acc.revisedBudget || 0
-      const original = acc.budget || 0
-      // Gunakan Pagu Perubahan jika mode aktif DAN nilai > 0
-      const effectiveBudget = (useRevisedBudgetMode && revised > 0) ? revised : original
-      return sum + effectiveBudget
-    }, 0)
-  }, [accountMappings, useRevisedBudgetMode])
+  if (!stats) {
+    return (
+      <div className="w-full min-h-[60vh] flex flex-col items-center justify-center p-8 animate-in fade-in duration-500">
+         <div className="flex flex-col items-center gap-4">
+           <div className="relative flex items-center justify-center">
+             <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full animate-pulse"></div>
+             <div className="w-16 h-16 bg-card border border-border rounded-2xl flex items-center justify-center shadow-xl relative z-10 animate-in zoom-in-95 duration-500">
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+             </div>
+           </div>
+           <div className="text-center">
+              <h3 className="text-sm font-black text-foreground/80 tracking-tight">
+                Sinkronisasi Data...
+              </h3>
+              <p className="text-[9px] text-muted font-black tracking-[0.2em] uppercase mt-1">
+                Sistem Laporan Terpadu
+              </p>
+           </div>
+         </div>
+      </div>
+    )
+  }
+
+  const yearlyPagu = accountMappings.reduce((sum, acc) => {
+    const revised = acc.revisedBudget || 0
+    const original = acc.budget || 0
+    // Gunakan Pagu Perubahan jika mode aktif DAN nilai > 0
+    const effectiveBudget = (useRevisedBudgetMode && revised > 0) ? revised : original
+    return sum + effectiveBudget
+  }, 0)
 
   const remainingPagu = yearlyPagu - stats.yearlyExpense
   const usagePercentage = yearlyPagu > 0 ? (stats.yearlyExpense / yearlyPagu) * 100 : 0
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-8 animate-in fade-in duration-500 relative">
+      {isSyncing && (
+        <div className="absolute -top-4 right-0 flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full animate-pulse">
+           <Loader2 className="w-3 h-3 text-primary animate-spin" />
+           <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinkronisasi...</span>
+        </div>
+      )}
+
       {/* Top Row: Form + Account Summary on Left, Stats on Right */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         

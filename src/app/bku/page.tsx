@@ -1,7 +1,6 @@
 import BkuFilter from "./BkuFilter"
 import BkuDashboardContent from "./BkuDashboardContent"
 import { BookOpen } from "lucide-react"
-import { getBkuRecords, getBkuComparison, getYearlyBkuRecords, getAccountMappings } from "@/app/actions/bkuActions"
 
 export const dynamic = 'force-dynamic'
 
@@ -14,12 +13,6 @@ export default async function BkuPage({
   const currentDate = new Date()
   const currentMonth = awaitedParams.month ? parseInt(awaitedParams.month) : currentDate.getMonth() + 1
   const currentYear = awaitedParams.year ? parseInt(awaitedParams.year) : currentDate.getFullYear()
-
-  // Fetch data on server
-  const records = await getBkuRecords(currentMonth, currentYear)
-  const stats = await getBkuComparison(currentMonth, currentYear)
-  const yearlyRecords = await getYearlyBkuRecords(currentYear)
-  const accountMappings = await getAccountMappings()
 
   return (
     <div className="w-full max-w-[1800px] mx-auto px-4 space-y-8 animate-in fade-in duration-700">
@@ -38,10 +31,6 @@ export default async function BkuPage({
       <BkuDashboardContent 
         month={currentMonth} 
         year={currentYear} 
-        records={records}
-        stats={stats}
-        yearlyRecords={yearlyRecords}
-        accountMappings={accountMappings}
       />
     </div>
   )
