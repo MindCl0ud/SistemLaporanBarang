@@ -18,20 +18,26 @@ export default function BkuFilter({ currentMonth, currentYear }: { currentMonth:
 
   // Sync URL state with local storage to persist session
   useEffect(() => {
-    const hasParams = searchParams.has('month') && searchParams.has('year')
-    const savedMonth = localStorage.getItem('bku_month')
-    const savedYear = localStorage.getItem('bku_year')
+    const month = searchParams.get('month')
+    const year = searchParams.get('year')
+    const hasParams = !!(month && year)
 
-    if (!hasParams && savedMonth && savedYear) {
-      // If URL has no params but we have a saved session, apply it
-      const params = new URLSearchParams(searchParams.toString())
-      params.set('month', savedMonth)
-      params.set('year', savedYear)
-      router.replace(`/bku?${params.toString()}`)
-    } else if (hasParams) {
+    if (hasParams) {
       // If URL has params, sync them to local storage
-      localStorage.setItem('bku_month', searchParams.get('month')!)
-      localStorage.setItem('bku_year', searchParams.get('year')!)
+      localStorage.setItem('bku_month', month)
+      localStorage.setItem('bku_year', year)
+    } else {
+      // If URL has no params but we have a saved session, apply it
+      const savedMonth = localStorage.getItem('bku_month')
+      const savedYear = localStorage.getItem('bku_year')
+      
+      if (savedMonth && savedYear) {
+        const params = new URLSearchParams(searchParams.toString())
+        params.set('month', savedMonth)
+        params.set('year', savedYear)
+        // Use replace but avoid it if we're already on the way
+        router.replace(`/bku?${params.toString()}`)
+      }
     }
   }, [searchParams, router])
 

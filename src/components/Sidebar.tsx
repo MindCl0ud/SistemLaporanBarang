@@ -34,12 +34,20 @@ export default function Sidebar() {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [bkuParams, setBkuParams] = useState<{ month?: string; year?: string }>({});
   const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     setMounted(true);
     const saved = localStorage.getItem("sidebarCollapsed");
     if (saved) setIsCollapsed(JSON.parse(saved));
+
+    // Get saved BKU filters
+    const savedMonth = localStorage.getItem("bku_month");
+    const savedYear = localStorage.getItem("bku_year");
+    if (savedMonth && savedYear) {
+      setBkuParams({ month: savedMonth, year: savedYear });
+    }
   }, []);
 
   const toggleSidebar = () => {
@@ -87,7 +95,10 @@ export default function Sidebar() {
           return (
             <Link
               key={item.name}
-              href={item.href}
+              href={item.href === "/bku" && bkuParams.month && bkuParams.year 
+                ? `/bku?month=${bkuParams.month}&year=${bkuParams.year}` 
+                : item.href
+              }
               className={`flex items-center gap-3 px-4 py-1.5 rounded-xl transition-all duration-300 relative group ${
                 isActive ? "text-indigo-700 dark:text-white font-black" : "text-muted hover:text-primary dark:hover:text-white"
               }`}
