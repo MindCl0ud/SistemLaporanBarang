@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { PieChart, ListTree } from 'lucide-react'
+import { PieChart, ListTree, Search, ArrowRight } from 'lucide-react'
 
 // Helper function to extract names from descriptions
 function extractName(description: string, isFull: boolean): string {
@@ -54,6 +54,7 @@ export default function BkuAccountSummary({
   yearlyRecords: any[], 
   accountMappings: any[] 
 }) {
+  const [search, setSearch] = useState('')
   // Aggregation level: 'full' (all segments) or 'prefix' (first 6 segments)
   const [aggrLevel, setAggrLevel] = useState<'prefix' | 'full'>('prefix')
 
@@ -113,7 +114,16 @@ export default function BkuAccountSummary({
     
     return Array.from(map.entries())
       .sort((a,b) => b[1].yearlyTotal - a[1].yearlyTotal) // Sort descending by yearly amount
-  }, [monthlyRecords, yearlyRecords, aggrLevel])
+  }, [monthlyRecords, yearlyRecords, aggrLevel, mappingMap])
+
+  const filteredSummary = useMemo(() => {
+    if (!search.trim()) return summary;
+    const lowerSearch = search.toLowerCase();
+    return summary.filter(([code, data]) => 
+      code.toLowerCase().includes(lowerSearch) || 
+      data.name.toLowerCase().includes(lowerSearch)
+    );
+  }, [summary, search])
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount)
@@ -126,70 +136,114 @@ export default function BkuAccountSummary({
   )
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-2">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-          <PieChart className="w-5 h-5 text-primary" />
-          Pengeluaran per Rekening
-        </h3>
-        <div className="flex bg-input/40 border border-border p-1 rounded-lg">
-           <button 
-             onClick={() => setAggrLevel('prefix')}
-             className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-md transition-all ${aggrLevel === 'prefix' ? 'bg-primary text-white shadow-sm' : 'text-muted hover:text-foreground'}`}
-           >
-             Agregat Sub-Kegiatan
-           </button>
-           <button 
-             onClick={() => setAggrLevel('full')}
-             className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-md transition-all ${aggrLevel === 'full' ? 'bg-primary text-white shadow-sm' : 'text-muted hover:text-foreground'}`}
-           >
-             Full Detail
-           </button>
+    <div className="animate-in fade-in slide-in-from-bottom-2 space-y-6">
+      {/* PREMIUM HEADER & TOOLBAR */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4 bg-slate-100 dark:bg-black/20 border-b-2 border-primary/20 rounded-t-[1.5rem] select-none">
+        <div className="flex items-center gap-3">
+          <div className="w-1.5 h-6 bg-primary rounded-full"></div>
+          <h2 className="text-lg font-black text-foreground tracking-tight flex items-center gap-2">
+            <PieChart className="w-5 h-5 text-primary opacity-60" />
+            Pengeluaran per Rekening
+          </h2>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {/* SEARCH BAR INTEGRATED */}
+          <div className="relative group mr-2">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-primary transition-colors">
+              <Search className="w-3.5 h-3.5" />
+            </div>
+            <input 
+              type="text"
+              placeholder="Cari Rekening..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-48 bg-white dark:bg-card border border-border py-2 pl-9 pr-4 rounded-xl text-[11px] font-black outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary transition-all shadow-sm"
+            />
+          </div>
+
+          <div className="flex bg-white dark:bg-card border border-border p-1 rounded-xl shadow-sm">
+             <button 
+               onClick={() => setAggrLevel('prefix')}
+               className={`px-4 py-1.5 text-[9px] font-black uppercase rounded-lg transition-all ${aggrLevel === 'prefix' ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-100' : 'text-muted hover:text-foreground scale-95'}`}
+             >
+               Agregat Sub-Kegiatan
+             </button>
+             <button 
+               onClick={() => setAggrLevel('full')}
+               className={`px-4 py-1.5 text-[9px] font-black uppercase rounded-lg transition-all ${aggrLevel === 'full' ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-100' : 'text-muted hover:text-foreground scale-95'}`}
+             >
+               Full Detail
+             </button>
+          </div>
         </div>
       </div>
       
-      <div className="overflow-x-auto custom-scrollbar border border-border rounded-2xl bg-card shadow-sm">
-        <table className="w-full text-sm border-collapse min-w-[700px]">
-          <thead>
-            <tr className="bg-slate-50 dark:bg-input/50">
-              <th className="px-4 py-4 text-left text-[10px] uppercase font-black tracking-widest text-muted border-b border-border w-48">Kode Rekening</th>
-              <th className="px-4 py-4 text-left text-[10px] uppercase font-black tracking-widest text-muted border-b border-border">Nama / Uraian Kustom</th>
-              <th className="px-4 py-4 text-right text-[10px] uppercase font-black tracking-widest text-muted border-b border-border w-40">Bulan Ini</th>
-              <th className="px-4 py-4 text-right text-[10px] uppercase font-black tracking-widest text-muted border-b border-border w-40">Total Tahunan</th>
-            </tr>
-          </thead>
-          <tbody>
-            {summary.map(([code, data]) => (
-              <tr key={code} className="hover:bg-primary/5 transition-colors border-b border-border/50 last:border-0 group">
-                <td className="px-4 py-4 font-mono text-[11px] text-primary font-black">
-                  <div className="flex items-center gap-2">
-                    <ListTree className="w-3.5 h-3.5 opacity-50" />
-                    {code}
-                  </div>
-                </td>
-                <td className="px-4 py-4">
-                  <div className="font-bold text-foreground text-sm leading-tight">
-                    {data.name}
-                  </div>
-                </td>
-                <td className="px-4 py-4 text-right font-black text-rose-600 dark:text-rose-400">
-                  {formatCurrency(data.monthlyTotal)}
-                </td>
-                <td className="px-4 py-4 text-right">
-                  <div className="inline-flex flex-col items-end">
-                    <span className="font-black text-rose-700 dark:text-rose-500">{formatCurrency(data.yearlyTotal)}</span>
-                    <div className="w-full h-1 bg-rose-500/10 rounded-full mt-1 overflow-hidden">
-                       <div 
-                         className="h-full bg-rose-500" 
-                         style={{ width: `${Math.min((data.monthlyTotal / data.yearlyTotal) * 100, 100)}%` }}
-                       />
-                    </div>
-                  </div>
-                </td>
+      <div className="border border-border bg-white dark:bg-black/10 overflow-hidden relative shadow-2xl shadow-indigo-500/5 select-none rounded-b-[1.5rem]">
+        <div className="overflow-x-auto custom-scrollbar max-h-[700px]">
+          <table className="w-full text-sm border-collapse min-w-[700px] table-fixed">
+            <thead className="sticky top-0 z-[10] shadow-sm">
+              <tr className="bg-slate-200 dark:bg-slate-800 text-foreground">
+                <th className="px-4 py-4 text-left text-[10px] uppercase font-black tracking-[0.2em] text-foreground/70 border-r border-border/20 w-48">Kode Rekening</th>
+                <th className="px-4 py-4 text-left text-[10px] uppercase font-black tracking-[0.2em] text-foreground/70 border-r border-border/20">Nama / Uraian Kustom</th>
+                <th className="px-4 py-4 text-right text-[10px] uppercase font-black tracking-[0.2em] text-foreground/70 border-r border-border/20 w-44">Bulan Ini</th>
+                <th className="px-4 py-4 text-right text-[10px] uppercase font-black tracking-[0.2em] text-foreground/70 w-48">Total Tahunan</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-border/30">
+              {filteredSummary.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="py-24 text-center">
+                    <div className="flex flex-col items-center gap-3 opacity-30">
+                       <Search className="w-12 h-12" />
+                       <p className="font-black text-xs uppercase tracking-widest">Data Tidak Ditemukan</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredSummary.map(([code, data]) => {
+                  const percentage = Math.min((data.monthlyTotal / data.yearlyTotal) * 100, 100) || 0;
+                  return (
+                    <tr key={code} className="hover:bg-primary/5 transition-all group select-text">
+                      <td className="px-4 py-5 font-mono text-[11px] text-primary/80 font-black border-r border-border/10">
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 h-6 rounded-lg bg-primary/5 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">
+                             <ListTree className="w-3.5 h-3.5" />
+                          </div>
+                          <span className="tracking-tighter">{code}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-5 border-r border-border/10">
+                        <div className="font-bold text-foreground text-sm tracking-tight leading-snug group-hover:translate-x-1 transition-transform">
+                          {data.name}
+                        </div>
+                      </td>
+                      <td className="px-4 py-5 text-right font-black text-rose-600 dark:text-rose-400 border-r border-border/10 tabular-nums">
+                        {formatCurrency(data.monthlyTotal)}
+                      </td>
+                      <td className="px-4 py-5 text-right">
+                        <div className="inline-flex flex-col items-end w-full">
+                          <div className="flex items-center gap-2 mb-1.5">
+                             <span className="font-black text-rose-700 dark:text-rose-500 tabular-nums">{formatCurrency(data.yearlyTotal)}</span>
+                             <ArrowRight className="w-3 h-3 text-muted-foreground/30 opacity-0 group-hover:opacity-100 transition-all" />
+                          </div>
+                          
+                          <div className="w-full max-w-[120px] h-1.5 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden border border-border/5">
+                             <div 
+                               className={`h-full transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(225,29,72,0.3)] ${percentage > 80 ? 'bg-rose-600' : 'bg-rose-500'}`}
+                               style={{ width: `${percentage}%` }}
+                             />
+                          </div>
+                          <span className="text-[9px] font-black text-muted-foreground mt-1 opacity-50">{percentage.toFixed(1)}% Penyerapan</span>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+})
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )
