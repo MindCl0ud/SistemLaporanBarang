@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   ListTree, 
@@ -12,17 +12,81 @@ import {
   RefreshCw, 
   X,
   Hash,
-  Plus,
-  Check,
-  ChevronUp,
-  ChevronDown,
   ArrowUpDown,
   UploadCloud,
   Download,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Settings as SettingsIcon,
+  CheckCircle2,
+  Plus,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  HelpCircle,
+  Circle as CircleIcon,
+  AlignJustify,
+  Pencil as PencilIcon
 } from 'lucide-react'
-import { useMemo } from 'react'
 import { getAccountMappings, upsertAccountMapping, deleteAccountMapping, syncAccountCodesFromBku, upsertAccountMappingBulk } from '@/app/actions/bkuActions'
+import { getBudgetMode, updateBudgetMode } from '@/app/actions/settingsActions'
+
+// ──────────────────────────────────────────────────────────
+// Column definitions & ResizableHeader (Unified Style)
+// ──────────────────────────────────────────────────────────
+const DEFAULT_WIDTHS: Record<string, number> = {
+  sub:         140,
+  code:        180,
+  name:        400,
+  awal:        130,
+  perubahan:   130,
+  bidang:      130,
+  aksi:        80
+}
+
+function ResizableHeader({ colKey, width, label, onResize, isLast, align = 'text-left', onSort }: {
+  colKey: string; width: number; label: string; align?: string;
+  onResize: (key: string, delta: number) => void; isLast?: boolean;
+  onSort?: (key: string) => void;
+}) {
+  const startX = useRef(0)
+  const dragging = useRef(false)
+
+  const onMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    startX.current = e.clientX
+    dragging.current = true
+    const onMove = (ev: MouseEvent) => {
+      if (!dragging.current) return
+      onResize(colKey, ev.clientX - startX.current)
+      startX.current = ev.clientX
+    }
+    const onUp = () => {
+      dragging.current = false
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }, [colKey, onResize])
+
+  return (
+    <th style={{ width, minWidth: 40 }}
+      className={`relative bg-input border-r border-b border-border ${align} text-[11px] font-semibold text-foreground/70 uppercase tracking-wide select-none group/h`}>
+      <div 
+        className="px-3 py-2.5 truncate flex items-center gap-2 cursor-pointer hover:text-primary transition-colors"
+        onClick={() => onSort?.(colKey)}
+      >
+        {label}
+      </div>
+      {!isLast && (
+        <div onMouseDown={onMouseDown}
+          className="absolute right-0 top-0 h-full w-2 cursor-col-resize flex items-center justify-center group z-10">
+          <div className="w-0.5 h-4 bg-foreground/10 group-hover/h:bg-primary/50 transition-colors" />
+        </div>
+      )}
+    </th>
+  )
+}
 
 export default function AccountMappingPage() {
   const [mappings, setMappings] = useState<any[]>([])
@@ -49,13 +113,41 @@ export default function AccountMappingPage() {
     subKegiatan: '' 
   })
 
+  // Popover/Modal states
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null)
   const [isImporting, setIsImporting] = useState(false)
-  const [importProgress, setImportProgress] = useState(0)
+  
+  // App-wide Settings
+  const [useRevisedBudgetMode, setUseRevisedBudgetMode] = useState(false)
+  const [showConfig, setShowConfig] = useState(false)
+  const [colWidths, setColWidths] = useState<Record<string, number>>(DEFAULT_WIDTHS)
 
   useEffect(() => {
     fetchMappings()
+    fetchSettings()
   }, [selectedYear])
+
+  const fetchSettings = async () => {
+    try {
+      const isRevised = await getBudgetMode()
+      setUseRevisedBudgetMode(isRevised)
+    } catch (e) {
+      console.warn("Failed to fetch budget mode", e)
+    }
+  }
+
+  const handleToggleRevised = async (enabled: boolean) => {
+    setUseRevisedBudgetMode(enabled)
+    try {
+      await updateBudgetMode(enabled)
+    } catch (e) {
+      console.error("Failed to update budget mode", e)
+    }
+  }
+
+  const handleResize = useCallback((key: string, delta: number) => {
+    setColWidths(prev => ({ ...prev, [key]: Math.max(40, prev[key] + delta) }))
+  }, [])
 
   const fetchMappings = async () => {
     setLoading(true)
@@ -118,7 +210,6 @@ export default function AccountMappingPage() {
     
     setLoading(true)
     setIsImporting(true)
-    setImportProgress(0)
 
     try {
       const { read, utils } = await import('xlsx')
@@ -128,7 +219,6 @@ export default function AccountMappingPage() {
       const rows = utils.sheet_to_json(ws, { header: 1 }) as any[][]
       
       const parsedData = []
-      // Skip header row
       for (let i = 1; i < rows.length; i++) {
         const row = rows[i]
         if (!row || row.length < 2) continue
@@ -172,7 +262,8 @@ export default function AccountMappingPage() {
     let result = mappings.filter(m => 
       m.code.toLowerCase().includes(search.toLowerCase()) || 
       m.name.toLowerCase().includes(search.toLowerCase()) ||
-      m.division?.toLowerCase().includes(search.toLowerCase())
+      m.division?.toLowerCase().includes(search.toLowerCase()) ||
+      m.subKegiatan?.toLowerCase().includes(search.toLowerCase())
     )
 
     if (sortConfig) {
@@ -190,26 +281,34 @@ export default function AccountMappingPage() {
     return result
   }, [mappings, search, sortConfig])
 
-  const totalPaguEffective = mappings.reduce((sum, m) => {
-    const effective = (m.revisedBudget && m.revisedBudget > 0) ? m.revisedBudget : (m.budget || 0)
-    return sum + effective
-  }, 0)
+  const totalPaguEffective = useMemo(() => {
+    return mappings.reduce((sum, m) => {
+      const revised = m.revisedBudget || 0
+      const original = m.budget || 0
+      // Logic: Use revised budget if ON and non-zero, else fall back to original
+      const effective = (useRevisedBudgetMode && revised > 0) ? revised : original
+      return sum + effective
+    }, 0)
+  }, [mappings, useRevisedBudgetMode])
 
   const formatCurrency = (amt: number) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(amt)
+    return new Intl.NumberFormat('id-ID').format(amt)
   }
 
+  const totalWidth = useMemo(() => 50 + Object.values(colWidths).reduce((a, b) => a + b, 0), [colWidths])
+  const cellBase = `border-r border-b border-border px-3 py-2 text-[12px] align-top`
+
   return (
-    <div className="max-w-[1400px] mx-auto px-4 py-8 space-y-8 min-h-screen">
+    <div className="max-w-[1550px] mx-auto px-4 py-8 space-y-8 min-h-screen">
       {/* HEADER */}
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div className="space-y-2">
+        <div className="space-y-1">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-black uppercase tracking-widest mb-2">
             <Hash className="w-3 h-3" /> Master Data Management
           </div>
-          <h1 className="text-4xl font-black text-foreground flex items-center gap-4 tracking-tighter">
+          <h1 className="text-3xl font-black text-foreground flex items-center gap-4 tracking-tighter">
             <div className="p-3 rounded-2xl bg-primary text-white shadow-xl shadow-primary/20">
-              <ListTree className="w-8 h-8" />
+              <ListTree className="w-6 h-6" />
             </div>
             Master Rekening
           </h1>
@@ -219,7 +318,7 @@ export default function AccountMappingPage() {
               <select 
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(Number(e.target.value))}
-                className="text-2xl font-black text-primary bg-transparent outline-none cursor-pointer hover:opacity-70 transition-opacity"
+                className="text-xl font-black text-primary bg-transparent outline-none cursor-pointer hover:opacity-70 transition-opacity"
               >
                 {[2024, 2025, 2026, 2027].map(y => (
                   <option key={y} value={y} className="text-sm font-bold bg-white dark:bg-slate-900 text-foreground">{y}</option>
@@ -228,7 +327,12 @@ export default function AccountMappingPage() {
             </div>
             <div className="flex flex-col border-l-2 border-primary/20 pl-6">
               <span className="text-[10px] font-black text-muted uppercase tracking-widest">Total Pagu Efektif ({selectedYear})</span>
-              <span className="text-2xl font-black text-primary tracking-tighter">{formatCurrency(totalPaguEffective)}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xl font-black text-primary tracking-tighter">Rp{formatCurrency(totalPaguEffective)}</span>
+                {useRevisedBudgetMode && (
+                  <span className="px-1.5 py-0.5 rounded bg-indigo-500 text-white text-[8px] font-black uppercase tracking-widest">Revised</span>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -265,16 +369,67 @@ export default function AccountMappingPage() {
             <RefreshCw className={`w-4 h-4 transition-transform group-hover:rotate-180 duration-500 ${loading ? 'animate-spin' : ''}`} />
             Sync BKU
           </button>
+
+          <div className="relative">
+            <button
+              onClick={() => setShowConfig(!showConfig)}
+              className={`p-4 rounded-2xl border transition-all active:scale-95 shadow-sm ${showConfig ? 'bg-primary text-white border-primary shadow-primary/20' : 'bg-white dark:bg-card text-foreground border-border hover:bg-slate-50'}`}
+            >
+              <SettingsIcon className={`w-5 h-5 ${showConfig ? 'animate-spin' : ''}`} />
+            </button>
+            
+            <AnimatePresence>
+              {showConfig && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  className="absolute right-0 top-full mt-3 w-72 bg-white dark:bg-slate-900 border border-border rounded-2xl shadow-2xl p-5 z-[50] backdrop-blur-xl"
+                >
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-primary">Konfigurasi Budget</h3>
+                    <button onClick={() => setShowConfig(false)} className="text-muted hover:text-rose-500">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-black/20 rounded-xl border border-border">
+                      <div className="flex flex-col gap-1 text-left">
+                        <span className="text-[11px] font-black text-foreground uppercase">Prioritas Pagu</span>
+                        <span className="text-[10px] text-muted">Gunakan Pagu Perubahan</span>
+                      </div>
+                      <button 
+                        onClick={() => handleToggleRevised(!useRevisedBudgetMode)}
+                        className={`w-12 h-6 rounded-full transition-all relative ${useRevisedBudgetMode ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'}`}
+                      >
+                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${useRevisedBudgetMode ? 'left-7' : 'left-1'}`} />
+                      </button>
+                    </div>
+
+                    <div className="p-3 bg-indigo-500/5 border border-indigo-500/10 rounded-xl">
+                      <div className="flex items-start gap-2">
+                        <HelpCircle className="w-3.5 h-3.5 text-indigo-500 mt-0.5" />
+                        <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium leading-relaxed">
+                          Saat nyala, sistem memprioritaskan **Pagu Perubahan**. Jika bernilai 0, sistem otomatis menggunakan **Pagu Awal**.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </header>
 
       {/* SEARCH BAR */}
-      <div className="flex items-center gap-4 bg-white dark:bg-card p-2 pr-4 rounded-[2rem] border border-border shadow-2xl shadow-indigo-500/5">
+      <div className="flex items-center gap-4 bg-white dark:bg-card p-2 pr-4 rounded-[2rem] border border-border shadow-sm">
         <div className="relative flex-1">
           <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
           <input
             type="text"
-            placeholder="Cari berdasarkan kode, nama, atau bidang..."
+            placeholder="Cari berdasarkan kode, nama, sub kegiatan atau bidang..."
             className="w-full bg-transparent border-none rounded-2xl pl-16 pr-6 py-4 text-base font-bold text-foreground outline-none placeholder:text-muted/40"
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -282,124 +437,111 @@ export default function AccountMappingPage() {
         </div>
       </div>
 
-      {/* TABLE SECTION */}
-      <div className="bg-white dark:bg-card border border-border rounded-[2.5rem] overflow-hidden shadow-2xl shadow-indigo-500/5 transition-all">
-        <div className="overflow-x-auto custom-scrollbar">
-          <table className="w-full text-sm border-collapse min-w-[900px]">
-            <thead>
-              <tr className="bg-table-header border-b border-border">
-                {[
-                  { id: 'subKegiatan', label: 'Sub Kegiatan', width: 'w-48' },
-                  { id: 'code', label: 'Kode Belanja', width: 'w-48' },
-                  { id: 'name', label: 'Nama Kustom', width: '' },
-                  { id: 'budget', label: 'Pagu Awal', width: 'w-40', align: 'text-right' },
-                  { id: 'revisedBudget', label: 'Pagu Perubahan', width: 'w-40', align: 'text-right' },
-                  { id: 'division', label: 'Bidang', width: 'w-32' },
-                ].map((col) => (
-                  <th 
-                    key={col.id} 
-                    className={`px-8 py-5 ${col.align || 'text-left'} text-[10px] uppercase font-black tracking-widest text-foreground/70 cursor-pointer hover:bg-accent transition-colors group/header ${col.width}`}
-                    onClick={() => requestSort(col.id)}
-                  >
-                    <div className={`flex items-center gap-2 ${col.align === 'text-right' ? 'justify-end' : ''}`}>
-                      {col.label}
-                      {sortConfig?.key === col.id ? (
-                        sortConfig.direction === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-primary" /> : <ChevronDown className="w-3.5 h-3.5 text-primary" />
-                      ) : (
-                        <ArrowUpDown className="w-3 h-3 opacity-0 group-hover/header:opacity-50 transition-opacity" />
-                      )}
-                    </div>
-                  </th>
-                ))}
-                <th className="px-8 py-5 text-center text-[10px] uppercase font-black tracking-widest text-muted w-32">Aksi</th>
+      {/* TABLE SECTION (UNIFIED UI) */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between px-1">
+           <div className="flex items-center gap-4">
+             <div className="flex items-center gap-2 px-3 py-1.5 bg-input border border-border rounded-lg text-[10px] font-black text-muted uppercase tracking-[0.2em]">
+               <FileSpreadsheet className="w-3.5 h-3.5 text-primary" /> Spreadsheet Mode
+             </div>
+             <button onClick={() => setColWidths(DEFAULT_WIDTHS)} className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline flex items-center gap-1.5">
+               <AlignJustify className="w-3.5 h-3.5" /> Reset Lebar
+             </button>
+           </div>
+           <span className="text-[10px] font-black text-muted uppercase tracking-widest opacity-60">
+             {sortedAndFiltered.length} REKENING TERDAFTAR
+           </span>
+        </div>
+
+        <div className="overflow-auto rounded-[2rem] border border-border bg-card custom-scrollbar shadow-sm w-full max-h-[65vh]">
+          <table className="border-collapse w-full" style={{ minWidth: totalWidth, tableLayout: 'fixed' }}>
+            <colgroup>
+               <col style={{ width: 50 }} />
+               {Object.keys(DEFAULT_WIDTHS).map(k => <col key={k} style={{ width: colWidths[k] }} />)}
+            </colgroup>
+            <thead className="sticky top-0 z-30">
+              <tr>
+                <th className="bg-input border-r border-b border-border text-center text-[11px] font-semibold text-foreground/70 uppercase w-[50px]">No</th>
+                <ResizableHeader colKey="sub" width={colWidths.sub} label="Sub Kegiatan" onResize={handleResize} />
+                <ResizableHeader colKey="code" width={colWidths.code} label="Kode Rekening" onResize={handleResize} />
+                <ResizableHeader colKey="name" width={colWidths.name} label="Nama Kustom / Uraian" onResize={handleResize} />
+                <ResizableHeader colKey="awal" width={colWidths.awal} label="Pagu Awal" align="text-right" onResize={handleResize} />
+                <ResizableHeader colKey="perubahan" width={colWidths.perubahan} label="Pagu Perubahan" align="text-right" onResize={handleResize} />
+                <ResizableHeader colKey="bidang" width={colWidths.bidang} label="Bidang" onResize={handleResize} />
+                <th className="bg-input border-b border-border text-center text-[11px] font-semibold text-foreground/70 uppercase">Aksi</th>
               </tr>
             </thead>
-            <tbody>
-              {/* ADD NEW ROW (HIDDEN BY DEFAULT) */}
+            <tbody className="divide-y divide-border">
+              {/* Add New Row Inline */}
               <AnimatePresence>
                 {showAddRow && (
                   <motion.tr 
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className="bg-primary/5 border-b border-primary/20"
+                    initial={{ opacity: 0, height: 0 }} 
+                    animate={{ opacity: 1, height: 'auto' }} 
+                    className="bg-primary/5 group"
                   >
-                    <td className="px-8 py-4">
+                    <td className={`${cellBase} text-center opacity-30`}>+</td>
+                    <td className={cellBase}>
                       <input 
-                        className="w-full bg-white dark:bg-input border border-primary/30 rounded-xl px-4 py-2.5 text-xs font-mono font-black text-primary outline-none focus:ring-2 focus:ring-primary shadow-sm"
+                        className="w-full bg-white dark:bg-input border border-primary/30 rounded-lg px-2 py-1.5 text-xs font-bold font-mono text-foreground outline-none focus:ring-1 focus:ring-primary shadow-sm"
                         placeholder="5.01..."
-                        value={newRow.subKegiatan || ''}
+                        value={newRow.subKegiatan}
                         onChange={e => setNewRow({...newRow, subKegiatan: e.target.value})}
                       />
                     </td>
-                    <td className="px-8 py-4">
+                    <td className={cellBase}>
                       <input 
-                        className="w-full bg-white dark:bg-input border border-primary/30 rounded-xl px-4 py-2.5 text-xs font-mono font-black text-primary outline-none focus:ring-2 focus:ring-primary shadow-sm"
-                        placeholder="5.1.02..."
+                        className="w-full bg-white dark:bg-input border border-primary/30 rounded-lg px-2 py-1.5 font-mono text-[11px] font-black text-foreground outline-none focus:ring-1 focus:ring-primary shadow-sm"
+                        placeholder="1.1.0..."
                         value={newRow.code}
-                        onChange={e => {
-                           const val = e.target.value;
-                           const parts = val.split('.');
-                           if (parts.length >= 7 && (val.startsWith('5.') || val.startsWith('5.01'))) {
-                              setNewRow({
-                                 ...newRow,
-                                 subKegiatan: parts.slice(0, 6).join('.'),
-                                 code: parts.slice(6).join('.')
-                              });
-                           } else {
-                              setNewRow({...newRow, code: val});
-                           }
-                        }}
+                        onChange={e => setNewRow({...newRow, code: e.target.value})}
                       />
                     </td>
-                    <td className="px-8 py-4">
+                    <td className={cellBase}>
                       <input 
-                        className="w-full bg-white dark:bg-input border border-primary/30 rounded-xl px-4 py-2.5 text-sm font-black text-foreground outline-none focus:ring-2 focus:ring-primary shadow-sm"
-                        placeholder="Nama Kustom..."
+                        className="w-full bg-white dark:bg-input border border-primary/30 rounded-lg px-2 py-1.5 text-xs font-bold text-foreground outline-none focus:ring-1 focus:ring-primary shadow-sm"
+                        placeholder="Nama Rekening..."
                         value={newRow.name}
                         onChange={e => setNewRow({...newRow, name: e.target.value})}
-                        autoFocus
                       />
                     </td>
-                    <td className="px-8 py-4">
-                       <input 
-                         type="number"
-                         className="w-full bg-white dark:bg-input border border-primary/30 rounded-xl px-4 py-2.5 text-sm font-black text-foreground outline-none focus:ring-2 focus:ring-primary shadow-sm text-right"
-                         placeholder="Awal"
-                         value={newRow.budget}
-                         onChange={e => setNewRow({...newRow, budget: e.target.value})}
-                       />
-                     </td>
-                     <td className="px-8 py-4">
-                       <input 
-                         type="number"
-                         className="w-full bg-white dark:bg-input border border-primary/30 rounded-xl px-4 py-2.5 text-sm font-black text-foreground outline-none focus:ring-2 focus:ring-primary shadow-sm text-right"
-                         placeholder="Perubahan"
-                         value={newRow.revisedBudget}
-                         onChange={e => setNewRow({...newRow, revisedBudget: e.target.value})}
-                       />
-                     </td>
-                    <td className="px-8 py-4">
+                    <td className={cellBase}>
                       <input 
-                        className="w-full bg-white dark:bg-input border border-primary/30 rounded-xl px-4 py-2.5 text-sm font-black text-foreground outline-none focus:ring-2 focus:ring-primary shadow-sm"
-                        placeholder="Bidang..."
+                        type="number"
+                        className="w-full bg-white dark:bg-input border border-primary/30 rounded-lg px-2 py-1.5 text-xs font-black text-foreground outline-none focus:ring-1 focus:ring-primary text-right shadow-sm"
+                        placeholder="0"
+                        value={newRow.budget}
+                        onChange={e => setNewRow({...newRow, budget: e.target.value})}
+                      />
+                    </td>
+                    <td className={cellBase}>
+                      <input 
+                        type="number"
+                        className="w-full bg-white dark:bg-input border border-primary/30 rounded-lg px-2 py-1.5 text-xs font-black text-foreground outline-none focus:ring-1 focus:ring-primary text-right shadow-sm"
+                        placeholder="0"
+                        value={newRow.revisedBudget}
+                        onChange={e => setNewRow({...newRow, revisedBudget: e.target.value})}
+                      />
+                    </td>
+                    <td className={cellBase}>
+                      <input 
+                        className="w-full bg-white dark:bg-input border border-primary/30 rounded-lg px-2 py-1.5 text-xs font-bold text-foreground outline-none focus:ring-1 focus:ring-primary shadow-sm"
+                        placeholder="Sekretariat..."
                         value={newRow.division}
                         onChange={e => setNewRow({...newRow, division: e.target.value})}
                       />
                     </td>
-                    <td className="px-8 py-4">
-                      <div className="flex items-center justify-center gap-2">
+                    <td className={cellBase}>
+                      <div className="flex items-center justify-center gap-1.5">
                         <button 
                           onClick={() => handleSaveInline(newRow.code, newRow.name, newRow.division, Number(newRow.budget), null, newRow.subKegiatan, Number(newRow.revisedBudget))}
                           disabled={savingId === 'new'}
-                          className="p-2.5 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 hover:scale-110 transition-all disabled:opacity-50"
+                          className="p-1.5 bg-primary text-white rounded-lg shadow-sm hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
                         >
-                          {savingId === 'new' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                          <Check className="w-3.5 h-3.5" />
                         </button>
-                        <button 
-                          onClick={() => setShowAddRow(false)}
-                          className="p-2.5 bg-white text-muted hover:text-rose-500 rounded-xl border border-border transition-all"
-                        >
-                          <X className="w-4 h-4" />
+                        <button onClick={() => setShowAddRow(false)} className="p-1.5 bg-input text-muted hover:text-rose-500 rounded-lg shadow-sm">
+                          <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </td>
@@ -409,27 +551,26 @@ export default function AccountMappingPage() {
 
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-8 py-20 text-center">
-                    <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-4 opacity-20" />
-                    <p className="text-xs font-black text-muted uppercase tracking-[0.3em]">Memuat Data Master...</p>
+                  <td colSpan={8} className="px-8 py-24 text-center">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary/30 mx-auto mb-4" />
+                    <p className="text-[10px] font-black text-muted uppercase tracking-[0.3em]">Memasuki spreadsheet...</p>
                   </td>
                 </tr>
               ) : sortedAndFiltered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-8 py-20 text-center">
-                    <div className="w-16 h-16 bg-muted/10 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-dashed border-border">
-                      <ListTree className="w-8 h-8 text-muted" />
-                    </div>
-                    <p className="text-base font-black text-foreground">Tidak Ada Data</p>
-                    <p className="text-xs text-muted font-bold">Coba sinkronkan dengan BKU atau tambah manual.</p>
+                  <td colSpan={8} className="px-8 py-24 text-center">
+                    <p className="text-muted text-sm font-medium">Belum ada data master untuk tahun ini.</p>
                   </td>
                 </tr>
               ) : (
-                sortedAndFiltered.map((m) => (
-                  <tr key={m.id} className="group hover:bg-primary/5 transition-colors border-b border-border last:border-0">
-                    <td className="px-8 py-5 font-mono text-[11px] text-primary font-black">
+                sortedAndFiltered.map((m, idx) => (
+                  <tr key={m.id} className="hover:bg-slate-50 dark:hover:bg-primary/5 transition-colors group">
+                    <td className={`${cellBase} text-center font-mono font-black text-muted/30`}>{idx + 1}</td>
+                    
+                    {/* SUB */}
+                    <td className={cellBase}>
                       <input 
-                        className="w-full bg-transparent border border-border group-hover:border-primary/30 rounded-xl px-2 py-1 text-xs font-mono font-black outline-none focus:bg-primary/5"
+                        className="w-full bg-transparent outline-none focus:bg-white dark:focus:bg-input px-1 rounded transition-all text-muted-foreground font-mono text-[10px] focus:ring-1 focus:ring-primary"
                         value={m.subKegiatan || ''}
                         onChange={e => {
                            const val = e.target.value;
@@ -438,74 +579,64 @@ export default function AccountMappingPage() {
                         onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
                       />
                     </td>
-                    <td className="px-8 py-5 font-mono text-[11px] text-primary font-black">
+
+                    {/* CODE */}
+                    <td className={cellBase}>
                       <input 
-                        className="w-full bg-transparent border border-border group-hover:border-primary/30 rounded-xl px-2 py-1 text-xs font-mono font-black outline-none focus:bg-primary/5"
+                        className="w-full bg-transparent outline-none focus:bg-white dark:focus:bg-input px-1 rounded transition-all font-mono text-[11px] text-primary font-black uppercase"
                         value={m.code}
                         onChange={e => {
                            const val = e.target.value;
-                           const parts = val.split('.');
-                           if (parts.length >= 7 && (val.startsWith('5.') || val.startsWith('5.01'))) {
-                              const sub = parts.slice(0, 6).join('.');
-                              const rek = parts.slice(6).join('.');
-                              setMappings(prev => prev.map(p => p.id === m.id ? {...p, subKegiatan: sub, code: rek} : p));
-                           } else {
-                              setMappings(prev => prev.map(p => p.id === m.id ? {...p, code: val} : p));
-                           }
+                           setMappings(prev => prev.map(p => p.id === m.id ? {...p, code: val} : p));
                         }}
                         onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
                       />
                     </td>
-                    <td className="px-8 py-5">
+
+                    {/* NAME */}
+                    <td className={cellBase}>
                       {editingId === m.id ? (
-                        <div className="flex items-center gap-3 animate-in fade-in duration-300">
+                        <div className="flex items-center gap-2">
                           <input 
-                            className="flex-1 bg-white dark:bg-input border border-primary rounded-xl px-4 py-2.5 text-sm font-black text-foreground outline-none shadow-lg shadow-primary/5"
+                            className="flex-1 bg-white dark:bg-input border border-primary rounded-lg px-2 py-1 text-xs font-bold text-foreground outline-none"
                             value={editValue}
                             onChange={e => setEditValue(e.target.value)}
                             onKeyDown={e => e.key === 'Enter' && handleSaveInline(m.code, editValue, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
                             onKeyDownCapture={e => e.key === 'Escape' && setEditingId(null)}
                             autoFocus
                           />
-                          <button 
-                            onClick={() => handleSaveInline(m.code, editValue, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
-                            disabled={savingId === m.id}
-                            className="p-2.5 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 hover:scale-110 transition-all disabled:opacity-50"
-                          >
-                            {savingId === m.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                          </button>
-                          <button 
-                            onClick={() => setEditingId(null)}
-                            className="p-2.5 bg-input text-muted hover:text-foreground rounded-xl transition-all"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
                         </div>
                       ) : (
                         <div 
-                          className="font-bold text-foreground text-sm cursor-pointer hover:text-primary transition-colors flex items-center justify-between group/cell"
-                          onClick={() => {
-                            setEditingId(m.id)
-                            setEditValue(m.name)
-                          }}
+                          className="flex items-center gap-2 cursor-pointer group/n min-h-[1.5rem]"
+                          onClick={() => { setEditingId(m.id); setEditValue(m.name); }}
                         >
-                          {m.name}
-                          <Pencil className="w-3 h-3 text-primary opacity-0 group-hover/cell:opacity-100 transition-opacity" />
+                          <span className="flex-1 font-medium">{m.name}</span>
+                          <PencilIcon className="w-3 h-3 text-primary opacity-0 group-hover/n:opacity-100 transition-opacity" />
                         </div>
                       )}
                     </td>
-                    <td className="px-8 py-5">
-                      <div className="flex items-center gap-3 justify-end group/pagu relative">
-                        {m.budgetLogs?.length > 0 && (
+
+                    {/* PAGU AWAL */}
+                    <td className={`${cellBase} text-right`}>
+                       <div className="flex items-center gap-2 justify-end group/p">
+                          <input 
+                            type="number"
+                            className="w-full bg-transparent outline-none focus:bg-white dark:focus:bg-input border border-transparent focus:border-border px-1 py-0.5 rounded text-right font-mono font-bold text-foreground/80 tabular-nums"
+                            value={m.budget || 0}
+                            onChange={(e) => {
+                               const newVal = Number(e.target.value);
+                               setMappings(prev => prev.map(p => p.id === m.id ? {...p, budget: newVal} : p));
+                            }}
+                            onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
+                          />
                           <div className="relative">
                             <button 
                               onClick={() => setActiveHistoryId(activeHistoryId === m.id ? null : m.id)}
-                              className={`p-1.5 rounded-lg border transition-all ${activeHistoryId === m.id ? 'bg-primary text-white border-primary' : 'bg-white dark:bg-input text-muted border-border hover:border-primary/50'}`}
-                              title="Lihat Riwayat Perubahan"
+                              className={`p-1 rounded bg-primary/5 hover:bg-primary/10 transition-colors ${activeHistoryId === m.id ? 'text-primary bg-primary/20' : 'text-slate-400 opacity-0 group-hover/p:opacity-100'}`}
                             >
-                              <RefreshCw className={`w-3 h-3 ${activeHistoryId === m.id ? 'animate-spin-slow' : ''}`} />
+                              <RefreshCw className="w-3 h-3" />
                             </button>
-                            
                             <AnimatePresence>
                               {activeHistoryId === m.id && (
                                 <motion.div 
@@ -515,34 +646,34 @@ export default function AccountMappingPage() {
                                   className="absolute bottom-full right-0 mb-3 w-80 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-primary/20 p-4 z-[100] backdrop-blur-xl"
                                 >
                                   <div className="flex items-center justify-between mb-4 pb-2 border-b border-border">
-                                    <div className="flex flex-col">
+                                    <div className="flex flex-col text-left">
                                       <h4 className="text-[10px] font-black text-primary uppercase tracking-widest">Riwayat Anggaran</h4>
-                                      <p className="text-[9px] text-muted font-bold">{m.code}</p>
+                                      <p className="text-[9px] text-muted font-bold truncate max-w-[200px]">{m.code}</p>
                                     </div>
-                                    <button onClick={() => setActiveHistoryId(null)} className="p-1.5 bg-muted/10 hover:bg-rose-500/10 hover:text-rose-500 rounded-lg transition-colors">
+                                    <button onClick={() => setActiveHistoryId(null)} className="p-1.5 bg-muted/10 rounded-lg">
                                       <X className="w-3.5 h-3.5" />
                                     </button>
                                   </div>
                                   <div className="space-y-4 max-h-80 overflow-y-auto custom-scrollbar pr-2">
                                     {m.budgetLogs.map((log: any) => (
-                                      <div key={log.id} className="relative pl-6 border-l-2 border-primary/20 pb-1">
+                                      <div key={log.id} className="relative pl-6 border-l-2 border-primary/20 pb-1 text-left">
                                         <div className="absolute -left-[9px] top-0 w-4 h-4 bg-white dark:bg-slate-900 border-2 border-primary rounded-full flex items-center justify-center">
                                           <div className={`w-1.5 h-1.5 rounded-full ${log.field === 'revisedBudget' ? 'bg-indigo-500' : 'bg-primary'}`} />
                                         </div>
                                         <div className="flex items-center justify-between mb-1">
-                                          <span className="text-[10px] font-black text-foreground uppercase">
+                                          <span className="text-[10px] font-black text-foreground uppercase tracking-tight">
                                             {log.field === 'revisedBudget' ? 'Pagu Perubahan' : 'Pagu Awal'}
                                           </span>
-                                          <span className="text-[9px] font-bold text-muted">{new Date(log.createdAt).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                                          <span className="text-[8px] font-bold text-muted">{new Date(log.createdAt).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
                                         </div>
                                         <div className="flex items-center gap-2 mb-2 p-2 bg-slate-50 dark:bg-black/20 rounded-xl border border-border/50">
-                                          <span className="text-[10px] line-through text-muted/40 font-mono italic">{formatCurrency(log.oldBudget)}</span>
+                                          <span className="text-[10px] line-through text-muted/30 font-mono italic">Rp{formatCurrency(log.oldBudget)}</span>
                                           <ChevronDown className="w-3 h-3 text-emerald-500 -rotate-90 opacity-50" />
                                           <span className={`text-[11px] font-black font-mono ${log.newBudget > log.oldBudget ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                            {formatCurrency(log.newBudget)}
+                                            Rp{formatCurrency(log.newBudget)}
                                           </span>
                                         </div>
-                                        <p className="text-[10px] text-foreground/70 leading-snug italic px-1">"{log.reason}"</p>
+                                        <p className="text-[9px] text-foreground/70 leading-snug italic px-1">"{log.reason}"</p>
                                       </div>
                                     ))}
                                   </div>
@@ -550,61 +681,63 @@ export default function AccountMappingPage() {
                               )}
                             </AnimatePresence>
                           </div>
-                        )}
-                        <input 
-                          type="number"
-                          className="w-full bg-transparent border border-border group-hover:border-primary/50 group-hover:bg-primary/5 rounded-xl px-4 py-2 text-sm font-black text-foreground text-right outline-none focus:ring-2 focus:ring-primary transition-all tabular-nums"
-                          value={m.budget || 0}
-                          onChange={(e) => {
-                             const newVal = Number(e.target.value);
-                             setMappings(prev => prev.map(p => p.id === m.id ? {...p, budget: newVal} : p));
-                          }}
-                          onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
-                        />
-                      </div>
+                       </div>
                     </td>
-                    <td className="px-8 py-5">
-                      <div className="flex items-center gap-3 justify-end group/pagu">
-                        <input 
-                          type="number"
-                          className="w-full bg-transparent border border-border group-hover:border-primary/50 group-hover:bg-primary/5 rounded-xl px-4 py-2 text-sm font-black text-foreground text-right outline-none focus:ring-2 focus:ring-primary transition-all tabular-nums"
-                          value={m.revisedBudget || 0}
-                          onChange={(e) => {
-                             const newVal = Number(e.target.value);
-                             setMappings(prev => prev.map(p => p.id === m.id ? {...p, revisedBudget: newVal} : p));
-                          }}
-                          onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
-                        />
-                      </div>
+
+                    {/* PAGU PERUBAHAN */}
+                    <td className={`${cellBase} text-right`}>
+                       <input 
+                         type="number"
+                         className={`w-full bg-transparent outline-none focus:bg-white dark:focus:bg-input px-1 py-0.5 rounded text-right font-mono font-black tabular-nums transition-colors ${m.revisedBudget > 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-foreground/10'}`}
+                         value={m.revisedBudget || 0}
+                         onChange={(e) => {
+                            const newVal = Number(e.target.value);
+                            setMappings(prev => prev.map(p => p.id === m.id ? {...p, revisedBudget: newVal} : p));
+                         }}
+                         onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
+                       />
                     </td>
-                    <td className="px-8 py-5">
-                      <div className="flex items-center gap-3">
+
+                    {/* BIDANG */}
+                    <td className={cellBase}>
                         <input 
-                          className="w-full bg-transparent border border-border group-hover:border-primary/30 rounded-xl px-4 py-2 text-sm font-black text-foreground outline-none focus:bg-white dark:focus:bg-white/5 transition-all"
+                          className="w-full bg-transparent outline-none focus:bg-white dark:focus:bg-input px-1 rounded transition-all text-muted-foreground font-medium"
                           value={m.division || ''}
-                          placeholder="Bidang..."
                           onChange={(e) => {
                              const newVal = e.target.value;
                              setMappings(prev => prev.map(p => p.id === m.id ? {...p, division: newVal} : p));
                           }}
                           onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
                         />
-                      </div>
                     </td>
-                    <td className="px-8 py-5 text-center">
-                      <button 
-                        onClick={() => handleDelete(m.id)}
-                        className="p-2.5 text-muted hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all opacity-0 group-hover:opacity-100"
-                        title="Hapus"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+
+                    {/* AKSI */}
+                    <td className={`${cellBase} text-center`}>
+                       <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                         {m.revisedBudget > 0 && useRevisedBudgetMode && (
+                           <div title="Pagu Perubahan Aktif" className="p-1.5 text-emerald-500">
+                             <CheckCircle2 className="w-4 h-4" />
+                           </div>
+                         )}
+                         <button onClick={() => handleDelete(m.id)} className="p-1.5 text-muted hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all">
+                           <Trash2 className="w-3.5 h-3.5" />
+                         </button>
+                       </div>
                     </td>
                   </tr>
                 ))
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Legend */}
+        <div className="flex items-center justify-between px-1 text-[10px] text-foreground/30 font-black uppercase tracking-widest mt-1">
+          <span>{sortedAndFiltered.length} REKENING · SERET BATAS KOLOM UNTUK RESIZE</span>
+          <div className="flex items-center gap-3">
+             <span className="flex items-center gap-1.5"><CircleIcon className="w-2.5 h-2.5 fill-primary text-primary" /> Pagu Awal</span>
+             <span className="flex items-center gap-1.5"><CircleIcon className="w-2.5 h-2.5 fill-indigo-500 text-indigo-500" /> Pagu Perubahan</span>
+          </div>
         </div>
       </div>
     </div>

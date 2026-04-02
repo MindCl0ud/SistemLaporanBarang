@@ -4,7 +4,9 @@ import { useState } from 'react'
 import BkuForm from "./BkuForm"
 import BkuList from "./BkuList"
 import BkuAccountSummary from "./BkuAccountSummary"
-import { Plus, TrendingUp, CalendarDays, List, PieChart } from "lucide-react"
+import { Plus, TrendingUp, CalendarDays, List, PieChart, ShieldCheck } from "lucide-react"
+import { useEffect, useMemo } from 'react'
+import { getBudgetMode } from '@/app/actions/settingsActions'
 
 export default function BkuDashboardContent({ 
   month, 
@@ -22,16 +24,30 @@ export default function BkuDashboardContent({
   accountMappings: any[]
 }) {
   const [activeTab, setActiveTab] = useState<'transactions' | 'summary'>('transactions')
+  const [useRevisedBudgetMode, setUseRevisedBudgetMode] = useState(false)
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      const mode = await getBudgetMode()
+      setUseRevisedBudgetMode(mode)
+    }
+    fetchSettings()
+  }, [])
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(amount)
   }
 
-  const yearlyPagu = accountMappings.reduce((sum, acc) => {
-    // Gunakan Pagu Perubahan jika ada, jika tidak gunakan Pagu Awal
-    const effectiveBudget = (acc.revisedBudget && acc.revisedBudget > 0) ? acc.revisedBudget : (acc.budget || 0)
-    return sum + effectiveBudget
-  }, 0)
+  const yearlyPagu = useMemo(() => {
+    return accountMappings.reduce((sum, acc) => {
+      const revised = acc.revisedBudget || 0
+      const original = acc.budget || 0
+      // Gunakan Pagu Perubahan jika mode aktif DAN nilai > 0
+      const effectiveBudget = (useRevisedBudgetMode && revised > 0) ? revised : original
+      return sum + effectiveBudget
+    }, 0)
+  }, [accountMappings, useRevisedBudgetMode])
+
   const remainingPagu = yearlyPagu - stats.yearlyExpense
   const usagePercentage = yearlyPagu > 0 ? (stats.yearlyExpense / yearlyPagu) * 100 : 0
 
@@ -118,8 +134,17 @@ export default function BkuDashboardContent({
                             <PieChart className="w-6 h-6 text-indigo-500" />
                           </div>
                           <div>
-                            <p className="text-[10px] font-black text-indigo-800 dark:text-indigo-400 uppercase tracking-[0.2em]">Total Pagu Tahun {year}</p>
-                            <p className="text-[10px] text-muted font-bold mt-0.5">Anggaran terdaftar di Master Rekening</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-[10px] font-black text-indigo-800 dark:text-indigo-400 uppercase tracking-[0.2em]">Total Pagu Tahun {year}</p>
+                              {useRevisedBudgetMode && (
+                                <span className="px-1 py-0.5 rounded-full bg-indigo-500 text-white text-[7px] font-black uppercase tracking-widest flex items-center gap-0.5">
+                                  <ShieldCheck className="w-2 h-2" /> REVISED
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-muted font-bold mt-0.5">
+                              {useRevisedBudgetMode ? 'Memprioritaskan Pagu Perubahan' : 'Menggunakan Pagu Awal'}
+                            </p>
                           </div>
                         </div>
                         <p className="text-xl font-black text-indigo-600 dark:text-indigo-400 tracking-tight">{formatCurrency(yearlyPagu)}</p>
