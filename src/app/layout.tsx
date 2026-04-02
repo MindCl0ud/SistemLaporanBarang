@@ -7,8 +7,8 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "SIPAGU AI - Sistem Pelaporan Anggaran",
-  description: "AI-powered financial budgeting and BKU reporting system.",
+  title: "Sistem Laporan Barang & Anggaran",
+  description: "AI-powered goods reporting and financial budgeting system.",
 };
 
 export default function RootLayout({

@@ -14,7 +14,7 @@ import {
   Sun,
   Moon,
   ListTree,
-  Landmark
+  Wallet
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
@@ -57,14 +57,17 @@ export default function Sidebar() {
       <div className="px-6 mb-8 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
-              <Landmark className="w-6 h-6 text-primary" />
+              <Wallet className="w-6 h-6 text-primary" />
             </div>
             {!isCollapsed && (
-              <div>
-                <h1 className="text-xl font-black text-foreground tracking-tight whitespace-nowrap">
-                  SIPAGU AI
+              <div className="flex flex-col">
+                <h1 className="text-sm font-black text-foreground leading-tight">
+                  LAPORAN BARANG
                 </h1>
-                <p className="text-[10px] text-primary mt-0.5 whitespace-nowrap tracking-wider font-extrabold uppercase">SISTEM PELAPORAN ANGGARAN</p>
+                <h1 className="text-sm font-black text-primary leading-tight">
+                  & ANGGARAN
+                </h1>
+                <p className="text-[8px] text-muted-foreground mt-0.5 whitespace-nowrap tracking-widest font-extrabold uppercase">SISTEM PELAPORAN TERPADU</p>
               </div>
             )}
           </div>
