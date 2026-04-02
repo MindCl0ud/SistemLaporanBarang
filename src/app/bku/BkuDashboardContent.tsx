@@ -38,6 +38,11 @@ export default function BkuDashboardContent({
   useEffect(() => {
     const cacheKey = `bku_cache_${month}_${year}`
     const saved = localStorage.getItem(cacheKey)
+    
+    // Clear data first to trigger premium loading screen
+    setRecords([])
+    setStats(null)
+
     if (saved && !initialRecords) {
       try {
         const parsed = JSON.parse(saved)
@@ -117,12 +122,6 @@ export default function BkuDashboardContent({
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 relative">
-      {isSyncing && (
-        <div className="absolute -top-4 right-0 flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full animate-pulse">
-           <Loader2 className="w-3 h-3 text-primary animate-spin" />
-           <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinkronisasi...</span>
-        </div>
-      )}
 
       {/* Top Row: Form + Account Summary on Left, Stats on Right */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
