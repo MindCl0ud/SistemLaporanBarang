@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useEffect, useMemo } from 'react'
 import BkuForm from "./BkuForm"
 import BkuList from "./BkuList"
