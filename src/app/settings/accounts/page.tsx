@@ -88,6 +88,12 @@ export default function AccountMappingPage() {
   const [editValue, setEditValue] = useState('')
   const [savedId, setSavedId] = useState<string | null>(null)
 
+  // Persistence State
+  const [modifiedIds, setModifiedIds] = useState<Set<string>>(new Set())
+  const [savingIds, setSavingIds] = useState<Set<string>>(new Set())
+  const [isSavingAll, setIsSavingAll] = useState(false)
+  const [backupMappings, setBackupMappings] = useState<any[]>([])
+
   // Filter settings
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
 
@@ -143,6 +149,8 @@ export default function AccountMappingPage() {
     try {
       const data = await getAccountMappings(selectedYear)
       setMappings(data)
+      setBackupMappings(JSON.parse(JSON.stringify(data)))
+      setModifiedIds(new Set())
     } finally {
       setLoading(false)
     }
@@ -150,7 +158,12 @@ export default function AccountMappingPage() {
 
   const handleSaveInline = async (code: string, name: string, division?: string | null, budget?: number | null, id?: string, subKegiatan?: string | null, revisedBudget?: number | null) => {
     if (!code || !name) return
-    setSavingId(id || 'new')
+    const mappingId = id || 'new'
+    
+    // Add to saving state
+    if (id) setSavingIds(prev => new Set(prev).add(id))
+    else setSavingId('new')
+
     try {
       const updated = await upsertAccountMapping(code, name, division || undefined, budget || 0, subKegiatan || undefined, selectedYear, revisedBudget || 0)
       
@@ -163,21 +176,74 @@ export default function AccountMappingPage() {
             return [...prev, updated]
           }
         })
+        // Update backup
+        setBackupMappings(prev => {
+           const exists = prev.some(m => m.id === updated.id)
+           if (exists) return prev.map(m => m.id === updated.id ? updated : m)
+           return [...prev, updated]
+        })
+        // Unmark modified
+        if (id) {
+           setModifiedIds(prev => {
+             const next = new Set(prev)
+             next.delete(id)
+             return next
+           })
+        }
       }
 
       setEditingId(null)
       setShowAddRow(false)
       setNewRow({ code: '', name: '', division: '', budget: '', revisedBudget: '', subKegiatan: '' })
       
-      // Show success feedback
       const currentId = id || updated?.id || 'new'
       setSavedId(currentId)
       setTimeout(() => setSavedId(null), 3000)
 
-      // Removed fetchMappings() for "snappy" local update
     } finally {
-      setSavingId(null)
+      if (id) setSavingIds(prev => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
+      else setSavingId(null)
     }
+  }
+
+  const handleSaveAllBatch = async () => {
+    if (modifiedIds.size === 0) return
+    setIsSavingAll(true)
+    try {
+      const selectedMappings = mappings.filter(m => modifiedIds.has(m.id))
+      const res = await upsertAccountMappingBulk(selectedMappings, selectedYear)
+      if (res.count > 0) {
+        // Refresh all because logs and IDs might have changed/added
+        await fetchMappings()
+        alert(`Berhasil menyimpan ${res.count} perubahan.`)
+      }
+    } catch (e) {
+      console.error(e)
+      alert("Gagal menyimpan perubahan batch.")
+    } finally {
+      setIsSavingAll(false)
+    }
+  }
+
+  const handleCancelRow = (id: string) => {
+    const original = backupMappings.find(m => m.id === id)
+    if (original) {
+      setMappings(prev => prev.map(m => m.id === id ? JSON.parse(JSON.stringify(original)) : m))
+      setModifiedIds(prev => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
+    }
+  }
+
+  const handleUpdateField = (id: string, field: string, value: any) => {
+    setMappings(prev => prev.map(m => m.id === id ? { ...m, [field]: value } : m))
+    setModifiedIds(prev => new Set(prev).add(id))
   }
 
   const handleDelete = async (id: string) => {
@@ -321,6 +387,17 @@ export default function AccountMappingPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          {modifiedIds.size > 0 && (
+            <button
+              onClick={handleSaveAllBatch}
+              disabled={isSavingAll}
+              className="flex items-center gap-2 px-6 py-4 bg-indigo-600 text-white rounded-2xl text-sm font-black shadow-xl shadow-indigo-600/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+            >
+              {isSavingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Simpan Semua ({modifiedIds.size})
+            </button>
+          )}
+
           <button
             onClick={() => setShowAddRow(true)}
             className="flex items-center gap-2 px-6 py-4 bg-primary text-white rounded-2xl text-sm font-black shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
@@ -557,35 +634,27 @@ export default function AccountMappingPage() {
                     <td className={`${cellBase} text-center font-mono font-black text-muted/30`}>{idx + 1}</td>
                     
                     {/* SUB */}
-                    <td className={cellBase}>
+                    <td className={`${cellBase} ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
                       <input 
                         className="w-full bg-transparent outline-none focus:bg-white dark:focus:bg-input px-1 rounded transition-all text-muted-foreground font-mono text-[10px] focus:ring-1 focus:ring-primary"
                         value={m.subKegiatan || ''}
-                        onChange={e => {
-                           const val = e.target.value;
-                           setMappings(prev => prev.map(p => p.id === m.id ? {...p, subKegiatan: val} : p));
-                        }}
-                        onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
+                        onChange={e => handleUpdateField(m.id, 'subKegiatan', e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
                       />
                     </td>
 
                     {/* CODE */}
-                    <td className={cellBase}>
+                    <td className={`${cellBase} ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
                       <input 
                         className="w-full bg-transparent outline-none focus:bg-white dark:focus:bg-input px-1 rounded transition-all font-mono text-[11px] text-primary font-black uppercase"
                         value={m.code}
-                        onChange={e => {
-                           const val = e.target.value;
-                           setMappings(prev => prev.map(p => p.id === m.id ? {...p, code: val} : p));
-                        }}
-                        onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
+                        onChange={e => handleUpdateField(m.id, 'code', e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
                       />
                     </td>
 
                     {/* NAME */}
-                    <td className={cellBase}>
+                    <td className={`${cellBase} ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
                       {editingId === m.id ? (
                         <div className="flex flex-col gap-1">
                           <textarea 
@@ -594,6 +663,7 @@ export default function AccountMappingPage() {
                             rows={Math.max(1, editValue.split('\n').length)}
                             onChange={e => {
                                setEditValue(e.target.value);
+                               handleUpdateField(m.id, 'name', e.target.value);
                                e.target.style.height = 'auto';
                                e.target.style.height = e.target.scrollHeight + 'px';
                             }}
@@ -602,7 +672,7 @@ export default function AccountMappingPage() {
                                  e.preventDefault();
                                  handleSaveInline(m.code, editValue, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget);
                                }
-                               if (e.key === 'Escape') setEditingId(null);
+                               if (e.key === 'Escape') handleCancelRow(m.id);
                             }}
                             autoFocus
                             onFocus={e => {
@@ -621,7 +691,7 @@ export default function AccountMappingPage() {
                         >
                           <span className="flex-1 font-medium whitespace-pre-wrap leading-relaxed">{m.name}</span>
                           <div className="shrink-0 flex items-center gap-1">
-                            {savingId === m.id ? (
+                            {savingId === m.id || savingIds.has(m.id) ? (
                               <Loader2 className="w-3 h-3 text-primary animate-spin" />
                             ) : savedId === m.id ? (
                               <CheckCircle2 className="w-3 h-3 text-emerald-500 animate-in fade-in zoom-in duration-300" />
@@ -634,17 +704,13 @@ export default function AccountMappingPage() {
                     </td>
 
                     {/* PAGU AWAL */}
-                    <td className={`${cellBase} text-right`}>
+                    <td className={`${cellBase} text-right ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
                        <div className="flex items-center gap-2 justify-end group/p">
                           <input 
                             type="number"
                             className="w-full bg-transparent outline-none focus:bg-white dark:focus:bg-input border border-transparent focus:border-border px-1 py-0.5 rounded text-right font-mono font-bold text-foreground/80 tabular-nums"
                             value={m.budget || 0}
-                            onChange={(e) => {
-                               const newVal = Number(e.target.value);
-                               setMappings(prev => prev.map(p => p.id === m.id ? {...p, budget: newVal} : p));
-                            }}
-                            onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
+                            onChange={(e) => handleUpdateField(m.id, 'budget', Number(e.target.value))}
                             onKeyDown={e => e.key === 'Enter' && handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
                           />
                             <button 
@@ -657,30 +723,22 @@ export default function AccountMappingPage() {
                     </td>
 
                     {/* PAGU PERUBAHAN */}
-                    <td className={`${cellBase} text-right`}>
+                    <td className={`${cellBase} text-right ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
                        <input 
                          type="number"
                          className={`w-full bg-transparent outline-none focus:bg-white dark:focus:bg-input px-1 py-0.5 rounded text-right font-mono font-black tabular-nums transition-colors ${m.revisedBudget > 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-foreground/10'}`}
                          value={m.revisedBudget || 0}
-                         onChange={(e) => {
-                            const newVal = Number(e.target.value);
-                            setMappings(prev => prev.map(p => p.id === m.id ? {...p, revisedBudget: newVal} : p));
-                         }}
-                         onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
+                         onChange={(e) => handleUpdateField(m.id, 'revisedBudget', Number(e.target.value))}
                          onKeyDown={e => e.key === 'Enter' && handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
                        />
                     </td>
 
                     {/* BIDANG */}
-                    <td className={cellBase}>
+                    <td className={`${cellBase} ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
                         <input 
                           className="w-full bg-transparent outline-none focus:bg-white dark:focus:bg-input px-1 rounded transition-all text-muted-foreground font-medium"
                           value={m.division || ''}
-                          onChange={(e) => {
-                             const newVal = e.target.value;
-                             setMappings(prev => prev.map(p => p.id === m.id ? {...p, division: newVal} : p));
-                          }}
-                          onBlur={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
+                          onChange={(e) => handleUpdateField(m.id, 'division', e.target.value)}
                           onKeyDown={e => e.key === 'Enter' && handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
                         />
                     </td>
@@ -688,17 +746,34 @@ export default function AccountMappingPage() {
                     {/* AKSI */}
                     <td className={`${cellBase} text-center`}>
                        <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                           <div title="Simpan Perubahan" className="p-1.5 text-primary hover:bg-primary/10 rounded-lg cursor-pointer" onClick={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}>
-                             <Save className="w-3.5 h-3.5" />
-                           </div>
-                         {m.revisedBudget > 0 && useRevisedBudgetMode && (
-                           <div title="Pagu Perubahan Aktif" className="p-1.5 text-emerald-500">
-                             <CheckCircle2 className="w-4 h-4" />
-                           </div>
+                         {modifiedIds.has(m.id) ? (
+                           <>
+                             <button
+                               disabled={savingIds.has(m.id)}
+                               onClick={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
+                               className="p-1.5 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-all"
+                               title="Simpan Baris"
+                             >
+                               {savingIds.has(m.id) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                             </button>
+                             <button
+                               onClick={() => handleCancelRow(m.id)}
+                               className="p-1.5 text-muted hover:text-slate-500 rounded-lg transition-all"
+                               title="Batal Edit"
+                             >
+                               <X className="w-3.5 h-3.5" />
+                             </button>
+                           </>
+                         ) : (
+                           <>
+                             <div title="Pagu Perubahan Aktif" className="p-1.5 text-emerald-500 hidden group-hover:block" onClick={() => setEditingId(m.id)}>
+                               <Pencil className="w-3.5 h-3.5 text-primary" />
+                             </div>
+                             <button onClick={() => handleDelete(m.id)} className="p-1.5 text-muted hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all">
+                               <Trash2 className="w-3.5 h-3.5" />
+                             </button>
+                           </>
                          )}
-                         <button onClick={() => handleDelete(m.id)} className="p-1.5 text-muted hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all">
-                           <Trash2 className="w-3.5 h-3.5" />
-                         </button>
                        </div>
                     </td>
                   </tr>
