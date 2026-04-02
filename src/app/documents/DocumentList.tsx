@@ -20,7 +20,6 @@ const DEFAULT_WIDTHS: Record<string, number> = {
   subKegiatan: 110,
   tipe: 90,
   vendor: 130,
-  satuan: 70,
   total: 100,
   items: 280,
   aksi: 60,
@@ -37,7 +36,6 @@ const COL_LABELS: Record<string, string> = {
   subKegiatan: 'Sub Kegiatan',
   tipe: 'Tipe',
   vendor: 'Vendor / Penyedia',
-  satuan: 'Satuan',
   total: 'Total (Rp)',
   items: 'Untuk Pembayaran',
   aksi: 'Aksi',
@@ -307,6 +305,10 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                 ? format(new Date(doc.baDate), 'dd/MM/yyyy', { locale: id })
                 : null
 
+              // Fix: Recalculate total amount from items to ensure accuracy
+              const itemsTotal = doc.items?.reduce((sum: number, it: any) => sum + (Number(it.total) || 0), 0) || 0
+              const displayTotal = itemsTotal || doc.totalAmount || 0
+
               const rowBg = rowIdx % 2 === 0 ? 'bg-card' : 'bg-accent/30'
               const cellClass = `border-r border-b border-border px-2 py-1.5 align-top text-foreground text-[12px] ${
                 wrapText ? 'whitespace-pre-wrap break-words' : 'truncate'
@@ -323,7 +325,10 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                       autoFocus
                       className="w-full bg-white dark:bg-input border border-primary rounded px-1 py-0.5 text-xs outline-none"
                       value={localVal === null ? '' : localVal}
-                      onChange={e => setLocalVal(e.target.value)}
+                      onChange={e => {
+                         setLocalVal(e.target.value)
+                         // Optional: live calculation if needed, but save on blur is standard
+                      }}
                       onBlur={() => handleInlineSave(doc.id, field, localVal)}
                       onKeyDown={e => {
                         if (e.key === 'Enter') handleInlineSave(doc.id, field, localVal)
@@ -339,8 +344,9 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                       e.stopPropagation()
                       setEditingCell({ id: doc.id, field })
                     }}
+                    title="Klik untuk mengedit"
                   >
-                    {value || <span className="opacity-20">—</span>}
+                    {field === 'totalAmount' ? formatCurrency(value) : (value || <span className="opacity-20">—</span>)}
                   </div>
                 )
               }
@@ -448,7 +454,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
 
                     {/* Total */}
                     <td className={`${cellClass} text-right font-mono font-black text-foreground text-sm`}>
-                      <InlineInput field="totalAmount" type="number" value={doc.totalAmount} />
+                      <InlineInput field="totalAmount" type="number" value={displayTotal} />
                     </td>
 
                     {/* Items -> Payment Description */}
@@ -631,7 +637,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                                       </td>
                                       <td className="px-3 py-4 text-right border-t-2 border-primary/20 font-mono text-xl text-primary">
                                         <span className="text-[10px] mr-1 opacity-70">Rp</span>
-                                        {formatCurrency(doc.totalAmount)}
+                                        {formatCurrency(displayTotal)}
                                       </td>
                                       <td className="px-6 py-4 border-t-2 border-primary/20"></td>
                                     </tr>
@@ -699,10 +705,13 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                                       placeholder={placeholder}
                                     />
                                   ) : (
-                                    <span className={`text-[11px] text-foreground font-mono bg-input/40 px-2 py-1.5 rounded-lg border border-border group-hover:border-primary/30 transition-all ${label.includes('BA') ? 'text-amber-600 dark:text-amber-400 font-black' : ''}`}>
+                                    <span 
+                                      className={`text-[11px] text-foreground font-mono bg-input/40 px-2 py-1.5 rounded-lg border border-border group-hover:border-primary/30 transition-all cursor-text ${label.includes('BA') ? 'text-amber-600 dark:text-amber-400 font-black' : ''}`}
+                                      onClick={() => setEditingCell({ id: doc.id, field: key })}
+                                    >
                                       {key.includes('Date') || key === 'date' 
                                         ? (doc[key] ? format(new Date(doc[key]), 'dd/MM/yyyy') : '—')
-                                        : (doc[key] || '—')}
+                                        : (doc[key] || <span className="opacity-20">—</span>)}
                                     </span>
                                   )}
                                 </div>
