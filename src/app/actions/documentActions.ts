@@ -230,3 +230,91 @@ export async function batchImportDocuments(rows: any[]) {
   }
 }
 
+
+async function getOrCreateManualDocument(tx: any) {
+  let manualDoc = await tx.document.findFirst({
+    where: { docNumber: 'MANUAL-REPORT-BUILDER' }
+  })
+
+  if (!manualDoc) {
+    manualDoc = await tx.document.create({
+      data: {
+        type: 'Nota',
+        docNumber: 'MANUAL-REPORT-BUILDER',
+        vendorName: 'Entri Manual',
+        paymentFor: 'Entri Manual Melalui Report Builder',
+        totalAmount: 0,
+        date: new Date(),
+      }
+    })
+  }
+  return manualDoc
+}
+
+export async function updateDocumentItemsBatch(items: any[]) {
+  try {
+    const results = await prisma.$transaction(async (tx) => {
+      const updatedItems = []
+      const affectedDocIds = new Set<string>()
+
+      for (const item of items) {
+        // 1. Determine Document ID
+        let docId = item.documentId
+        if (!docId || item.docNo === 'Manual') {
+          const manualDoc = await getOrCreateManualDocument(tx)
+          docId = manualDoc.id
+        }
+
+        // 2. Update or Create
+        if (item.id && !item.id.includes('.')) { // Simple check for cuid vs math.random
+          const updated = await tx.documentItem.update({
+            where: { id: item.id },
+            data: {
+              description: item.desc,
+              quantity: Number(item.qty) || 0,
+              unit: item.unit,
+              price: Number(item.price) || 0,
+              total: Number(item.total) || 0,
+              itemCode: item.itemCode,
+            }
+          })
+          updatedItems.push(updated)
+          affectedDocIds.add(updated.documentId)
+        } else {
+          const created = await tx.documentItem.create({
+            data: {
+              documentId: docId,
+              description: item.desc,
+              quantity: Number(item.qty) || 0,
+              unit: item.unit,
+              price: Number(item.price) || 0,
+              total: Number(item.total) || 0,
+              itemCode: item.itemCode,
+            }
+          })
+          updatedItems.push(created)
+          affectedDocIds.add(created.documentId)
+        }
+      }
+
+      // 3. Recalculate totalAmount for all affected documents
+      for (const docId of affectedDocIds) {
+        const docItems = await tx.documentItem.findMany({ where: { documentId: docId } })
+        const totalAmount = docItems.reduce((sum: number, it: any) => sum + (it.total || 0), 0)
+        await tx.document.update({
+          where: { id: docId },
+          data: { totalAmount }
+        })
+      }
+
+      return updatedItems
+    })
+
+    revalidatePath('/documents')
+    revalidatePath('/')
+    return { success: true, count: results.length }
+  } catch (error: any) {
+    console.error("BATCH UPDATE ITEMS ERROR:", error)
+    return { success: false, error: error.message || "Gagal memperbarui item secara batch." }
+  }
+}

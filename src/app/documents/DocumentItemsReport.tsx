@@ -15,8 +15,12 @@ import {
   ArrowUp,
   ArrowDown,
   ArrowUpDown,
-  GripVertical
+  GripVertical,
+  Save,
+  Loader2,
+  X
 } from 'lucide-react'
+import { updateDocumentItemsBatch } from '@/app/actions/documentActions'
 
 // Extended Columns configuration
 const AVAILABLE_COLUMNS = [
@@ -48,6 +52,11 @@ export default function DocumentItemsReport({ documents }: { documents: any[] })
   )
   const [showColumnPicker, setShowColumnPicker] = useState(false)
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null)
+
+  // Persistence State
+  const [modifiedIds, setModifiedIds] = useState<Set<string>>(new Set())
+  const [savingIds, setSavingIds] = useState<Set<string>>(new Set())
+  const [isSavingAll, setIsSavingAll] = useState(false)
 
   // Memoized Column List for Settings Menu
   const orderedMenu = useMemo(() => {
@@ -101,7 +110,8 @@ export default function DocumentItemsReport({ documents }: { documents: any[] })
   // Initialize report items from documents
   useEffect(() => {
     const flattened = documents.flatMap(doc => (doc.items || []).map((item: any) => ({
-      id: item.id || Math.random().toString(36).substr(2, 9),
+      id: item.id || (Math.random() + 0.1).toString(), // Add salt to avoid 0.0 leading to issues
+      documentId: doc.id,
       docNo: doc.docNumber || '-',
       baNumber: doc.baNumber || '-',
       baDate: doc.baDate ? new Date(doc.baDate).toLocaleDateString('id-ID') : '-',
@@ -118,6 +128,7 @@ export default function DocumentItemsReport({ documents }: { documents: any[] })
       itemCode: item.itemCode || '-',
     })))
     setItems(flattened)
+    setModifiedIds(new Set())
   }, [documents])
 
   const filteredItems = useMemo(() => {
@@ -218,13 +229,69 @@ export default function DocumentItemsReport({ documents }: { documents: any[] })
   const handleUpdateItem = (originalIdx: number, key: string, value: any) => {
     setItems(prev => {
       const newItems = [...prev]
+      const itemId = newItems[originalIdx].id
       newItems[originalIdx] = { ...newItems[originalIdx], [key]: value }
-      if (key === 'price' || key === 'quantity') {
+      if (key === 'price' || key === 'qty') {
         const p = Number(newItems[originalIdx].price) || 0
-        const q = Number(newItems[originalIdx].quantity) || 0
+        const q = Number(newItems[originalIdx].qty) || 0
         newItems[originalIdx].total = p * q
       }
+      
+      // Mark as modified
+      setModifiedIds(prevIds => new Set(prevIds).add(itemId))
+      
       return newItems
+    })
+  }
+
+  const handleSaveAll = async () => {
+    if (modifiedIds.size === 0) return
+    setIsSavingAll(true)
+    try {
+      const itemsToSave = items.filter(it => modifiedIds.has(it.id))
+      const res = await updateDocumentItemsBatch(itemsToSave)
+      if (res.success) {
+        setModifiedIds(new Set())
+        alert(`Berhasil menyimpan ${res.count} perubahan.`)
+      } else {
+        alert("Gagal menyimpan: " + res.error)
+      }
+    } finally {
+      setIsSavingAll(false)
+    }
+  }
+
+  const handleSaveRow = async (itemId: string) => {
+    setSavingIds(prev => new Set(prev).add(itemId))
+    try {
+      const itemToSave = items.find(it => it.id === itemId)
+      if (!itemToSave) return
+      const res = await updateDocumentItemsBatch([itemToSave])
+      if (res.success) {
+        setModifiedIds(prev => {
+          const next = new Set(prev)
+          next.delete(itemId)
+          return next
+        })
+      } else {
+        alert("Gagal menyimpan baris: " + res.error)
+      }
+    } finally {
+      setSavingIds(prev => {
+        const next = new Set(prev)
+        next.delete(itemId)
+        return next
+      })
+    }
+  }
+
+  const handleCancelRow = (itemId: string) => {
+    // Reset individual row is tricky without deep copy of original data.
+    // For now, just unmark as modified. The user can refresh to revert.
+    setModifiedIds(prev => {
+      const next = new Set(prev)
+      next.delete(itemId)
+      return next
     })
   }
 
@@ -390,6 +457,17 @@ export default function DocumentItemsReport({ documents }: { documents: any[] })
             <Plus className="w-4 h-4" /> Baris Baru
           </button>
           
+          {modifiedIds.size > 0 && (
+            <button
+              onClick={handleSaveAll}
+              disabled={isSavingAll}
+              className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black shadow-lg shadow-indigo-600/20 active:scale-95 transition-all disabled:opacity-50"
+            >
+              {isSavingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Simpan Semua ({modifiedIds.size})
+            </button>
+          )}
+
           <button
             onClick={handleExport}
             className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-600/20 active:scale-95 transition-all"
@@ -474,28 +552,59 @@ export default function DocumentItemsReport({ documents }: { documents: any[] })
                              {colId === 'no' ? (
                                viewIdx + 1
                              ) : (
-                            <input 
-                                 className={`w-full bg-transparent border-none p-2 outline-none focus:bg-white dark:focus:bg-white/5 ${colId === 'total' ? 'text-right font-black text-emerald-600 dark:text-emerald-400 font-mono text-xs' : 'text-[11px] font-bold text-foreground'} ${colId === 'price' ? 'text-right font-mono' : ''} ${colId === 'date' ? 'text-primary font-black' : ''}`}
-                                 value={
-                                   colId === 'total' ? formatCurrency(item[colId]) :
-                                   item[colId] || ''
-                                 }
-                                 onChange={e => {
-                                   handleUpdateItem(originalIdx, colId, e.target.value)
-                                 }}
-                                 readOnly={colId === 'total'}
-                               />
+                               <div className="relative group/cell w-full h-full">
+                                 <input 
+                                   className={`w-full bg-transparent border-none p-2 outline-none focus:bg-white dark:focus:bg-white/5 ${colId === 'total' ? 'text-right font-black text-emerald-600 dark:text-emerald-400 font-mono text-xs' : 'text-[11px] font-bold text-foreground'} ${colId === 'price' ? 'text-right font-mono' : ''} ${colId === 'date' ? 'text-primary font-black' : ''} ${modifiedIds.has(item.id) ? 'bg-amber-500/5' : ''}`}
+                                   value={
+                                     colId === 'total' ? formatCurrency(item[colId]) :
+                                     item[colId] || ''
+                                   }
+                                   onChange={e => {
+                                     handleUpdateItem(originalIdx, colId, e.target.value)
+                                   }}
+                                   onKeyDown={e => {
+                                      if (e.key === 'Enter') handleSaveRow(item.id)
+                                      if (e.key === 'Escape') handleCancelRow(item.id)
+                                   }}
+                                   readOnly={colId === 'total'}
+                                 />
+                                 {modifiedIds.has(item.id) && (
+                                   <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-amber-500/50" />
+                                 )}
+                               </div>
                              )}
                           </td>
                         )
                       })}
                       <td className="border border-border text-center bg-slate-50 dark:bg-black/20 sticky right-0 z-10 shadow-[-4px_0_10px_-2px_rgba(0,0,0,0.1)]">
-                        <button 
-                          onClick={() => handleDeleteItem(originalIdx)}
-                          className="p-3 text-muted hover:text-rose-500 hover:bg-rose-500/10 transition-all opacity-0 group-hover:opacity-100"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center justify-center gap-1">
+                          {modifiedIds.has(item.id) ? (
+                            <>
+                              <button 
+                                onClick={() => handleSaveRow(item.id)}
+                                disabled={savingIds.has(item.id)}
+                                className="p-2 text-emerald-500 hover:bg-emerald-500/10 transition-all"
+                                title="Simpan Baris"
+                              >
+                                {savingIds.has(item.id) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                              </button>
+                              <button 
+                                onClick={() => handleCancelRow(item.id)}
+                                className="p-2 text-muted hover:text-slate-500 transition-all"
+                                title="Batal Edit"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </>
+                          ) : (
+                            <button 
+                              onClick={() => handleDeleteItem(originalIdx)}
+                              className="p-3 text-muted hover:text-rose-500 hover:bg-rose-500/10 transition-all opacity-0 group-hover:opacity-100"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   )
