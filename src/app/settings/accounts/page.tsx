@@ -30,7 +30,6 @@ import {
 } from 'lucide-react'
 import { getAccountMappings, upsertAccountMapping, deleteAccountMapping, syncAccountCodesFromBku, upsertAccountMappingBulk } from '@/app/actions/bkuActions'
 import { getBudgetMode, updateBudgetMode } from '@/app/actions/settingsActions'
-import { toast } from 'sonner'
 import * as XLSX from 'xlsx'
 
 const DEFAULT_WIDTHS = {
@@ -190,7 +189,7 @@ export default function AccountMappingPage() {
     setLoading(true)
     try {
       const res = await syncAccountCodesFromBku(selectedYear)
-      toast.success(`${res.count} rekening baru disinkronkan`)
+      console.log(`${res.count} rekening baru disinkronkan`)
       fetchMappings()
     } finally {
       setLoading(false)
@@ -230,11 +229,10 @@ export default function AccountMappingPage() {
         }))
 
         await upsertAccountMappingBulk(prepared, selectedYear)
-        toast.success("Impor data berhasil")
+        console.log("Impor data berhasil")
         fetchMappings()
       } catch (err) {
-        toast.error("Gagal mengimpor file")
-        console.error(err)
+        console.error("Gagal mengimpor file", err)
       } finally {
         setIsImporting(false)
       }
