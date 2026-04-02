@@ -31,6 +31,7 @@ import {
 import { getAccountMappings, upsertAccountMapping, deleteAccountMapping, syncAccountCodesFromBku, upsertAccountMappingBulk } from '@/app/actions/bkuActions'
 import { getBudgetMode, updateBudgetMode } from '@/app/actions/settingsActions'
 import * as XLSX from 'xlsx'
+import LoadingState from '@/components/LoadingState'
 
 const DEFAULT_WIDTHS = {
   sub: 160,
@@ -613,9 +614,12 @@ export default function AccountMappingPage() {
 
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-8 py-24 text-center">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary/30 mx-auto mb-4" />
-                    <p className="text-[10px] font-black text-muted uppercase tracking-[0.3em]">Memasuki spreadsheet...</p>
+                  <td colSpan={8} className="p-0 border-none">
+                    <LoadingState 
+                      message="Menyiapkan Spreadsheet" 
+                      subtitle="MASTER DATA REKENING"
+                      className="min-h-[400px]" 
+                    />
                   </td>
                 </tr>
               ) : sortedAndFiltered.length === 0 ? (
