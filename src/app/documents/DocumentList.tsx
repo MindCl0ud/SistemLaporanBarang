@@ -322,12 +322,11 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                 <React.Fragment key={doc.id}>
                   {/* ── Main data row ── */}
                   <tr
-                    className={`${rowBg} hover:bg-primary/5 border-l-2 ${isExpanded ? 'border-primary' : 'border-transparent'} transition-all group`}
+                    className={`${rowBg} hover:bg-primary/5 border-l-2 ${isExpanded ? 'border-primary' : 'border-transparent'} transition-all group cursor-pointer`}
+                    onClick={() => setExpandedId(isExpanded ? null : doc.id)}
                   >
                     {/* No */}
-                    <td className={`${cellClass} text-foreground/70 text-center font-mono border-border cursor-pointer`}
-                        onClick={() => setExpandedId(isExpanded ? null : doc.id)}
-                    >
+                    <td className={`${cellClass} text-foreground/70 text-center font-mono border-border`}>
                       <div className="flex items-center justify-center gap-1.5">
                         {isExpanded
                           ? <ChevronDown className="w-3.5 h-3.5 text-primary" />
@@ -479,7 +478,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                                                   placeholder="Kode..."
                                                 />
                                               </td>
-                                              <td className="px-2 py-1 border-b border-border">
+                                              <td className="px-2 py-1 border-b border-border min-w-[300px]">
                                                 <input
                                                   className="w-full bg-input text-foreground text-xs px-2 py-1 rounded border border-indigo-500 outline-none"
                                                   value={editing.description}
