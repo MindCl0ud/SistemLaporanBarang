@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Calendar, Loader2 } from 'lucide-react'
-import { useTransition } from 'react'
+import { useTransition, useEffect } from 'react'
 
 const months = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -16,7 +16,30 @@ export default function BkuFilter({ currentMonth, currentYear }: { currentMonth:
   const searchParams = useSearchParams()
   const [isPending, startTransition] = useTransition()
 
+  // Sync URL state with local storage to persist session
+  useEffect(() => {
+    const hasParams = searchParams.has('month') && searchParams.has('year')
+    const savedMonth = localStorage.getItem('bku_month')
+    const savedYear = localStorage.getItem('bku_year')
+
+    if (!hasParams && savedMonth && savedYear) {
+      // If URL has no params but we have a saved session, apply it
+      const params = new URLSearchParams(searchParams.toString())
+      params.set('month', savedMonth)
+      params.set('year', savedYear)
+      router.replace(`/bku?${params.toString()}`)
+    } else if (hasParams) {
+      // If URL has params, sync them to local storage
+      localStorage.setItem('bku_month', searchParams.get('month')!)
+      localStorage.setItem('bku_year', searchParams.get('year')!)
+    }
+  }, [searchParams, router])
+
   const updateFilter = (month: number, year: number) => {
+    // Save to local storage immediately for snappy persistence
+    localStorage.setItem('bku_month', month.toString())
+    localStorage.setItem('bku_year', year.toString())
+    
     const params = new URLSearchParams(searchParams.toString())
     params.set('month', month.toString())
     params.set('year', year.toString())

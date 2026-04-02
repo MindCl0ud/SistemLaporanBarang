@@ -35,9 +35,12 @@ export async function getBkuComparison(month: number, year: number) {
   
   const openingBalance = (aggPast._sum.receiptTotal || 0) - (aggPast._sum.expenseTotal || 0)
 
-  const currentRecords = await prisma.bkuTransaction.findMany({ where: { month, year } })
-  const currentExpense = currentRecords.reduce((sum, r) => sum + (r.expenseTotal || 0), 0)
-  const currentReceipt = currentRecords.reduce((sum, r) => sum + (r.receiptTotal || 0), 0)
+  const currentAgg = await prisma.bkuTransaction.aggregate({
+    where: { month, year },
+    _sum: { expenseTotal: true, receiptTotal: true }
+  })
+  const currentExpense = currentAgg._sum.expenseTotal || 0
+  const currentReceipt = currentAgg._sum.receiptTotal || 0
   const currentNet = currentReceipt - currentExpense
   
   let prevMonth = month - 1
@@ -47,9 +50,12 @@ export async function getBkuComparison(month: number, year: number) {
     prevYear = year - 1
   }
   
-  const prevRecords = await prisma.bkuTransaction.findMany({ where: { month: prevMonth, year: prevYear } })
-  const prevExpense = prevRecords.reduce((sum, r) => sum + (r.expenseTotal || 0), 0)
-  const prevReceipt = prevRecords.reduce((sum, r) => sum + (r.receiptTotal || 0), 0)
+  const prevAgg = await prisma.bkuTransaction.aggregate({
+    where: { month: prevMonth, year: prevYear },
+    _sum: { expenseTotal: true, receiptTotal: true }
+  })
+  const prevExpense = prevAgg._sum.expenseTotal || 0
+  const prevReceipt = prevAgg._sum.receiptTotal || 0
 
   const aggPrevPast = await prisma.bkuTransaction.aggregate({
     where: {
