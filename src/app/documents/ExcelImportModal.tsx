@@ -140,7 +140,7 @@ export default function ExcelImportModal({ onClose, onSuccess }: ExcelImportModa
                 </div>
                 <button 
                   onClick={downloadTemplate}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-white border border-border text-[10px] font-black uppercase tracking-wider text-foreground hover:bg-slate-50 rounded-lg shrink-0 transition-all shadow-sm"
+                  className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-white/5 border border-border text-[10px] font-black uppercase tracking-wider text-foreground hover:bg-slate-200 dark:hover:bg-white/10 rounded-lg shrink-0 transition-all shadow-sm"
                 >
                   <Download className="w-3.5 h-3.5" /> Template
                 </button>
