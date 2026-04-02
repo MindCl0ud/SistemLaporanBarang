@@ -34,6 +34,7 @@ export default function ManualDocumentForm({ onClose, onSuccess, initialData, im
     subKegiatan: initialData?.subKegiatan || '',
     paymentFor: initialData?.paymentFor || '',
     division: initialData?.division || '',
+    unit: initialData?.unit || '',
     extractedText: initialData?.extractedText || '',
     items: initialData?.items?.map((it: any) => ({
       itemCode: it.itemCode || '',
@@ -213,6 +214,16 @@ export default function ManualDocumentForm({ onClose, onSuccess, initialData, im
                     className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-primary focus:outline-none"
                   />
                 </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-muted uppercase mb-1">Satuan Global (Opsional)</label>
+                  <input
+                    type="text"
+                    value={formData.unit}
+                    onChange={e => setFormData({ ...formData, unit: e.target.value })}
+                    placeholder="Contoh: Bulan / Paket / LS"
+                    className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-primary focus:outline-none"
+                  />
+                </div>
               </div>
 
               {/* Dates & Codes */}
@@ -254,6 +265,27 @@ export default function ManualDocumentForm({ onClose, onSuccess, initialData, im
                       type="text"
                       value={formData.docNumber}
                       onChange={e => setFormData({ ...formData, docNumber: e.target.value })}
+                      className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-muted uppercase mb-1">Tanggal Berita Acara (BA)</label>
+                    <input
+                      type="date"
+                      value={formData.baDate}
+                      onChange={e => setFormData({ ...formData, baDate: e.target.value })}
+                      className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-muted uppercase mb-1">Nomor Berita Acara (BA)</label>
+                    <input
+                      type="text"
+                      value={formData.baNumber}
+                      onChange={e => setFormData({ ...formData, baNumber: e.target.value })}
+                      placeholder="Contoh: BA/01/MD"
                       className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none"
                     />
                   </div>

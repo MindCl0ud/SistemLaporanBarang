@@ -3,8 +3,9 @@
 import React, { useState, useRef, useCallback, useEffect } from "react"
 import { format } from "date-fns"
 import { id } from "date-fns/locale"
-import { Trash2, Bot, Loader2, WrapText, AlignJustify, ChevronDown, ChevronRight, CheckCircle2, Circle, Pencil, Check, X, Save } from "lucide-react"
+import { Plus, Trash2, Bot, Loader2, WrapText, AlignJustify, ChevronDown, ChevronRight, CheckCircle2, Circle, Pencil, Check, X, Save } from "lucide-react"
 import { deleteDocument, updateDocumentItem, deleteDocumentItem } from "@/app/actions/documentActions"
+import ManualDocumentForm from "./ManualDocumentForm"
 
 // ──────────────────────────────────────────────────────────
 // Column definitions
@@ -115,6 +116,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
   const [editingDocId, setEditingDocId] = useState<string | null>(null)
   const [editingDocData, setEditingDocData] = useState<any>(null)
   const [savingDoc, setSavingDoc] = useState(false)
+  const [showManualForm, setShowManualForm] = useState(false)
 
   const handleStartEditDoc = (doc: any) => {
     setEditingDocId(doc.id)
@@ -189,6 +191,13 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
         >
           <AlignJustify className="w-3.5 h-3.5" />
           Reset Lebar
+        </button>
+        <button
+          onClick={() => setShowManualForm(true)}
+          className="flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-black bg-primary text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all active:scale-95"
+        >
+          <Plus className="w-4 h-4" />
+          Tambah Manual
         </button>
         <span className="text-foreground/60 text-xs ml-auto font-medium">
           {initialDocuments.length} dokumen · Seret batas kolom untuk mengubah lebar
@@ -621,6 +630,16 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
         <span>{initialDocuments.length} baris · {COL_KEYS.length} kolom</span>
         <span>💡 Klik baris untuk melihat detail · Seret batas kolom untuk resize</span>
       </div>
+
+      {showManualForm && (
+        <ManualDocumentForm 
+          onClose={() => setShowManualForm(false)}
+          onSuccess={() => {
+            setShowManualForm(false);
+            window.location.reload();
+          }}
+        />
+      )}
     </div>
   )
 }
