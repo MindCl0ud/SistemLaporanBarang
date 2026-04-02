@@ -121,7 +121,7 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
   }
 
   return (
-    <form ref={formRef} action={handleSubmit} className="space-y-4">
+    <form ref={formRef} action={handleSubmit} className="h-full flex flex-col space-y-5">
       <input type="hidden" name="month" value={currentMonth} />
       <input type="hidden" name="year" value={currentYear} />
       
@@ -161,9 +161,14 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
         </div>
       </div>
 
-      <div className="space-y-1">
+      <div className="space-y-1 flex-1 flex flex-col min-h-[150px]">
         <label className="text-[10px] font-bold text-foreground/60 uppercase">Uraian / Deskripsi</label>
-        <textarea name="description" required rows={3} className="w-full bg-input border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary transition-all" placeholder="Belanja Makan Minum Rapat..." />
+        <textarea 
+          name="description" 
+          required 
+          className="w-full flex-1 bg-input border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary transition-all resize-none" 
+          placeholder="Belanja Makan Minum Rapat..." 
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -177,8 +182,8 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
         </div>
       </div>
 
-      <button type="submit" disabled={loading} className="w-full mt-4 py-2.5 bg-primary hover:bg-primary/90 disabled:opacity-50 text-white rounded-xl text-sm font-medium transition-colors flex justify-center items-center gap-2 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
-        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Simpan Data"}
+      <button type="submit" disabled={loading} className="w-full py-4 bg-primary hover:bg-primary/90 disabled:opacity-50 text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all hover:scale-[1.01] active:scale-95 flex justify-center items-center gap-2 shadow-xl shadow-primary/20 mt-auto">
+        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Simpan Data BKU"}
       </button>
     </form>
   )

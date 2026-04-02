@@ -38,12 +38,14 @@ export default function BkuDashboardContent({
         
         {/* LEFT COLUMN: Input Form */}
         <div className="space-y-6">
-          <div className="p-6 rounded-3xl bg-card border border-border backdrop-blur-md shadow-sm h-full">
+          <div className="p-6 rounded-3xl bg-card border border-border backdrop-blur-md shadow-sm h-full flex flex-col">
             <h2 className="text-lg font-black text-foreground mb-6 flex items-center gap-2">
               <Plus className="w-5 h-5 text-primary" />
               Tambah Data BKU
             </h2>
-            <BkuForm currentMonth={month} currentYear={year} />
+            <div className="flex-1 min-h-0">
+              <BkuForm currentMonth={month} currentYear={year} />
+            </div>
           </div>
         </div>
 
