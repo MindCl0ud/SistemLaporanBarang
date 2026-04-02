@@ -84,8 +84,6 @@ export default function AccountMappingPage() {
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null)
   
   // Inline editing states
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editValue, setEditValue] = useState('')
   const [savedId, setSavedId] = useState<string | null>(null)
 
   // Persistence State
@@ -192,8 +190,6 @@ export default function AccountMappingPage() {
         }
       }
 
-      setEditingId(null)
-      setShowAddRow(false)
       setNewRow({ code: '', name: '', division: '', budget: '', revisedBudget: '', subKegiatan: '' })
       
       const currentId = id || updated?.id || 'new'
@@ -634,113 +630,116 @@ export default function AccountMappingPage() {
                     <td className={`${cellBase} text-center font-mono font-black text-muted/30`}>{idx + 1}</td>
                     
                     {/* SUB */}
-                    <td className={`${cellBase} ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
+                    <td className={`${cellBase} p-0 relative group/cell ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
                       <input 
-                        className="w-full bg-transparent outline-none focus:bg-white dark:focus:bg-input px-1 rounded transition-all text-muted-foreground font-mono text-[10px] focus:ring-1 focus:ring-primary"
+                        className="w-full bg-transparent border-none p-2 outline-none focus:bg-white dark:focus:bg-white/5 text-muted-foreground font-mono text-[10px]"
                         value={m.subKegiatan || ''}
                         onChange={e => handleUpdateField(m.id, 'subKegiatan', e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)
+                          if (e.key === 'Escape') handleCancelRow(m.id)
+                        }}
                       />
+                      {modifiedIds.has(m.id) && <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-amber-500/50" />}
                     </td>
 
                     {/* CODE */}
-                    <td className={`${cellBase} ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
+                    <td className={`${cellBase} p-0 relative group/cell ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
                       <input 
-                        className="w-full bg-transparent outline-none focus:bg-white dark:focus:bg-input px-1 rounded transition-all font-mono text-[11px] text-primary font-black uppercase"
+                        className="w-full bg-transparent border-none p-2 outline-none focus:bg-white dark:focus:bg-white/5 font-mono text-[11px] text-primary font-black uppercase"
                         value={m.code}
                         onChange={e => handleUpdateField(m.id, 'code', e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)
+                          if (e.key === 'Escape') handleCancelRow(m.id)
+                        }}
                       />
+                      {modifiedIds.has(m.id) && <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-amber-500/50" />}
                     </td>
 
                     {/* NAME */}
-                    <td className={`${cellBase} ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
-                      {editingId === m.id ? (
-                        <div className="flex flex-col gap-1">
-                          <textarea 
-                            className="w-full bg-white dark:bg-input border border-primary rounded-lg px-2 py-1 text-xs font-bold text-foreground outline-none resize-none overflow-hidden min-h-[2.5rem]"
-                            value={editValue}
-                            rows={Math.max(1, editValue.split('\n').length)}
-                            onChange={e => {
-                               setEditValue(e.target.value);
-                               handleUpdateField(m.id, 'name', e.target.value);
-                               e.target.style.height = 'auto';
-                               e.target.style.height = e.target.scrollHeight + 'px';
-                            }}
-                            onKeyDown={e => {
-                               if (e.key === 'Enter' && !e.shiftKey) {
-                                 e.preventDefault();
-                                 handleSaveInline(m.code, editValue, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget);
-                               }
-                               if (e.key === 'Escape') handleCancelRow(m.id);
-                            }}
-                            autoFocus
-                            onFocus={e => {
-                               e.target.style.height = 'auto';
-                               e.target.style.height = e.target.scrollHeight + 'px';
-                            }}
-                          />
-                          <div className="flex items-center justify-end gap-1">
-                             <span className="text-[8px] text-muted-foreground uppercase font-black tracking-tighter">Shift+Enter for newline</span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div 
-                          className="flex items-start gap-2 cursor-pointer group/n min-h-[1.5rem]"
-                          onClick={() => { setEditingId(m.id); setEditValue(m.name); }}
-                        >
-                          <span className="flex-1 font-medium whitespace-pre-wrap leading-relaxed">{m.name}</span>
-                          <div className="shrink-0 flex items-center gap-1">
-                            {savingId === m.id || savingIds.has(m.id) ? (
-                              <Loader2 className="w-3 h-3 text-primary animate-spin" />
-                            ) : savedId === m.id ? (
-                              <CheckCircle2 className="w-3 h-3 text-emerald-500 animate-in fade-in zoom-in duration-300" />
-                            ) : (
-                              <PencilIcon className="w-3 h-3 text-primary opacity-0 group-hover/n:opacity-100 transition-opacity" />
-                            )}
-                          </div>
-                        </div>
-                      )}
+                    <td className={`${cellBase} p-0 relative group/cell ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
+                      <textarea 
+                        className="w-full bg-transparent border-none p-2 outline-none focus:bg-white dark:focus:bg-white/5 font-medium whitespace-pre-wrap leading-relaxed text-[12px] resize-none overflow-hidden min-h-[3rem]"
+                        value={m.name}
+                        rows={Math.max(1, (m.name || '').split('\n').length)}
+                        onChange={e => {
+                           handleUpdateField(m.id, 'name', e.target.value);
+                           e.target.style.height = 'auto';
+                           e.target.style.height = e.target.scrollHeight + 'px';
+                        }}
+                        onKeyDown={e => {
+                           if (e.key === 'Enter' && !e.shiftKey) {
+                             e.preventDefault();
+                             handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget);
+                           }
+                           if (e.key === 'Escape') handleCancelRow(m.id);
+                        }}
+                        onFocus={e => {
+                           e.target.style.height = 'auto';
+                           e.target.style.height = e.target.scrollHeight + 'px';
+                        }}
+                      />
+                      {modifiedIds.has(m.id) && <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-amber-500/50" />}
+                      <div className="absolute right-2 bottom-1 shrink-0 flex items-center gap-1 pointer-events-none">
+                        {savingIds.has(m.id) ? (
+                          <Loader2 className="w-3 h-3 text-primary animate-spin" />
+                        ) : savedId === m.id ? (
+                          <CheckCircle2 className="w-3 h-3 text-emerald-500 animate-in fade-in zoom-in duration-300" />
+                        ) : null}
+                      </div>
                     </td>
 
                     {/* PAGU AWAL */}
-                    <td className={`${cellBase} text-right ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
-                       <div className="flex items-center gap-2 justify-end group/p">
+                    <td className={`${cellBase} p-0 relative group/cell text-right ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
+                       <div className="flex items-center gap-2 justify-end w-full h-full pr-2">
                           <input 
                             type="number"
-                            className="w-full bg-transparent outline-none focus:bg-white dark:focus:bg-input border border-transparent focus:border-border px-1 py-0.5 rounded text-right font-mono font-bold text-foreground/80 tabular-nums"
+                            className="w-full bg-transparent border-none p-2 outline-none focus:bg-white dark:focus:bg-white/5 text-right font-mono font-bold text-foreground/80 tabular-nums"
                             value={m.budget || 0}
                             onChange={(e) => handleUpdateField(m.id, 'budget', Number(e.target.value))}
-                            onKeyDown={e => e.key === 'Enter' && handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)
+                              if (e.key === 'Escape') handleCancelRow(m.id)
+                            }}
                           />
                             <button 
                               onClick={() => setHistoryData(m)}
-                              className={`p-1 rounded bg-primary/5 hover:bg-primary/10 transition-colors ${savedId === m.id ? 'text-primary bg-primary/20' : 'text-slate-400 opacity-0 group-hover/p:opacity-100'}`}
+                              className={`p-1 rounded bg-primary/5 hover:bg-primary/10 transition-colors ${savedId === m.id ? 'text-primary bg-primary/20' : 'text-slate-400 opacity-0 group-hover/cell:opacity-100'}`}
                             >
                               <RefreshCw className="w-3 h-3" />
                             </button>
                        </div>
+                       {modifiedIds.has(m.id) && <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-amber-500/50" />}
                     </td>
 
                     {/* PAGU PERUBAHAN */}
-                    <td className={`${cellBase} text-right ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
+                    <td className={`${cellBase} p-0 relative group/cell text-right ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
                        <input 
                          type="number"
-                         className={`w-full bg-transparent outline-none focus:bg-white dark:focus:bg-input px-1 py-0.5 rounded text-right font-mono font-black tabular-nums transition-colors ${m.revisedBudget > 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-foreground/10'}`}
+                         className={`w-full bg-transparent border-none p-2 outline-none focus:bg-white dark:focus:bg-white/5 text-right font-mono font-black tabular-nums transition-colors ${m.revisedBudget > 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-foreground/10'}`}
                          value={m.revisedBudget || 0}
                          onChange={(e) => handleUpdateField(m.id, 'revisedBudget', Number(e.target.value))}
-                         onKeyDown={e => e.key === 'Enter' && handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
+                         onKeyDown={e => {
+                            if (e.key === 'Enter') handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)
+                            if (e.key === 'Escape') handleCancelRow(m.id)
+                         }}
                        />
+                       {modifiedIds.has(m.id) && <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-amber-500/50" />}
                     </td>
 
                     {/* BIDANG */}
-                    <td className={`${cellBase} ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
+                    <td className={`${cellBase} p-0 relative group/cell ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
                         <input 
-                          className="w-full bg-transparent outline-none focus:bg-white dark:focus:bg-input px-1 rounded transition-all text-muted-foreground font-medium"
+                          className="w-full bg-transparent border-none p-2 outline-none focus:bg-white dark:focus:bg-white/5 text-muted-foreground font-medium"
                           value={m.division || ''}
                           onChange={(e) => handleUpdateField(m.id, 'division', e.target.value)}
-                          onKeyDown={e => e.key === 'Enter' && handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)
+                            if (e.key === 'Escape') handleCancelRow(m.id)
+                          }}
                         />
+                        {modifiedIds.has(m.id) && <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-amber-500/50" />}
                     </td>
 
                     {/* AKSI */}
@@ -766,9 +765,6 @@ export default function AccountMappingPage() {
                            </>
                          ) : (
                            <>
-                             <div title="Pagu Perubahan Aktif" className="p-1.5 text-emerald-500 hidden group-hover:block" onClick={() => setEditingId(m.id)}>
-                               <Pencil className="w-3.5 h-3.5 text-primary" />
-                             </div>
                              <button onClick={() => handleDelete(m.id)} className="p-1.5 text-muted hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all">
                                <Trash2 className="w-3.5 h-3.5" />
                              </button>
@@ -785,7 +781,7 @@ export default function AccountMappingPage() {
 
         {/* Legend */}
         <div className="flex items-center justify-between px-1 text-[10px] text-foreground/30 font-black uppercase tracking-widest mt-1">
-          <span>{sortedAndFiltered.length} REKENING · SERET BATAS KOLOM UNTUK RESIZE</span>
+          <span>{sortedAndFiltered.length} REKENING · SERET BATAS KOLOM UNTUK RESIZE · TEKAN ENTER UNTUK SIMPAN BARIS</span>
           <div className="flex items-center gap-3">
              <span className="flex items-center gap-1.5"><CircleIcon className="w-2.5 h-2.5 fill-primary text-primary" /> Pagu Awal</span>
              <span className="flex items-center gap-1.5"><CircleIcon className="w-2.5 h-2.5 fill-indigo-500 text-indigo-500" /> Pagu Perubahan</span>
