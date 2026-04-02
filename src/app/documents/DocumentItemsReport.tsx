@@ -159,6 +159,10 @@ export default function DocumentItemsReport({ documents }: { documents: any[] })
     return result
   }, [items, search, sortConfig])
 
+  const totalOverall = useMemo(() => {
+    return filteredItems.reduce((sum, item) => sum + (Number(item.total) || 0), 0)
+  }, [filteredItems])
+
   const requestSort = (key: string) => {
     let direction: 'asc' | 'desc' = 'asc'
     if (sortConfig?.key === key && sortConfig.direction === 'asc') {
@@ -498,6 +502,36 @@ export default function DocumentItemsReport({ documents }: { documents: any[] })
                 })
               )}
             </tbody>
+            {filteredItems.length > 0 && (
+              <tfoot className="sticky bottom-0 z-[10] shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)]">
+                <tr className="bg-slate-200/80 dark:bg-slate-900/90 backdrop-blur-md border-t-2 border-primary/20">
+                  {visibleColumns.map((colId) => {
+                    const width = columnWidths[colId] || 100
+                    return (
+                      <td 
+                        key={`foot-${colId}`} 
+                        className={`border border-border p-3 text-[10px] font-black uppercase tracking-widest ${colId === 'total' ? 'bg-emerald-500/10 text-right' : ''}`}
+                        style={{ width: `${width}px` }}
+                      >
+                        {colId === 'total' ? (
+                          <div className="flex flex-col gap-0.5">
+                             <span className="text-[8px] opacity-40">TOTAL KESELURUHAN</span>
+                             <span className="text-sm font-black text-emerald-600 dark:text-emerald-400 font-mono tracking-tighter">
+                               {formatCurrency(totalOverall)}
+                             </span>
+                          </div>
+                        ) : colId === 'no' ? (
+                          <span className="opacity-0">Sum</span>
+                        ) : colId === 'desc' ? (
+                          <span className="text-primary truncate block max-w-full">TOTAL LIST ITEM</span>
+                        ) : null}
+                      </td>
+                    )
+                  })}
+                  <td className="border border-border bg-slate-300 dark:bg-slate-950 sticky right-0 z-10 shadow-[-4px_0_10px_-2px_rgba(0,0,0,0.1)]"></td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       </div>
