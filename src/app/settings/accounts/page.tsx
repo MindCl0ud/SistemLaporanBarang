@@ -13,8 +13,12 @@ import {
   X,
   Hash,
   Plus,
-  Check
+  Check,
+  ChevronUp,
+  ChevronDown,
+  ArrowUpDown
 } from 'lucide-react'
+import { useMemo } from 'react'
 import { getAccountMappings, upsertAccountMapping, deleteAccountMapping, syncAccountCodesFromBku } from '@/app/actions/bkuActions'
 
 export default function AccountMappingPage() {
@@ -22,6 +26,7 @@ export default function AccountMappingPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [savingId, setSavingId] = useState<string | null>(null)
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null)
   
   // Inline editing states
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -76,11 +81,35 @@ export default function AccountMappingPage() {
     }
   }
 
-  const filtered = mappings.filter(m => 
-    m.code.toLowerCase().includes(search.toLowerCase()) || 
-    m.name.toLowerCase().includes(search.toLowerCase()) ||
-    m.division?.toLowerCase().includes(search.toLowerCase())
-  )
+  const requestSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc'
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc'
+    }
+    setSortConfig({ key, direction })
+  }
+
+  const sortedAndFiltered = useMemo(() => {
+    let result = mappings.filter(m => 
+      m.code.toLowerCase().includes(search.toLowerCase()) || 
+      m.name.toLowerCase().includes(search.toLowerCase()) ||
+      m.division?.toLowerCase().includes(search.toLowerCase())
+    )
+
+    if (sortConfig) {
+      result.sort((a, b) => {
+        const valA = a[sortConfig.key] || (typeof a[sortConfig.key] === 'number' ? 0 : '')
+        const valB = b[sortConfig.key] || (typeof b[sortConfig.key] === 'number' ? 0 : '')
+
+        if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1
+        if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1
+        return 0
+      })
+    } else {
+       result.sort((a, b) => a.code.localeCompare(b.code))
+    }
+    return result
+  }, [mappings, search, sortConfig])
 
   const totalPagu = mappings.reduce((sum, m) => sum + (m.budget || 0), 0)
 
@@ -150,11 +179,28 @@ export default function AccountMappingPage() {
         <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-sm border-collapse min-w-[900px]">
             <thead>
-              <tr className="bg-slate-50 dark:bg-input/50 border-b border-border">
-                <th className="px-8 py-5 text-left text-[10px] uppercase font-black tracking-widest text-muted w-64">Kode Rekening</th>
-                <th className="px-8 py-5 text-left text-[10px] uppercase font-black tracking-widest text-muted">Nama Kustom</th>
-                <th className="px-8 py-5 text-right text-[10px] uppercase font-black tracking-widest text-muted w-48">Total Pagu (Rp)</th>
-                <th className="px-8 py-5 text-left text-[10px] uppercase font-black tracking-widest text-muted w-64">Bidang (Keterangan)</th>
+              <tr className="bg-table-header border-b border-border">
+                {[
+                  { id: 'code', label: 'Kode Rekening', width: 'w-64' },
+                  { id: 'name', label: 'Nama Kustom', width: '' },
+                  { id: 'budget', label: 'Total Pagu (Rp)', width: 'w-48', align: 'text-right' },
+                  { id: 'division', label: 'Bidang (Keterangan)', width: 'w-64' },
+                ].map((col) => (
+                  <th 
+                    key={col.id} 
+                    className={`px-8 py-5 ${col.align || 'text-left'} text-[10px] uppercase font-black tracking-widest text-foreground/70 cursor-pointer hover:bg-accent transition-colors group/header ${col.width}`}
+                    onClick={() => requestSort(col.id)}
+                  >
+                    <div className={`flex items-center gap-2 ${col.align === 'text-right' ? 'justify-end' : ''}`}>
+                      {col.label}
+                      {sortConfig?.key === col.id ? (
+                        sortConfig.direction === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-primary" /> : <ChevronDown className="w-3.5 h-3.5 text-primary" />
+                      ) : (
+                        <ArrowUpDown className="w-3 h-3 opacity-0 group-hover/header:opacity-50 transition-opacity" />
+                      )}
+                    </div>
+                  </th>
+                ))}
                 <th className="px-8 py-5 text-center text-[10px] uppercase font-black tracking-widest text-muted w-32">Aksi</th>
               </tr>
             </thead>
@@ -229,9 +275,9 @@ export default function AccountMappingPage() {
                     <p className="text-xs font-black text-muted uppercase tracking-[0.3em]">Memuat Data Master...</p>
                   </td>
                 </tr>
-              ) : filtered.length === 0 ? (
+              ) : sortedAndFiltered.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-8 py-20 text-center">
+                  <td colSpan={5} className="px-8 py-20 text-center">
                     <div className="w-16 h-16 bg-muted/10 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-dashed border-border">
                       <ListTree className="w-8 h-8 text-muted" />
                     </div>
@@ -240,7 +286,7 @@ export default function AccountMappingPage() {
                   </td>
                 </tr>
               ) : (
-                filtered.map((m) => (
+                sortedAndFiltered.map((m) => (
                   <tr key={m.id} className="group hover:bg-primary/5 transition-colors border-b border-border last:border-0">
                     <td className="px-8 py-5 font-mono text-[11px] text-primary font-black">
                       {m.code}
