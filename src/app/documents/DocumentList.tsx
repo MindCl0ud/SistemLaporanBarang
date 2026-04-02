@@ -21,8 +21,8 @@ const DEFAULT_WIDTHS: Record<string, number> = {
   tipe: 90,
   vendor: 130,
   total: 100,
-  items: 280,
-  aksi: 60,
+  items: 320,
+  aksi: 50,
 }
 
 const COL_KEYS = Object.keys(DEFAULT_WIDTHS)
@@ -135,9 +135,6 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null)
   
   // Document-level editing
-  const [editingDocId, setEditingDocId] = useState<string | null>(null)
-  const [editingDocData, setEditingDocData] = useState<any>(null)
-  const [savingDoc, setSavingDoc] = useState(false)
   const [showManualForm, setShowManualForm] = useState(false)
   const [showExcelForm, setShowExcelForm] = useState(false)
 
@@ -167,35 +164,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
     }
   }
 
-  const handleStartEditDoc = (doc: any) => {
-    setEditingDocId(doc.id)
-    setEditingDocData({
-      type: doc.type,
-      docNumber: doc.docNumber || '',
-      baNumber: doc.baNumber || '',
-      date: doc.date ? new Date(doc.date).toISOString().split('T')[0] : '',
-      baDate: doc.baDate ? new Date(doc.baDate).toISOString().split('T')[0] : '',
-      kodeRek: doc.kodeRek || '',
-      subKegiatan: doc.subKegiatan || '',
-      vendorName: doc.vendorName || '',
-      totalAmount: doc.totalAmount || 0,
-      paymentFor: doc.paymentFor || '',
-      unit: doc.unit || ''
-    })
-  }
 
-  const handleSaveDoc = async () => {
-    if (!editingDocId) return
-    setSavingDoc(true)
-    try {
-      const { updateDocument } = await import("@/app/actions/documentActions")
-      await updateDocument(editingDocId, editingDocData)
-      setEditingDocId(null)
-      setEditingDocData(null)
-    } finally {
-      setSavingDoc(false)
-    }
-  }
 
   const handleDelete = async (docId: string) => {
     setDeletingId(docId)
@@ -464,7 +433,11 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                     >
                       <div className="flex items-center justify-center gap-1">
                         <button
-                          onClick={() => handleStartEditDoc(doc)}
+                          onClick={() => {
+                            // Move editing trigger to first column or icons if needed
+                            // But here we can keep the Pencil for secondary edit if user wants
+                            setEditingCell({ id: doc.id, field: 'docNumber' })
+                          }}
                           className="p-1 text-slate-600 hover:text-indigo-400 hover:bg-indigo-400/10 rounded transition-colors"
                         >
                           <Pencil className="w-3.5 h-3.5" />
@@ -640,7 +613,9 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                                 </table>
                               </div>
                             ) : (
-                              <p className="text-slate-600 text-xs italic p-4 bg-slate-900/40 rounded-xl border border-dashed border-slate-800">Tidak ada rincian item terdeteksi dari dokumen ini.</p>
+                              <p className="text-slate-600 text-xs italic p-4 bg-slate-900/40 rounded-xl border border-dashed border-slate-800">
+                                Tidak ada rincian item terdeteksi dari dokumen ini.
+                              </p>
                             )}
                           </div>
 
@@ -650,68 +625,33 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                               <p className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
                                 <Bot className="w-3 h-3" /> Informasi Metadata Dokumen
                               </p>
-                              {editingDocId === doc.id ? (
-                                <div className="flex gap-2">
-                                   <button 
-                                     onClick={() => { setEditingDocId(null); setEditingDocData(null); }}
-                                     className="px-3 py-1 bg-input hover:bg-accent text-foreground text-[10px] font-black uppercase rounded-lg border border-border transition-all"
-                                   >
-                                     Batal
-                                   </button>
-                                   <button 
-                                     onClick={handleSaveDoc}
-                                     className="px-3 py-1 bg-primary text-white text-[10px] font-black uppercase rounded-lg shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all flex items-center gap-1.5"
-                                   >
-                                     {savingDoc ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-                                     Simpan Perubahan
-                                   </button>
-                                </div>
-                              ) : (
-                                <button 
-                                  onClick={() => handleStartEditDoc(doc)}
-                                  className="px-3 py-1 bg-input hover:bg-accent text-foreground text-[10px] font-black uppercase rounded-lg border border-border transition-all flex items-center gap-1.5"
-                                >
-                                  <Pencil className="w-3 h-3 translate-y-[-0.5px]" />
-                                  Edit Metadata
-                                </button>
-                              )}
                             </div>
 
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                              {[
-                                { key: 'docNumber', label: 'Nomor Kwitansi', placeholder: 'Kwitansi...' },
-                                { key: 'baNumber', label: 'Nomor BA', placeholder: 'BA/...' },
-                                { key: 'date', label: 'Tgl Kwitansi', type: 'date' },
-                                { key: 'baDate', label: 'Tgl Berita Acara', type: 'date' },
-                                { key: 'kodeRek', label: 'Kode Rekening', placeholder: '5.01...' },
-                                { key: 'subKegiatan', label: 'Sub Kegiatan', placeholder: '5.01...' },
-                                { key: 'vendorName', label: 'Vendor / Penyedia', placeholder: 'Toko...' },
-                                { key: 'unit', label: 'Satuan Global', placeholder: 'Bulan / Paket' },
-                                { key: 'paymentFor', label: 'Untuk Pembayaran', placeholder: 'Belanja...', isFullWidth: true },
-                              ].map(({ key, label, type = 'text', placeholder, isFullWidth }) => (
-                                <div key={label} className={`flex flex-col gap-1 group ${isFullWidth ? 'lg:col-span-2' : ''}`}>
-                                  <span className="text-[9px] text-foreground/70 uppercase font-black tracking-tight group-hover:text-primary transition-colors">{label}</span>
-                                  {editingDocId === doc.id ? (
-                                    <input
-                                      type={type}
-                                      className="w-full bg-input border border-primary/30 rounded-xl px-2 py-1.5 text-[11px] font-bold text-foreground focus:ring-1 focus:ring-primary outline-none transition-all"
-                                      value={editingDocData[key] || ''}
-                                      onChange={e => setEditingDocData({ ...editingDocData, [key]: e.target.value })}
-                                      placeholder={placeholder}
-                                    />
-                                  ) : (
-                                    <span 
-                                      className={`text-[11px] text-foreground font-mono bg-input/40 px-2 py-1.5 rounded-lg border border-border group-hover:border-primary/30 transition-all cursor-text ${label.includes('BA') ? 'text-amber-600 dark:text-amber-400 font-black' : ''}`}
-                                      onClick={() => setEditingCell({ id: doc.id, field: key })}
-                                    >
-                                      {key.includes('Date') || key === 'date' 
-                                        ? (doc[key] ? format(new Date(doc[key]), 'dd/MM/yyyy') : '—')
-                                        : (doc[key] || <span className="opacity-20">—</span>)}
-                                    </span>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
+                                {[
+                                  { key: 'docNumber', label: 'Nomor Kwitansi', placeholder: 'Kwitansi...' },
+                                  { key: 'baNumber', label: 'Nomor BA', placeholder: 'BA/...' },
+                                  { key: 'date', label: 'Tgl Kwitansi', type: 'date' },
+                                  { key: 'baDate', label: 'Tgl Berita Acara', type: 'date' },
+                                  { key: 'kodeRek', label: 'Kode Rekening', placeholder: '5.01...' },
+                                  { key: 'subKegiatan', label: 'Sub Kegiatan', placeholder: '5.01...' },
+                                  { key: 'vendorName', label: 'Vendor / Penyedia', placeholder: 'Toko...' },
+                                  { key: 'unit', label: 'Satuan Global', placeholder: 'Bulan / Paket' },
+                                  { key: 'paymentFor', label: 'Untuk Pembayaran', placeholder: 'Belanja...', isFullWidth: true },
+                                ].map(({ key, label, type = 'text', placeholder, isFullWidth }) => (
+                                  <div key={label} className={`flex flex-col gap-1 group ${isFullWidth ? 'lg:col-span-2' : ''}`}>
+                                    <span className="text-[9px] text-foreground/70 uppercase font-black tracking-tight group-hover:text-primary transition-colors">{label}</span>
+                                      <span 
+                                        className={`text-[11px] text-foreground font-mono bg-input/40 px-2 py-1.5 rounded-lg border border-border group-hover:border-primary/30 transition-all cursor-text ${label.includes('BA') ? 'text-amber-600 dark:text-amber-400 font-black' : ''}`}
+                                        onClick={() => setEditingCell({ id: doc.id, field: key })}
+                                      >
+                                        {key.includes('Date') || key === 'date' 
+                                          ? (doc[key] ? format(new Date(doc[key]), 'dd/MM/yyyy') : '—')
+                                          : (doc[key] || <span className="opacity-20">—</span>)}
+                                      </span>
+                                  </div>
+                                ))}
+                              </div>
                             
                             {doc.matchRecord && (
                               <div className="mt-6 p-3 bg-emerald-500/5 rounded-xl border border-emerald-500/10 flex items-center gap-3">
