@@ -285,19 +285,16 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
 
               const isEditing = (field: string) => editingCell?.id === doc.id && editingCell?.field === field
 
-              const InlineInput = ({ field, value, type = 'text' }: { field: string, value: any, type?: string }) => {
+              const InlineInput = ({ field, value, type = 'text', isMetadata = false }: { field: string, value: any, type?: string, isMetadata?: boolean }) => {
                 const [localVal, setLocalVal] = useState(value)
-                return isEditing(field) ? (
+                return (isEditing(field) && isMetadata) ? (
                   <div className="flex items-center gap-1">
                     <input
                       type={type}
                       autoFocus
                       className="w-full bg-white dark:bg-input border border-primary rounded px-1 py-0.5 text-xs outline-none"
                       value={localVal === null ? '' : localVal}
-                      onChange={e => {
-                         setLocalVal(e.target.value)
-                         // Optional: live calculation if needed, but save on blur is standard
-                      }}
+                      onChange={e => setLocalVal(e.target.value)}
                       onBlur={() => handleInlineSave(doc.id, field, localVal)}
                       onKeyDown={e => {
                         if (e.key === 'Enter') handleInlineSave(doc.id, field, localVal)
@@ -308,12 +305,13 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                   </div>
                 ) : (
                   <div 
-                    className="cursor-text hover:bg-primary/5 transition-all p-0.5 rounded -m-0.5"
+                    className={`${isMetadata ? 'cursor-text hover:bg-primary/5 transition-all p-0.5 rounded -m-0.5' : ''}`}
                     onClick={(e) => {
+                      if (!isMetadata) return
                       e.stopPropagation()
                       setEditingCell({ id: doc.id, field })
                     }}
-                    title="Klik untuk mengedit"
+                    title={isMetadata ? "Klik untuk mengedit" : ""}
                   >
                     {field === 'totalAmount' ? formatCurrency(value) : (value || <span className="opacity-20">—</span>)}
                   </div>
@@ -361,41 +359,29 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                     {/* Tanggal */}
                     <td className={cellClass + ' font-mono'}>
                       <div className="flex flex-col gap-0.5">
-                        <div className="text-[11px]">
-                          <InlineInput 
-                            field="date" 
-                            type="date"
-                            value={doc.date ? new Date(doc.date).toISOString().split('T')[0] : ''} 
-                          />
-                        </div>
-                        <div className="text-[9px] text-amber-500/70">
-                          <InlineInput 
-                            field="baDate" 
-                            type="date"
-                            value={doc.baDate ? new Date(doc.baDate).toISOString().split('T')[0] : ''} 
-                          />
-                        </div>
+                        <div className="text-[11px]">{kwatDate}</div>
+                        {baDateStr && <div className="text-[9px] text-amber-500/70">BA: {baDateStr}</div>}
                       </div>
                     </td>
 
                     {/* Nomor Dokumen */}
                     <td className={cellClass + ' font-mono text-foreground/80 text-[11px] font-black'}>
                       <div className="flex flex-col gap-0.5">
-                        <InlineInput field="docNumber" value={doc.docNumber} />
-                        <div className="text-[10px] text-amber-700 dark:text-amber-500">
-                          <InlineInput field="baNumber" value={doc.baNumber} />
-                        </div>
+                        <span>{doc.docNumber || '—'}</span>
+                        {doc.baNumber && (
+                           <span className="text-[10px] text-amber-700 dark:text-amber-500">{doc.baNumber}</span>
+                        )}
                       </div>
                     </td>
 
                     {/* Kode Rek */}
                     <td className={cellClass + ' font-mono text-indigo-600 dark:text-indigo-300 text-[11px]'}>
-                      <InlineInput field="kodeRek" value={doc.kodeRek} />
+                      {doc.kodeRek || '—'}
                     </td>
 
                     {/* Sub Kegiatan */}
                     <td className={cellClass + ' font-mono text-indigo-800 dark:text-indigo-200 text-[11px] font-black'}>
-                      <InlineInput field="subKegiatan" value={doc.subKegiatan} />
+                      {doc.subKegiatan || '—'}
                     </td>
 
                     {/* Tipe */}
@@ -413,17 +399,17 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
 
                     {/* Vendor */}
                     <td className={cellClass + ' font-black text-foreground'}>
-                      <InlineInput field="vendorName" value={doc.vendorName} />
+                      {doc.vendorName}
                     </td>
 
                     {/* Total */}
                     <td className={`${cellClass} text-right font-mono font-black text-foreground text-sm`}>
-                      <InlineInput field="totalAmount" type="number" value={displayTotal} />
+                      Rp {formatCurrency(displayTotal)}
                     </td>
 
                     {/* Items -> Payment Description */}
                     <td className={cellClass + ' text-foreground/80 text-[11px] font-medium'}>
-                      <InlineInput field="paymentFor" value={doc.paymentFor} />
+                      {doc.paymentFor || '—'}
                     </td>
 
                     {/* Aksi */}
@@ -433,11 +419,7 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
                     >
                       <div className="flex items-center justify-center gap-1">
                         <button
-                          onClick={() => {
-                            // Move editing trigger to first column or icons if needed
-                            // But here we can keep the Pencil for secondary edit if user wants
-                            setEditingCell({ id: doc.id, field: 'docNumber' })
-                          }}
+                          onClick={() => setExpandedId(isExpanded ? null : doc.id)}
                           className="p-1 text-slate-600 hover:text-indigo-400 hover:bg-indigo-400/10 rounded transition-colors"
                         >
                           <Pencil className="w-3.5 h-3.5" />
@@ -629,28 +611,40 @@ export default function DocumentList({ initialDocuments }: { initialDocuments: a
 
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                                 {[
-                                  { key: 'docNumber', label: 'Nomor Kwitansi', placeholder: 'Kwitansi...' },
-                                  { key: 'baNumber', label: 'Nomor BA', placeholder: 'BA/...' },
-                                  { key: 'date', label: 'Tgl Kwitansi', type: 'date' },
-                                  { key: 'baDate', label: 'Tgl Berita Acara', type: 'date' },
-                                  { key: 'kodeRek', label: 'Kode Rekening', placeholder: '5.01...' },
-                                  { key: 'subKegiatan', label: 'Sub Kegiatan', placeholder: '5.01...' },
-                                  { key: 'vendorName', label: 'Vendor / Penyedia', placeholder: 'Toko...' },
-                                  { key: 'unit', label: 'Satuan Global', placeholder: 'Bulan / Paket' },
-                                  { key: 'paymentFor', label: 'Untuk Pembayaran', placeholder: 'Belanja...', isFullWidth: true },
-                                ].map(({ key, label, type = 'text', placeholder, isFullWidth }) => (
-                                  <div key={label} className={`flex flex-col gap-1 group ${isFullWidth ? 'lg:col-span-2' : ''}`}>
-                                    <span className="text-[9px] text-foreground/70 uppercase font-black tracking-tight group-hover:text-primary transition-colors">{label}</span>
-                                      <span 
-                                        className={`text-[11px] text-foreground font-mono bg-input/40 px-2 py-1.5 rounded-lg border border-border group-hover:border-primary/30 transition-all cursor-text ${label.includes('BA') ? 'text-amber-600 dark:text-amber-400 font-black' : ''}`}
-                                        onClick={() => setEditingCell({ id: doc.id, field: key })}
-                                      >
-                                        {key.includes('Date') || key === 'date' 
-                                          ? (doc[key] ? format(new Date(doc[key]), 'dd/MM/yyyy') : '—')
-                                          : (doc[key] || <span className="opacity-20">—</span>)}
-                                      </span>
-                                  </div>
-                                ))}
+                                { key: 'docNumber', label: 'Nomor Kwitansi', placeholder: 'Kwitansi...' },
+                                { key: 'baNumber', label: 'Nomor BA', placeholder: 'BA/...' },
+                                { key: 'date', label: 'Tgl Kwitansi', type: 'date' },
+                                { key: 'baDate', label: 'Tgl Berita Acara', type: 'date' },
+                                { key: 'kodeRek', label: 'Kode Rekening', placeholder: '5.01...' },
+                                { key: 'subKegiatan', label: 'Sub Kegiatan', placeholder: '5.01...' },
+                                { key: 'vendorName', label: 'Vendor / Penyedia', placeholder: 'Toko...' },
+                                { key: 'paymentFor', label: 'Untuk Pembayaran', placeholder: 'Belanja...', isFullWidth: true },
+                              ].map(({ key, label, type = 'text', placeholder, isFullWidth }) => (
+                                <div key={label} className={`flex flex-col gap-1 group ${isFullWidth ? 'lg:col-span-2' : ''}`}>
+                                  <span className="text-[9px] text-foreground/70 uppercase font-black tracking-tight group-hover:text-primary transition-colors">{label}</span>
+                                    <span 
+                                      className="text-[11px] text-foreground font-mono bg-input/40 px-2 py-1.5 rounded-lg border border-border group-hover:border-primary/30 transition-all cursor-text"
+                                      onClick={() => setEditingCell({ id: doc.id, field: key })}
+                                    >
+                                      {isEditing(key) ? (
+                                        <input
+                                          autoFocus
+                                          type={type}
+                                          className="w-full bg-white dark:bg-input border border-primary rounded p-0 text-[11px] outline-none"
+                                          value={doc[key] || ''}
+                                          onChange={e => handleInlineSave(doc.id, key, e.target.value)}
+                                          onBlur={() => setEditingCell(null)}
+                                        />
+                                      ) : (
+                                        <>
+                                          {key.includes('Date') || key === 'date' 
+                                            ? (doc[key] ? format(new Date(doc[key]), 'dd/MM/yyyy') : '—')
+                                            : (doc[key] || <span className="opacity-20">—</span>)}
+                                        </>
+                                      )}
+                                    </span>
+                                </div>
+                              ))}
                               </div>
                             
                             {doc.matchRecord && (
