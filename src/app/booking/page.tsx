@@ -1,119 +1,76 @@
-'use server'
-
 import React from 'react'
-import { getAssets, seedDemoAssets } from '../actions/bookingActions'
-import Link from 'next/link'
-import { Car, Monitor, Laptop, ArrowRight, CheckCircle2, AlertCircle, Clock } from 'lucide-react'
+import { prisma } from '@/lib/prisma'
+import { Calendar, ChevronRight, CheckCircle2, AlertCircle } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
-export default async function BookingDashboard() {
-  // Ensure we have data
-  await seedDemoAssets()
-  
-  const assets = await getAssets()
-  const availableCount = assets.filter((a: any) => a.status === 'AVAILABLE').length
-  const bookedCount = assets.filter((a: any) => a.status === 'BOOKED').length
-
-  const categories = [
-    { name: 'Kendaraan', icon: Car, color: 'bg-blue-500', count: assets.filter((a: any) => a.type === 'VEHICLE').length },
-    { name: 'Proyektor', icon: Monitor, color: 'bg-emerald-500', count: assets.filter((a: any) => a.type === 'PROJECTOR').length },
-    { name: 'Laptop', icon: Laptop, color: 'bg-indigo-500', count: assets.filter((a: any) => a.type === 'LAPTOP').length },
-  ]
+export default async function BookingsPage() {
+  const bookings = await prisma.booking.findMany({
+    include: {
+      asset: true,
+      user: true,
+    },
+    orderBy: { createdAt: 'desc' },
+  })
 
   return (
-    <div className="flex flex-col gap-8">
-      {/* Welcome Card - Glassmorphism */}
-      <section className="relative overflow-hidden rounded-3xl bg-slate-900 p-8 text-white shadow-2xl">
-        <div className="relative z-10">
-          <h2 className="mb-2 text-2xl font-bold">Halo, Agil! 👋</h2>
-          <p className="mb-6 text-slate-400">Siap untuk tugas dinas hari ini?</p>
-          
-          <div className="flex items-center gap-6">
-            <div className="flex flex-col">
-              <span className="text-3xl font-bold text-emerald-400">{availableCount}</span>
-              <span className="text-xs uppercase tracking-wider text-slate-500">Tersedia</span>
-            </div>
-            <div className="h-8 w-px bg-slate-800" />
-            <div className="flex flex-col">
-              <span className="text-3xl font-bold text-amber-400">{bookedCount}</span>
-              <span className="text-xs uppercase tracking-wider text-slate-500">Dipakai</span>
+    <main className="flex flex-col gap-6 p-6">
+      <h1 className="text-2xl font-black tracking-tight text-slate-900">Peminjaman Saya</h1>
+
+      <div className="grid gap-4">
+        {bookings.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-4 rounded-3xl border border-dashed border-slate-200 p-8 text-center">
+            <Calendar className="h-12 w-12 text-slate-300" />
+            <div>
+              <p className="text-sm font-bold text-slate-400">Belum ada peminjaman</p>
+              <p className="text-xs text-slate-300">Buat booking pertama Anda hari ini!</p>
             </div>
           </div>
-        </div>
-
-        {/* Abstract Background Shapes */}
-        <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-blue-600/20 blur-3xl" />
-        <div className="absolute -bottom-10 right-20 h-20 w-20 rounded-full bg-emerald-600/10 blur-2xl" />
-      </section>
-
-      {/* Categories Grid */}
-      <section>
-        <h3 className="mb-4 text-lg font-bold text-slate-800">Kategori Utama</h3>
-        <div className="grid grid-cols-3 gap-3">
-          {categories.map((cat) => (
-            <div key={cat.name} className="flex flex-col items-center justify-center gap-3 rounded-2xl bg-white p-4 shadow-sm transition-transform active:scale-95">
-              <div className={`p-3 rounded-xl ${cat.color} text-white shadow-lg`}>
-                <cat.icon size={24} />
-              </div>
-              <div className="text-center">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{cat.name}</p>
-                <p className="text-sm font-semibold text-slate-800">{cat.count} Item</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Quick Action - Suggested Asset */}
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-slate-800">Sering Dipinjam</h3>
-          <Link href="/booking/catalog" className="text-sm font-semibold text-blue-600 flex items-center gap-1">
-            Lihat Semua <ArrowRight size={16} />
-          </Link>
-        </div>
-
-        <div className="space-y-4">
-          {assets.slice(0, 2).map((asset: any) => (
-            <Link key={asset.id} href={`/booking/catalog/${asset.id}`} className="group flex items-center gap-4 rounded-2xl bg-white p-4 shadow-sm hover:shadow-md transition-all active:scale-[0.98]">
-              <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl bg-slate-100 border border-slate-100">
-                <img 
-                  src={asset.imageUrl === '/assets/mobil_dinas.png' ? 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?auto=format&fit=crop&q=80&w=200' : 
-                       asset.type === 'VEHICLE' ? 'https://images.unsplash.com/photo-1601611029199-7927e57c6a99?auto=format&fit=crop&q=80&w=200' :
-                       'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&q=80&w=200'} 
-                  alt={asset.name} 
-                  className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-              </div>
-              <div className="flex-grow">
-                <div className="flex items-center gap-2 mb-1">
-                   <div className={`h-2 w-2 rounded-full ${asset.status === 'AVAILABLE' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-amber-500'}`} />
-                   <span className={`text-[10px] font-bold uppercase tracking-wider ${asset.status === 'AVAILABLE' ? 'text-emerald-600' : 'text-amber-600'}`}>
-                    {asset.status === 'AVAILABLE' ? 'Tersedia' : 'Dipakai'}
-                   </span>
+        ) : (
+          bookings.map((booking) => (
+            <div 
+              key={booking.id}
+              className="flex flex-col gap-4 rounded-3xl border border-slate-50 bg-white p-5 shadow-sm"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={cn(
+                    "flex h-10 w-10 items-center justify-center rounded-2xl",
+                    booking.status === 'ONGOING' ? "bg-amber-100 text-amber-600" : "bg-emerald-100 text-emerald-600"
+                  )}>
+                    {booking.status === 'ONGOING' ? <AlertCircle className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-800">{booking.asset.name}</p>
+                    <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">{booking.asset.type.replace('_', ' ')}</p>
+                  </div>
                 </div>
-                <h4 className="font-bold text-slate-800">{asset.name}</h4>
-                <p className="text-xs text-slate-500 truncate max-w-[200px]">{asset.licensePlate || asset.serialNumber || asset.description}</p>
+                <div className={cn(
+                  "rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-tight",
+                  booking.status === 'ONGOING' ? "bg-amber-500/10 text-amber-600" : "bg-emerald-500/10 text-emerald-600"
+                )}>
+                  {booking.status}
+                </div>
               </div>
-              <div className="h-10 w-10 flex items-center justify-center rounded-full bg-slate-50 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
-                <ArrowRight size={20} />
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
 
-      {/* Info Card - Prosedur */}
-      <section className="mb-4 rounded-2xl border border-blue-100 bg-blue-50/50 p-5">
-        <div className="flex gap-3">
-          <AlertCircle className="text-blue-600 flex-shrink-0" size={24} />
-          <div>
-            <h4 className="mb-1 text-sm font-bold text-blue-900">Prosedur Peminjaman</h4>
-            <p className="text-xs leading-relaxed text-blue-700/80">
-              Setiap peminjaman wajib melakukan <strong>Check-out</strong> (Serah Terima) di Ruang Sarpras maksimal 30 menit sebelum keberangkatan.
-            </p>
-          </div>
-        </div>
-      </section>
-    </div>
+              <div className="flex items-center justify-between rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Jadwal</p>
+                  <p className="text-xs font-bold text-slate-600">
+                    {new Date(booking.startDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })} • 08:00 - Selesai
+                  </p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-slate-300" />
+              </div>
+
+              {booking.status === 'ONGOING' && (
+                <button className="w-full rounded-2xl bg-slate-900 py-3 text-xs font-bold text-white shadow-lg active:scale-95">
+                  Kembalikan Barang
+                </button>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    </main>
   )
 }

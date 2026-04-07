@@ -8,148 +8,11 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-enum MatchStatus {
-  MATCHED
-  PENDING
-  UNMATCHED
-}
-
-model Document {
-  id            String         @id @default(cuid())
-  type          String
-  docNumber     String?
-  baNumber      String?        // New field for Berita Acara
-  baDate        DateTime?      // New field for Berita Acara date
-  kodeRek       String?
-  subKegiatan   String?
-  vendorName    String?
-  totalAmount   Float?
-  date          DateTime?
-  imageUrl      String?
-  extractedText String?
-  paymentFor    String?        // New field for BKU matching
-  unit          String?        // Global unit if applicable
-  division      String?        // New field for Bidang
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  items         DocumentItem[]
-  matchRecord   MatchRecord?
-
-  @@index([docNumber])
-  @@index([vendorName])
-  @@index([date])
-}
-
-model DocumentItem {
-  id          String   @id @default(cuid())
-  documentId  String
-  description String
-  itemCode    String?  // New field for Item Code
-  quantity    Float?
-  price       Float?
-  unit        String?  // New field for Satuan (e.g., buah, ltr)
-  total       Float?
-  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
-}
-
-model BkuTransaction {
-  id           String       @id @default(cuid())
-  date         String?
-  month        Int
-  year         Int
-  code         String?
-  description  String
-  receiptTotal Float?
-  expenseTotal Float?
-  balance      Float?
-  rowOrder     Int          @default(0)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  matchRecord  MatchRecord?
-
-  @@index([month, year])
-  @@index([date])
-  @@index([code])
-  @@index([year])
-  @@index([rowOrder])
-}
-
-model MatchRecord {
-  id               String         @id @default(cuid())
-  bkuTransactionId String         @unique
-  documentId       String         @unique
-  confidence       Float
-  status           MatchStatus    @default(PENDING)
-  reasoning        String?
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  bkuTransaction   BkuTransaction @relation(fields: [bkuTransactionId], references: [id], onDelete: Cascade)
-  document         Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
-}
-
-model MasterItem {
-  id          String   @id @default(cuid())
-  code        String   @unique
-  description String
-  unit        String?
-  price       Float?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([code])
-}
-
-model AccountCodeMapping {
-  id        String   @id @default(cuid())
-  year      Int      @default(2026) // Multi-year support
-  kodeProgram String?
-  namaProgram String?
-  kodeKegiatan String?
-  namaKegiatan String?
-  kodeSubKeg String?
-  namaSubKeg String?
-  kodeBelanja      String   
-  name      String
-  division  String?        // New field for Bidang
-  budget    Float?         @default(0) // Pagu Murni / Awal
-  revisedBudget Float?    @default(0) // Pagu Perubahan
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  budgetLogs BudgetLog[]
-
-  @@unique([kodeSubKeg, kodeBelanja, year])
-  @@index([kodeBelanja])
-  @@index([kodeSubKeg])
-  @@index([year])
-}
-
-model BudgetLog {
-  id        String   @id @default(cuid())
-  mappingId String
-  field     String   @default("budget") // "budget" or "revisedBudget"
-  oldBudget Float
-  newBudget Float
-  reason    String?
-  createdAt DateTime @default(now())
-  mapping   AccountCodeMapping @relation(fields: [mappingId], references: [id], onDelete: Cascade)
-
-  @@index([mappingId])
-}
-
-model GlobalSetting {
-  id        String   @id @default(cuid())
-  key       String   @unique
-  value     String
-  updatedAt DateTime @updatedAt
-}
-
-// --- Booking System Models ---
-
 enum AssetType {
-  VEHICLE
-  PROJECTOR
-  LAPTOP
-  OTHER
+  KENDARAAN_DINAS
+  PERALATAN_KOMPUTER
+  PERLENGKAPAN_KOMPUTER
+  LAINNYA
 }
 
 enum AssetStatus {
@@ -165,58 +28,60 @@ enum BookingStatus {
   ONGOING
   COMPLETED
   CANCELLED
-  REJECTED
+}
+
+enum LogType {
+  PICKUP
+  RETURN
+}
+
+model User {
+  id        String    @id @default(cuid())
+  name      String
+  nip       String?   @unique
+  role      String    @default("USER")
+  bookings  Booking[]
 }
 
 model Asset {
   id           String      @id @default(cuid())
-  type         AssetType
   name         String
-  brand        String?     // e.g., Toyota, Epson
-  model        String?     // e.g., Innova, EB-X400
-  licensePlate String?     @unique // For vehicles
-  serialNumber String?     @unique // For electronics
   description  String?
-  imageUrl     String?
+  type         AssetType
+  sipdId       String?     @unique
   status       AssetStatus @default(AVAILABLE)
+  brand        String?
+  model        String?
+  licensePlate String?
+  serialNumber String?
+  imageUrl     String?
+  bookings     Booking[]
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
-  bookings     Booking[]
-
-  @@index([type])
-  @@index([status])
 }
 
 model Booking {
-  id            String        @id @default(cuid())
-  assetId       String
-  userId        String?
-  userName      String        // For quick demo without full Auth
-  userDivision  String?       // Bidang
-  startDate     DateTime
-  endDate       DateTime
-  purpose       String
-  status        BookingStatus @default(PENDING)
-  notes         String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  asset         Asset         @relation(fields: [assetId], references: [id])
-  handovers     Handover[]
-
-  @@index([assetId])
-  @@index([status])
-  @@index([startDate, endDate])
+  id           String        @id @default(cuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id])
+  assetId      String
+  asset        Asset         @relation(fields: [assetId], references: [id])
+  startDate    DateTime
+  endDate      DateTime
+  purpose      String
+  status       BookingStatus @default(PENDING)
+  notes        String?
+  logs         HandoverLog[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 }
 
-model Handover {
-  id         String   @id @default(cuid())
-  bookingId  String
-  type       String   // "PICKUP" or "RETURN"
-  condition  String   // "GOOD", "MINOR_DAMAGE", "MAJOR_DAMAGE"
-  notes      String?
-  staffName  String?  // Staff who processed handover
-  timestamp  DateTime @default(now())
-  booking    Booking  @relation(fields: [bookingId], references: [id])
-
-  @@index([bookingId])
+model HandoverLog {
+  id           String   @id @default(cuid())
+  bookingId    String
+  booking      Booking  @relation(fields: [bookingId], references: [id])
+  type         LogType
+  condition    String   // Description of condition (e.g., "Good", "Scratched")
+  timestamp    DateTime @default(now())
+  responsible  String   // Person handling the handover
 }

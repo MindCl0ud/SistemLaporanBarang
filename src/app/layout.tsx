@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import Sidebar from "@/components/Sidebar";
-import { ThemeProvider } from "@/components/ThemeProvider";
+import MobileNav from "@/components/MobileNav";
+import { cn } from "@/lib/utils";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "700", "900"] });
 
 export const metadata: Metadata = {
-  title: "Sistem Laporan Barang & Anggaran",
-  description: "AI-powered goods reporting and financial budgeting system.",
+  title: "SIPINJAM - Sistem Peminjaman Barang Dinas",
+  description: "Manajemen peminjaman kendaraan dan inventaris dinas yang cerdas dan efisien.",
 };
 
 export default function RootLayout({
@@ -17,23 +17,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} bg-background text-foreground min-h-screen selection:bg-indigo-500/30 overflow-x-hidden transition-colors duration-300`}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <div className="flex min-h-screen w-full">
-            <Sidebar />
-            <main className="flex-1 min-h-screen min-w-0 overflow-hidden transition-all duration-300">
-              <div className="p-4 md:p-8">
-                {children}
-              </div>
-            </main>
-          </div>
-        </ThemeProvider>
+    <html lang="id" className="h-full">
+      <body className={cn(inter.className, "min-h-full bg-slate-50 dark:bg-slate-950 pb-24")}>
+        <div className="mx-auto max-w-md bg-white min-h-screen shadow-sm dark:bg-slate-900">
+          {children}
+        </div>
+        <MobileNav />
       </body>
     </html>
   );

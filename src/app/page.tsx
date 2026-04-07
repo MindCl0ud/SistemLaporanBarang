@@ -1,215 +1,133 @@
-import { FileText, CheckCircle2, AlertTriangle, Activity, RefreshCw, Sparkles, Settings, MessageSquare, ArrowRight, TrendingUp } from "lucide-react"
-import { getDashboardStats } from "@/app/actions/matchActions"
-import MatchRunner from "@/components/MatchRunner"
-import Link from "next/link"
 import React from 'react'
-
-export const dynamic = 'force-dynamic'
+import { Car, Monitor, Laptop, Plus, ArrowRight, User as UserIcon, Calendar, CheckCircle2, Clock } from 'lucide-react'
+import Link from 'next/link'
+import { cn } from '@/lib/utils'
+import { prisma } from '@/lib/prisma'
 
 export default async function Home() {
-  const stats = await getDashboardStats()
+  const categoriesCount = await prisma.asset.groupBy({
+    by: ['type'],
+    _count: {
+      id: true
+    }
+  })
+
+  const getCount = (type: string) => categoriesCount.find(c => c.type === type)?._count.id || 0
+
+  const categories = [
+    { name: 'Kendaraan', icon: Car, color: 'bg-blue-500', count: getCount('KENDARAAN_DINAS'), type: 'KENDARAAN_DINAS' },
+    { name: 'Peralatan', icon: Monitor, color: 'bg-indigo-500', count: getCount('PERALATAN_KOMPUTER'), type: 'PERALATAN_KOMPUTER' },
+    { name: 'Perlengkapan', icon: Laptop, color: 'bg-purple-500', count: getCount('PERLENGKAPAN_KOMPUTER'), type: 'PERLENGKAPAN_KOMPUTER' },
+  ]
+
+  const recentBookings = await prisma.booking.findMany({
+    take: 3,
+    orderBy: { createdAt: 'desc' },
+    include: {
+      asset: true,
+      user: true
+    }
+  })
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-in pb-20">
-      {/* AI PULSE / WELCOME HEADER */}
-      <div className="relative overflow-hidden p-10 rounded-3xl bg-gradient-to-br from-primary via-primary/90 to-indigo-900 text-primary-foreground shadow-2xl shadow-primary/20 group">
-        {/* Animated Background Elements */}
-        <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full blur-[100px] -z-0 group-hover:bg-white/20 transition-all duration-1000"></div>
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-black/10 rounded-full blur-[80px] -z-0"></div>
-        
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
-          <div className="space-y-4 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 border border-white/20 rounded-full backdrop-blur-md">
-               <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-               <span className="text-[10px] font-black uppercase tracking-widest opacity-90">AI Data Pulse</span>
-            </div>
-            <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-tight">
-              {stats.aiPulse.split('!')[0]}!
-            </h1>
-            <p className="text-primary-foreground/80 text-base font-medium leading-relaxed">
-              {stats.aiPulse.split('!')[1]?.trim() || "Selamat datang kembali di pusat kendali aset Anda."}
-            </p>
-          </div>
-          <div className="flex flex-col items-center justify-center p-8 bg-white/10 border border-white/20 rounded-3xl backdrop-blur-md min-w-[220px] shadow-inner">
-             <span className="text-[10px] font-black uppercase tracking-widest opacity-70 mb-2">Akurasi Pencocokan</span>
-             <h2 className="text-5xl font-black tracking-tighter">{stats.accuracy}%</h2>
-             <div className="w-full h-2 bg-black/20 rounded-full mt-4 overflow-hidden border border-white/5">
-                <div className="h-full bg-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.6)] transition-all duration-1000" style={{ width: `${stats.accuracy}%` }}></div>
-             </div>
-          </div>
+    <main className="flex flex-col gap-6 p-6">
+      {/* Header / Greeting */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-black tracking-tight text-slate-900">
+            Halo, <span className="text-primary">Admin</span> 👋
+          </h1>
+          <p className="text-sm font-medium text-slate-500">
+            Selamat datang di SIPINJAM V2.0
+          </p>
+        </div>
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 ring-1 ring-slate-200">
+          <UserIcon className="h-6 w-6 text-slate-600" />
         </div>
       </div>
 
-      {/* Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Total Dokumen"
-          value={stats.totalDocs.toString()}
-          icon={<FileText className="w-5 h-5" />}
-          trend="TERINPUT"
-          variant="primary"
-        />
-        <StatCard
-          title="Tercocokkan"
-          value={stats.matchedDocs.toString()}
-          icon={<CheckCircle2 className="w-5 h-5" />}
-          trend="VALIDE"
-          variant="success"
-        />
-        <StatCard
-          title="Butuh Bukti"
-          value={stats.bkuWithoutDocs.toString()}
-          icon={<AlertTriangle className="w-5 h-5" />}
-          trend="PENDING"
-          variant="warning"
-          isAlert={stats.bkuWithoutDocs > 0}
-        />
-        <StatCard
-          title="Status Akurasi"
-          value={`${Math.round(stats.accuracy)}%`}
-          icon={<TrendingUp className="w-5 h-5" />}
-          trend="AI CONFIDENCE"
-          variant="info"
-        />
-      </div>
+      {/* Quick Action Button */}
+      <Link 
+        href="/booking/new"
+        className="flex items-center justify-between rounded-3xl bg-primary p-5 text-white shadow-xl shadow-primary/20 transition-transform active:scale-95"
+      >
+        <div className="flex items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-md">
+            <Plus className="h-6 w-6" />
+          </div>
+          <div>
+            <p className="text-lg font-bold">Buat Booking</p>
+            <p className="text-xs opacity-80">Pinjam aset dengan cepat</p>
+          </div>
+        </div>
+        <ArrowRight className="h-5 w-5 opacity-60" />
+      </Link>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* RECENT ACTIVITY */}
-        <div className="lg:col-span-2 space-y-4">
-           <div className="bg-card border border-border p-8 rounded-3xl shadow-sm relative overflow-hidden h-full">
-              <div className="flex items-center justify-between mb-8">
-                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center text-primary">
-                       <Activity className="w-5 h-5" />
-                    </div>
-                    <div>
-                       <h2 className="text-xl font-black text-foreground tracking-tight">Aktivitas Pencocokan</h2>
-                       <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Update Terakhir Otomatis</p>
-                    </div>
-                 </div>
-                 <Link href="/bku" className="text-xs font-black text-primary hover:underline flex items-center gap-1 group">
-                    Buka BKU <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                 </Link>
+      {/* Categories Horizontal Scroll */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-slate-800">Kategori Aset</h2>
+          <Link href="/assets" className="text-sm font-semibold text-primary">Lihat Semua</Link>
+        </div>
+        <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+          {categories.map((cat) => (
+            <div 
+              key={cat.name}
+              className="flex min-w-[140px] flex-col gap-3 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm transition-all hover:border-slate-200 hover:shadow-md"
+            >
+              <div className={cn("flex h-10 w-10 items-center justify-center rounded-2xl text-white", cat.color)}>
+                <cat.icon className="h-5 w-5" />
               </div>
+              <div>
+                <p className="text-sm font-bold text-slate-800">{cat.name}</p>
+                <p className="text-[10px] font-medium text-slate-400">{cat.count} Aset Tersedia</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
 
-              {stats.recentMatches.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-12 mt-4 border border-dashed border-border rounded-2xl bg-accent/30 opacity-60">
-                   <p className="text-muted-foreground text-sm font-bold">Belum ada data pencocokan aktif.</p>
+      {/* Recent Activity */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-slate-800">Aktivitas Terakhir</h2>
+          <Clock className="h-5 w-5 text-slate-400" />
+        </div>
+        <div className="space-y-3">
+          {recentBookings.length === 0 ? (
+            <p className="text-center text-xs font-medium text-slate-400 py-4">Belum ada aktivitas baru.</p>
+          ) : (
+            recentBookings.map((booking) => (
+              <div 
+                key={booking.id}
+                className="flex items-center gap-4 rounded-3xl border border-slate-50 bg-slate-50/50 p-4"
+              >
+                <div className={cn(
+                  "flex h-12 w-12 items-center justify-center rounded-2xl",
+                  booking.status === 'ONGOING' ? "bg-amber-100 text-amber-600" : "bg-emerald-100 text-emerald-600"
+                )}>
+                  {booking.status === 'ONGOING' ? <Calendar className="h-6 w-6" /> : <CheckCircle2 className="h-6 w-6" />}
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {stats.recentMatches.map(match => (
-                    <div key={match.id} className="p-5 rounded-2xl bg-accent/30 border border-border/50 flex items-center justify-between hover:bg-accent/50 transition-all group/item shadow-sm">
-                      <div className="flex items-center gap-4">
-                         <div className="w-12 h-12 rounded-xl bg-card flex flex-col items-center justify-center border border-border shadow-sm group-hover/item:scale-110 transition-transform">
-                            <span className="text-[9px] font-black text-muted-foreground uppercase leading-none">Conf</span>
-                            <span className="text-[14px] font-black text-primary">{(match.confidence * 100).toFixed(0)}%</span>
-                         </div>
-                         <div>
-                            <p className="text-sm font-black text-foreground leading-tight">{match.bkuTransaction.description}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                               <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[9px] font-black uppercase tracking-tighter">
-                                  {match.document.type}
-                               </span>
-                               <span className="text-[10px] text-muted-foreground font-medium">#{match.document.docNumber || 'Tanpa No'}</span>
-                            </div>
-                         </div>
-                      </div>
-                      <div className="hidden sm:block text-right">
-                         <p className="text-sm font-black text-foreground/80 tabular-nums">
-                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(match.document.totalAmount || 0)}
-                         </p>
-                         <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter mt-0.5">{match.bkuTransaction.date}</p>
-                      </div>
-                    </div>
-                  ))}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-slate-800 truncate">{booking.asset.name}</p>
+                  <div className="flex items-center gap-2 text-[11px] font-medium text-slate-500">
+                    <span className="truncate">{booking.user.name}</span>
+                    <span>•</span>
+                    <span className="shrink-0">{new Date(booking.startDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}</span>
+                  </div>
                 </div>
-              )}
-           </div>
+              </div>
+            ))
+          )}
         </div>
+      </section>
 
-        {/* Action Panel */}
-        <div className="space-y-6">
-          <div className="p-8 rounded-3xl bg-primary text-primary-foreground shadow-xl shadow-primary/20 relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-8 opacity-20">
-               <RefreshCw className="w-20 h-20 animate-[spin_10s_linear_infinite]" />
-            </div>
-            <div className="relative z-10">
-              <h3 className="text-xl font-black tracking-tight mb-2">Matching Engine</h3>
-              <p className="text-primary-foreground/80 text-xs font-medium mb-8 leading-relaxed">Jalankan verifikasi otomatis antara dokumen fisik dan transaksi kas.</p>
-              <MatchRunner />
-            </div>
-          </div>
-
-          <div className="p-8 bg-card border border-border rounded-3xl shadow-sm">
-            <h3 className="text-sm font-black text-foreground uppercase tracking-widest mb-6">Tindakan Cepat</h3>
-            <div className="space-y-3">
-              <QuickLink 
-                title="Input Dokumen" 
-                href="/documents" 
-                icon={<FileText className="w-5 h-5 text-blue-500" />} 
-                desc="Proses Nota/BA Baru"
-              />
-              <QuickLink 
-                title="Tanya Asisten AI" 
-                href="/chat" 
-                icon={<MessageSquare className="w-5 h-5" />} 
-                desc="Cek Data via Chat"
-              />
-              <QuickLink 
-                title="Pengaturan" 
-                href="/settings" 
-                icon={<Settings className="w-5 h-5 text-slate-500" />} 
-                desc="Identitas & Sistem"
-              />
-            </div>
-          </div>
-        </div>
+      {/* Footer Branding */}
+      <div className="mt-4 text-center">
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-300">
+          MindCloud Advanced Agentic Coding
+        </p>
       </div>
-    </div>
-  )
-}
-
-function StatCard({ title, value, icon, trend, variant, isAlert }: { title: string, value: string, icon: React.ReactNode, trend: string, variant: 'primary' | 'success' | 'warning' | 'info', isAlert?: boolean }) {
-  const variants = {
-    primary: "bg-primary/5 border-primary/20 text-primary",
-    success: "bg-emerald-500/5 border-emerald-500/20 text-emerald-600",
-    warning: "bg-amber-500/5 border-amber-500/20 text-amber-600",
-    info: "bg-indigo-500/5 border-indigo-500/20 text-indigo-600",
-  }
-
-  return (
-    <div className={`p-6 rounded-3xl bg-card border border-border group hover:border-primary/30 transition-all duration-300 shadow-sm relative overflow-hidden ${isAlert ? 'ring-2 ring-destructive/10' : ''}`}>
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">{title}</h3>
-        <div className={`p-2.5 rounded-xl ${variants[variant]} border shadow-inner group-hover:scale-110 transition-transform duration-300`}>
-          {icon}
-        </div>
-      </div>
-      <div className="flex items-baseline gap-2 relative z-10">
-        <h2 className="text-3xl font-black text-foreground tracking-tighter tabular-nums drop-shadow-sm">{value}</h2>
-        {isAlert && <div className="w-2 h-2 rounded-full bg-destructive animate-ping"></div>}
-      </div>
-      <div className="flex items-center gap-1.5 mt-3">
-         <span className={`text-[10px] font-black uppercase tracking-widest ${isAlert ? 'text-destructive' : 'text-muted-foreground'}`}>{trend}</span>
-      </div>
-    </div>
-  )
-}
-
-function QuickLink({ title, href, icon, desc }: { title: string, href: string, icon: React.ReactNode, desc: string }) {
-  return (
-    <Link href={href} className="flex items-center gap-4 p-4 rounded-2xl bg-accent/30 hover:bg-accent transition-all border border-transparent hover:border-border group/link">
-      <div className="w-12 h-12 rounded-xl bg-card border border-border flex items-center justify-center group-hover/link:bg-primary group-hover/link:text-primary-foreground transition-all shadow-sm">
-         <div className="group-hover/link:scale-110 transition-transform">
-            {icon}
-         </div>
-      </div>
-      <div>
-         <p className="text-xs font-black text-foreground uppercase tracking-tight">{title}</p>
-         <p className="text-[10px] text-muted-foreground font-bold mt-0.5">{desc}</p>
-      </div>
-      <ArrowRight className="w-4 h-4 text-muted-foreground ml-auto opacity-0 group-hover/link:opacity-100 group-hover/link:translate-x-1 transition-all" />
-    </Link>
+    </main>
   )
 }
