@@ -449,7 +449,7 @@ export default function AccountMappingPage() {
   }
 
   const totalWidth = useMemo(() => 50 + Object.values(colWidths).reduce((a, b) => a + b, 0), [colWidths])
-  const cellBase = `border-r border-b border-border px-2 py-1.5 text-[12px] align-top bg-background text-foreground transition-colors`
+  const cellBase = `border-r border-b border-border/60 px-3 py-2 text-[12px] align-top bg-background text-foreground transition-all duration-200`
 
   return (
     <div className="w-full mx-auto px-4 py-6 space-y-6 min-h-screen bg-slate-50/30 dark:bg-transparent">
@@ -625,14 +625,14 @@ export default function AccountMappingPage() {
             </colgroup>
             <thead className="sticky top-0 z-30">
               <tr>
-                <th className="bg-muted border-r border-b border-border text-center text-[10px] font-black text-muted-foreground uppercase w-[50px] sticky left-0 z-20">No</th>
+                <th className="bg-muted/80 backdrop-blur-sm border-r border-b border-border text-center text-[10px] font-black text-muted-foreground uppercase w-[50px] sticky left-0 z-20">No</th>
                 <ResizableHeader colKey="fullDetail" width={colWidths.fullDetail} label="Detail Rekening / Hirarki" onResize={handleResize} />
                 <ResizableHeader colKey="awal" width={colWidths.awal} label="Pagu Awal" align="text-right" onResize={handleResize} />
                 <ResizableHeader colKey="perubahan" width={colWidths.perubahan} label="Pagu Perubahan" align="text-right" onResize={handleResize} />
                 <ResizableHeader colKey="realisasi" width={colWidths.realisasi} label="Realisasi (BKU)" align="text-right" onResize={handleResize} />
                 <ResizableHeader colKey="sisa" width={colWidths.sisa} label="Sisa Anggaran" align="text-right" onResize={handleResize} />
                 <ResizableHeader colKey="bidang" width={colWidths.bidang} label="Bidang" onResize={handleResize} />
-                <th className="bg-muted border-l border-b border-border text-center text-[10px] font-black text-muted-foreground uppercase sticky right-0 z-20 w-[60px]">Aksi</th>
+                <th className="bg-muted/80 backdrop-blur-sm border-l border-b border-border text-center text-[10px] font-black text-muted-foreground uppercase sticky right-0 z-20 w-[60px]">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -842,24 +842,24 @@ export default function AccountMappingPage() {
 
                   return groups.flatMap(prog => [
                     // Program Header
-                    <tr key={`prog-${prog.data.kodeProgram}`} className="bg-indigo-500/5 hover:bg-indigo-500/10 transition-colors border-b-2 border-indigo-500/20 shadow-sm relative z-10 group/prog">
-                      <td className={`${cellBase} !bg-indigo-600 text-center sticky left-1 z-20 text-white font-extrabold text-[14px] border-r-2 border-indigo-400`}>P</td>
-                      <td className={`${cellBase} bg-inherit py-6 px-4 border-r border-border`}>
+                    <tr key={`prog-${prog.data.kodeProgram}`} className="bg-indigo-50/40 dark:bg-indigo-950/20 hover:bg-indigo-100/40 dark:hover:bg-indigo-900/30 transition-colors border-b-2 border-indigo-200 dark:border-indigo-500/10 relative z-10 group/prog">
+                      <td className={`${cellBase} !bg-indigo-600 text-center sticky left-1 z-20 text-white font-extrabold text-[14px] border-r-2 border-indigo-400 shadow-[2px_0_10px_rgba(79,70,229,0.2)]`}>P</td>
+                      <td className={`${cellBase} bg-inherit py-6 px-6 border-r border-border/40 border-l-4 border-indigo-500`}>
                         <div className="flex flex-col gap-4">
-                           <div className="flex items-center gap-4">
-                              <div className="flex flex-col gap-1 min-w-[120px]">
-                                 <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest leading-none">KODE PROGRAM</span>
+                           <div className="flex items-center gap-6">
+                              <div className="flex flex-col gap-1.5 min-w-[140px]">
+                                 <span className="text-[7px] font-black text-indigo-500 uppercase tracking-[0.2em] leading-none">KODE PROGRAM</span>
                                  <input 
-                                   className="w-full bg-background text-indigo-600 dark:text-indigo-400 border border-input p-2 outline-none font-mono font-black text-[14px] focus:ring-1 focus:ring-indigo-400 shadow-sm"
+                                   className="w-full bg-background/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-900/50 p-2 rounded-sm outline-none font-mono font-black text-[14px] focus:ring-2 focus:ring-indigo-400/50 shadow-sm"
                                    value={prog.data.kodeProgram || ''}
                                    placeholder="KODE..."
                                    onChange={e => handleUpdateHierarchyField('kodeProgram', prog.data.kodeProgram, 'kodeProgram', e.target.value)}
                                  />
                               </div>
-                              <div className="flex flex-col gap-1 flex-1">
-                                 <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest leading-none">NAMA PROGRAM</span>
+                              <div className="flex flex-col gap-1.5 flex-1">
+                                 <span className="text-[7px] font-black text-indigo-500 uppercase tracking-[0.2em] leading-none">NAMA PROGRAM</span>
                                  <input 
-                                   className="w-full bg-background text-foreground border border-input p-2 outline-none font-black text-[15px] focus:ring-1 focus:ring-indigo-400 shadow-sm uppercase tracking-tight"
+                                   className="w-full bg-background/50 text-foreground border border-indigo-200 dark:border-indigo-900/50 p-2 rounded-sm outline-none font-black text-[16px] focus:ring-2 focus:ring-indigo-400/50 shadow-sm uppercase tracking-tight"
                                    value={prog.data.namaProgram || ''}
                                    placeholder="NAMA PROGRAM . . ."
                                    onChange={e => handleUpdateHierarchyField('kodeProgram', prog.data.kodeProgram, 'namaProgram', e.target.value)}
@@ -868,10 +868,10 @@ export default function AccountMappingPage() {
                            </div>
                         </div>
                       </td>
-                      <td className={`${cellBase} bg-inherit text-right font-black tabular-nums text-foreground text-[15px] leading-[60px]`}>Rp{formatCurrency(prog.totalBudget)}</td>
-                      <td className={`${cellBase} bg-inherit text-right font-black tabular-nums text-indigo-600 dark:text-indigo-400 text-[15px] leading-[60px]`}>Rp{formatCurrency(prog.totalRevised)}</td>
-                      <td className={`${cellBase} bg-inherit text-right font-black tabular-nums text-indigo-700 dark:text-indigo-300 animate-pulse text-[15px] leading-[60px]`}>Rp{formatCurrency(prog.totalReal)}</td>
-                      <td className={`${cellBase} bg-emerald-500/5 text-right font-black tabular-nums text-emerald-600 dark:text-emerald-400 border-l border-border text-[15px] leading-[60px]`}>
+                      <td className={`${cellBase} bg-inherit text-right font-black tabular-nums text-foreground/80 text-[15px] leading-[70px]`}>Rp{formatCurrency(prog.totalBudget)}</td>
+                      <td className={`${cellBase} bg-inherit text-right font-black tabular-nums text-indigo-600 dark:text-indigo-400 text-[15px] leading-[70px]`}>Rp{formatCurrency(prog.totalRevised)}</td>
+                      <td className={`${cellBase} bg-inherit text-right font-black tabular-nums text-indigo-500 animate-pulse text-[15px] leading-[70px]`}>Rp{formatCurrency(prog.totalReal)}</td>
+                      <td className={`${cellBase} bg-emerald-500/5 text-right font-black tabular-nums text-emerald-600 dark:text-emerald-400 border-l border-border/80 text-[16px] leading-[70px]`}>
                         Rp{formatCurrency(((useRevisedBudgetMode && prog.totalRevised > 0) ? prog.totalRevised : prog.totalBudget) - prog.totalReal)}
                       </td>
                       <td className={`${cellBase} bg-inherit`}></td>
@@ -879,23 +879,23 @@ export default function AccountMappingPage() {
                     </tr>,
                     ...prog.items.flatMap((keg: any) => [
                       // Kegiatan Header
-                      <tr key={`keg-${keg.data.kodeKegiatan}`} className="bg-muted/30 hover:bg-muted/50 transition-colors border-b border-border group/keg">
-                        <td className={`${cellBase} bg-muted text-center sticky left-1 z-20 text-muted-foreground font-extrabold text-[12px] border-r-2 border-border`}>K</td>
-                        <td className={`${cellBase} bg-inherit pl-10 py-5 border-r border-border`}>
-                          <div className="flex items-center gap-4">
-                            <div className="flex flex-col gap-1 min-w-[140px]">
-                               <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest font-mono leading-none">KODE KEGIATAN</span>
+                      <tr key={`keg-${keg.data.kodeKegiatan}`} className="bg-slate-50/50 dark:bg-slate-900/30 hover:bg-slate-100/50 dark:hover:bg-slate-800/40 transition-colors border-b border-border group/keg">
+                        <td className={`${cellBase} bg-slate-100 dark:bg-slate-800 text-center sticky left-1 z-20 text-slate-400 dark:text-slate-500 font-black text-[12px] border-r-2 border-slate-300 dark:border-slate-700`}>K</td>
+                        <td className={`${cellBase} bg-inherit pl-12 py-5 border-r border-border/30 border-l-4 border-slate-400`}>
+                          <div className="flex items-center gap-6">
+                            <div className="flex flex-col gap-1 min-w-[160px]">
+                               <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest font-mono leading-none">KODE KEGIATAN</span>
                                <input 
-                                 className="w-full bg-background text-emerald-600 dark:text-emerald-400 border border-input p-2 outline-none font-mono font-bold text-[12px] focus:ring-1 focus:ring-emerald-500 shadow-sm"
+                                 className="w-full bg-background text-emerald-600 dark:text-emerald-400 border border-border p-2 rounded-sm outline-none font-mono font-bold text-[12px] focus:ring-2 focus:ring-emerald-500/30"
                                  value={keg.data.kodeKegiatan || ''}
                                  placeholder="KODE..."
                                  onChange={e => handleUpdateHierarchyField('kodeKegiatan', keg.data.kodeKegiatan, 'kodeKegiatan', e.target.value)}
                                />
                             </div>
                             <div className="flex flex-col gap-1 flex-1">
-                               <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest font-mono leading-none">NAMA KEGIATAN</span>
+                               <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest font-mono leading-none">NAMA KEGIATAN</span>
                                <input 
-                                 className="w-full bg-background text-foreground border border-input p-2 outline-none font-bold text-[13px] focus:ring-1 focus:ring-emerald-500 shadow-sm uppercase"
+                                 className="w-full bg-background text-foreground border border-border p-2 rounded-sm outline-none font-bold text-[13px] focus:ring-2 focus:ring-emerald-500/30 uppercase"
                                  value={keg.data.namaKegiatan || ''}
                                  placeholder="NAMA KEGIATAN . . ."
                                  onChange={e => handleUpdateHierarchyField('kodeKegiatan', keg.data.kodeKegiatan, 'namaKegiatan', e.target.value)}
@@ -903,34 +903,34 @@ export default function AccountMappingPage() {
                             </div>
                           </div>
                         </td>
-                        <td className={`${cellBase} bg-inherit text-right text-[13px] font-bold tabular-nums text-muted-foreground leading-[50px]`}>Rp{formatCurrency(keg.totalBudget)}</td>
-                        <td className={`${cellBase} bg-inherit text-right text-[13px] font-bold tabular-nums text-muted-foreground leading-[50px]`}>Rp{formatCurrency(keg.totalRevised)}</td>
-                        <td className={`${cellBase} bg-inherit text-right text-[13px] font-bold tabular-nums text-muted-foreground leading-[50px]`}>Rp{formatCurrency(keg.totalReal)}</td>
-                        <td className={`${cellBase} bg-inherit text-right text-[13px] font-bold tabular-nums text-muted-foreground leading-[50px]`}>
+                        <td className={`${cellBase} bg-inherit text-right text-[13px] font-bold tabular-nums text-muted-foreground/80 leading-[55px]`}>Rp{formatCurrency(keg.totalBudget)}</td>
+                        <td className={`${cellBase} bg-inherit text-right text-[13px] font-bold tabular-nums text-muted-foreground/80 leading-[55px]`}>Rp{formatCurrency(keg.totalRevised)}</td>
+                        <td className={`${cellBase} bg-inherit text-right text-[13px] font-bold tabular-nums text-muted-foreground/80 leading-[55px]`}>Rp{formatCurrency(keg.totalReal)}</td>
+                        <td className={`${cellBase} bg-inherit text-right text-[13px] font-bold tabular-nums text-muted-foreground/80 leading-[55px]`}>
                            Rp{formatCurrency(((useRevisedBudgetMode && keg.totalRevised > 0) ? keg.totalRevised : keg.totalBudget) - keg.totalReal)}
                         </td>
                         <td className={`${cellBase} bg-inherit`}></td>
-                        <td className={`${cellBase} bg-background sticky right-0 z-20 border-l border-border shadow-none`}></td>
+                        <td className={`${cellBase} bg-background sticky right-0 z-20 border-l border-border`}></td>
                       </tr>,
                       ...keg.items.flatMap((sub: any) => [
                         // Sub Kegiatan Header
-                        <tr key={`sub-${sub.data.kodeSubKeg}`} className="bg-background hover:bg-muted/20 transition-colors border-b border-border group/sub">
-                          <td className={`${cellBase} bg-muted/20 text-center sticky left-1 z-20 text-muted-foreground font-bold text-[12px] border-r-2 border-border`}>S</td>
-                          <td className={`${cellBase} bg-inherit pl-16 py-5 border-r border-border`}>
-                            <div className="flex items-center gap-4">
-                              <div className="flex flex-col gap-1 min-w-[160px]">
-                                 <span className="text-[8px] font-black text-muted-foreground uppercase font-mono tracking-widest leading-none">KODE SUB KEGIATAN</span>
+                        <tr key={`sub-${sub.data.kodeSubKeg}`} className="bg-background hover:bg-muted/10 transition-colors border-b border-border group/sub">
+                          <td className={`${cellBase} bg-muted/10 text-center sticky left-1 z-20 text-indigo-400 dark:text-indigo-600 font-bold text-[12px] border-r-2 border-border/80`}>S</td>
+                          <td className={`${cellBase} bg-inherit pl-20 py-4 border-r border-border/20 border-l-4 border-indigo-400/40`}>
+                            <div className="flex items-center gap-6">
+                              <div className="flex flex-col gap-1 min-w-[180px]">
+                                 <span className="text-[7px] font-black text-indigo-400 dark:text-indigo-700 uppercase font-mono tracking-widest leading-none">KODE SUB KEGIATAN</span>
                                  <input 
-                                   className="w-full bg-background text-indigo-600 dark:text-indigo-400 border border-input p-2 outline-none font-mono font-bold text-[11px] focus:ring-1 focus:ring-primary shadow-sm"
+                                   className="w-full bg-background/30 text-indigo-600 dark:text-indigo-400 border border-border p-2 rounded-sm outline-none font-mono font-bold text-[11px] focus:border-indigo-400"
                                    value={sub.data.kodeSubKeg || ''}
                                    placeholder="KODE..."
                                    onChange={e => handleUpdateHierarchyField('kodeSubKeg', sub.data.kodeSubKeg, 'kodeSubKeg', e.target.value)}
                                  />
                               </div>
                               <div className="flex flex-col gap-1 flex-1">
-                                 <span className="text-[8px] font-black text-muted-foreground uppercase font-mono tracking-widest leading-none">NAMA SUB KEGIATAN</span>
+                                 <span className="text-[7px] font-black text-indigo-400 dark:text-indigo-700 uppercase font-mono tracking-widest leading-none">NAMA SUB KEGIATAN</span>
                                  <textarea 
-                                   className="w-full bg-background text-foreground border border-input p-2 outline-none font-black text-[12px] focus:ring-1 focus:ring-primary shadow-sm uppercase resize-none leading-normal min-h-[44px]"
+                                   className="w-full bg-background/30 text-foreground border border-border p-2 rounded-sm outline-none font-black text-[12px] focus:border-indigo-400 uppercase resize-none leading-normal min-h-[40px]"
                                    value={sub.data.namaSubKeg || ''}
                                    placeholder="NAMA SUB KEGIATAN . . ."
                                    onChange={e => handleUpdateHierarchyField('kodeSubKeg', sub.data.kodeSubKeg, 'namaSubKeg', e.target.value)}
@@ -951,16 +951,16 @@ export default function AccountMappingPage() {
                           const m = item.data
                           const sisaAnggaran = ((useRevisedBudgetMode && m.revisedBudget > 0) ? m.revisedBudget : m.budget) - (m.realization || 0)
                           return (
-                            <tr key={m.id} className="hover:bg-muted/50 transition-all group">
-                              <td className={`${cellBase} bg-muted text-center font-mono font-black text-muted-foreground/30 sticky left-1 z-20 border-r border-border`}>B</td>
-                              <td className={`${cellBase} relative group/cell p-0 ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''} pl-[85px] border-l border-border relative bg-background`}>
+                            <tr key={m.id} className="hover:bg-muted/30 transition-all group">
+                              <td className={`${cellBase} bg-muted text-center font-mono font-black text-muted-foreground/20 sticky left-1 z-20 border-r border-border/80`}>B</td>
+                              <td className={`${cellBase} relative group/cell p-0 ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''} pl-24 border-l border-border/10 relative bg-background`}>
                                  {/* Semantic Indentation Thread */}
-                                 <div className="absolute left-16 top-0 bottom-0 w-[1px] bg-border" />
-                                 <div className="absolute left-16 top-[32px] w-5 h-[1px] bg-border" />
+                                 <div className="absolute left-[88px] top-0 bottom-0 w-[2px] bg-border opacity-60" />
+                                 <div className="absolute left-[88px] top-[30px] w-5 h-[2px] bg-border opacity-60 rounded-r-full" />
                                  
-                                 <div className="flex flex-col m-2 p-3 bg-background border border-border rounded-none group-hover:border-primary/50 transition-all">
+                                 <div className="flex flex-col my-2 mx-4 p-4 bg-background border border-border shadow-sm rounded-none group-hover:border-primary/50 transition-all">
                                    <textarea 
-                                     className="w-full bg-transparent border-none p-0 outline-none font-bold text-[13px] leading-relaxed text-foreground uppercase placeholder:text-muted-foreground opacity-80"
+                                     className="w-full bg-transparent border-none p-0 outline-none font-bold text-[13px] leading-relaxed text-foreground uppercase placeholder:text-muted-foreground opacity-90"
                                      value={m.name || ''}
                                      placeholder="KLIK UNTUK ISI URAIAN BELANJA. . ."
                                      rows={Math.max(1, (m.name || '').split('\n').length)}
@@ -970,12 +970,12 @@ export default function AccountMappingPage() {
                                        e.target.style.height = e.target.scrollHeight + 'px'
                                      }}
                                    />
-                                   <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border">
-                                      <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest whitespace-nowrap">BELANJA</span>
+                                   <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border/50">
+                                      <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest whitespace-nowrap opacity-60">KODE BELANJA</span>
                                       <input 
-                                        className="w-full bg-background border border-input p-1 px-2 outline-none text-[11px] font-mono font-black text-muted-foreground group-hover:text-primary transition-colors focus:ring-1 focus:ring-primary"
+                                        className="w-full bg-muted/20 border border-border p-1.5 px-3 outline-none text-[11px] font-mono font-black text-muted-foreground group-hover:text-primary transition-colors focus:ring-1 focus:ring-primary rounded-sm placeholder:italic"
                                         value={m.kodeBelanja || ''}
-                                        placeholder="KODE BELANJA"
+                                        placeholder="KONTEN..."
                                         onChange={e => handleUpdateField(m.id, 'kodeBelanja', e.target.value)}
                                       />
                                    </div>
