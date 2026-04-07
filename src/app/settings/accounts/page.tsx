@@ -984,10 +984,11 @@ export default function AccountMappingPage() {
 
                               {/* Financial Columns */}
                               <td className={`${cellBase} p-0 relative group/cell text-right ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
-                                 <div className="flex items-center gap-2 justify-end w-full h-full pr-2 text-[11px]">
+                                 <div className="flex items-center gap-1 justify-end w-full h-full pr-2 text-[13px]">
+                                    <span className="font-black text-foreground/40 text-[10px] select-none">Rp</span>
                                     <input 
                                       type="number"
-                                      className="w-full bg-transparent border-none p-2 outline-none focus:bg-white dark:focus:bg-white/5 text-right font-mono font-bold text-foreground/80 tabular-nums"
+                                      className="w-full bg-transparent border-none py-2 px-1 outline-none focus:bg-white dark:focus:bg-white/5 text-right font-black text-foreground/80 tabular-nums"
                                       value={m.budget || 0}
                                       onChange={(e) => handleUpdateField(m.id, 'budget', Number(e.target.value))}
                                     />
@@ -1000,17 +1001,20 @@ export default function AccountMappingPage() {
                                  </div>
                               </td>
                               <td className={`${cellBase} p-0 relative group/cell text-right ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
-                                 <input 
-                                   type="number"
-                                   className={`w-full bg-transparent border-none p-2 outline-none focus:bg-white dark:focus:bg-white/5 text-right font-mono font-black tabular-nums transition-colors text-[11px] ${m.revisedBudget > 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-foreground/10'}`}
-                                   value={m.revisedBudget || 0}
-                                   onChange={(e) => handleUpdateField(m.id, 'revisedBudget', Number(e.target.value))}
-                                 />
+                                 <div className="flex items-center gap-1 justify-end w-full h-full pr-3 text-[13px]">
+                                    <span className={`font-black text-[10px] select-none ${m.revisedBudget > 0 ? 'text-indigo-600/40 dark:text-indigo-400/40' : 'text-foreground/5'}`}>Rp</span>
+                                    <input 
+                                      type="number"
+                                      className={`w-full bg-transparent border-none py-2 px-1 outline-none focus:bg-white dark:focus:bg-white/5 text-right font-black tabular-nums transition-colors ${m.revisedBudget > 0 ? 'text-indigo-700 dark:text-indigo-300' : 'text-foreground/10'}`}
+                                      value={m.revisedBudget || 0}
+                                      onChange={(e) => handleUpdateField(m.id, 'revisedBudget', Number(e.target.value))}
+                                    />
+                                 </div>
                               </td>
-                              <td className={`${cellBase} p-2 text-right font-mono font-black text-indigo-600 dark:text-indigo-400 tabular-nums bg-indigo-50/30 dark:bg-indigo-500/5 whitespace-nowrap text-[11px]`}>
+                              <td className={`${cellBase} p-2 text-right font-black text-indigo-600 dark:text-indigo-400 tabular-nums bg-indigo-50/10 dark:bg-indigo-500/5 whitespace-nowrap text-[13px] leading-[40px]`}>
                                  Rp{formatCurrency(m.realization || 0)}
                               </td>
-                              <td className={`${cellBase} p-2 text-right font-mono font-black tabular-nums whitespace-nowrap text-[11px] ${sisaAnggaran < 0 ? 'text-rose-500 bg-rose-50' : 'text-emerald-600 bg-emerald-50/30 dark:bg-emerald-500/5'}`}>
+                              <td className={`${cellBase} p-2 text-right font-black tabular-nums whitespace-nowrap text-[13px] leading-[40px] ${sisaAnggaran < 0 ? 'text-rose-600 bg-rose-50' : 'text-emerald-700 bg-emerald-50/10 dark:bg-emerald-500/5'}`}>
                                  Rp{formatCurrency(sisaAnggaran)}
                               </td>
                               <td className={`${cellBase} p-0 relative group/cell ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
