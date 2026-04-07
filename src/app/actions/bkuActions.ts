@@ -188,7 +188,8 @@ export async function getAccountMappings(year: number = 2026) {
     where: { year },
     select: {
       code: true,
-      expenseTotal: true
+      expenseTotal: true,
+      receiptTotal: true
     }
   })
 
@@ -211,7 +212,8 @@ export async function getAccountMappings(year: number = 2026) {
       const isBaseMatch = tCode === kBel
 
       if (isFullMatch || isSuffixMatch || isBaseMatch) {
-         return sum + (t.expenseTotal || 0)
+         // Realization sums BOTH receipts and expenses for SP2D-style execution
+         return sum + (t.expenseTotal || 0) + (t.receiptTotal || 0)
       }
       return sum
     }, 0)

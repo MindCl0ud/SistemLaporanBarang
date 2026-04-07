@@ -52,9 +52,20 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
           const noRaw = String(row[0] || "").trim()
           const uraian = String(row[2] || "").trim()
           const kode = String(row[3] || "").trim()
-          const terima = Number(row[4] || 0)
-          const keluar = Number(row[5] || 0)
-          const saldo = Number(row[6] || 0)
+          
+          // Robust number parsing for Indonesian format (e.g., 87.749.600)
+          const cleanNumber = (val: any): number => {
+            if (val === undefined || val === null || val === "") return 0
+            if (typeof val === 'number') return val
+            // Hapus titik ribuan, ganti koma desimal dengan titik
+            const cleaned = String(val).replace(/\./g, "").replace(/,/g, ".")
+            const num = Number(cleaned)
+            return isNaN(num) ? 0 : num
+          }
+
+          const terima = cleanNumber(row[4])
+          const keluar = cleanNumber(row[5])
+          const saldo = cleanNumber(row[6])
           
           const isSaldoLalu = uraian.toLowerCase().includes("saldo bulan lalu") || uraian.toLowerCase().includes("saldo s.d bulan lalu")
           
