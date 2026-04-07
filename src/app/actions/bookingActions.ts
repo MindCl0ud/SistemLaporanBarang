@@ -1,3 +1,4 @@
+'use server'
 import prisma from '@/lib/prisma'
 import { AssetStatus, BookingStatus, AssetType } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
