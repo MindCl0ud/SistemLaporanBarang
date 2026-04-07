@@ -89,14 +89,14 @@ function ResizableHeader({ colKey, width, label, onResize, align = 'text-left', 
   }
 
   return (
-    <th className={`bg-slate-50 dark:bg-slate-900 border-r border-b border-border p-0 relative transition-colors hover:bg-slate-100 dark:hover:bg-primary/5 group/h min-w-[${width}px]`} style={{ width }}>
-      <div className={`px-3 py-2 text-[10px] font-black text-foreground/70 uppercase tracking-tight ${align}`}>
+    <th className={`bg-slate-100/90 dark:bg-slate-900/95 backdrop-blur-sm border-r border-b-2 border-border p-0 relative transition-colors hover:bg-slate-200 dark:hover:bg-primary/5 group/h min-w-[${width}px]`} style={{ width }}>
+      <div className={`px-4 py-3 text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-tight ${align}`}>
         {label}
       </div>
       {!isLast && (
         <div onMouseDown={onMouseDown}
           className="absolute right-0 top-0 h-full w-2 cursor-col-resize flex items-center justify-center group z-10">
-          <div className="w-0.5 h-4 bg-foreground/10 group-hover/h:bg-primary/50 transition-colors" />
+          <div className="w-0.5 h-4 bg-foreground/5 group-hover/h:bg-primary/50 transition-colors" />
         </div>
       )}
     </th>
@@ -625,14 +625,14 @@ export default function AccountMappingPage() {
             </colgroup>
             <thead className="sticky top-0 z-30">
               <tr>
-                <th className="bg-muted/80 backdrop-blur-sm border-r border-b border-border text-center text-[10px] font-black text-muted-foreground uppercase w-[50px] sticky left-0 z-20">No</th>
+                <th className="bg-slate-100/90 dark:bg-slate-900/95 backdrop-blur-sm border-r border-b-2 border-border text-center text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase w-[50px] sticky left-0 z-20 transition-colors">No</th>
                 <ResizableHeader colKey="fullDetail" width={colWidths.fullDetail} label="Detail Rekening / Hirarki" onResize={handleResize} />
                 <ResizableHeader colKey="awal" width={colWidths.awal} label="Pagu Awal" align="text-right" onResize={handleResize} />
                 <ResizableHeader colKey="perubahan" width={colWidths.perubahan} label="Pagu Perubahan" align="text-right" onResize={handleResize} />
                 <ResizableHeader colKey="realisasi" width={colWidths.realisasi} label="Realisasi (BKU)" align="text-right" onResize={handleResize} />
                 <ResizableHeader colKey="sisa" width={colWidths.sisa} label="Sisa Anggaran" align="text-right" onResize={handleResize} />
                 <ResizableHeader colKey="bidang" width={colWidths.bidang} label="Bidang" onResize={handleResize} />
-                <th className="bg-muted/80 backdrop-blur-sm border-l border-b border-border text-center text-[10px] font-black text-muted-foreground uppercase sticky right-0 z-20 w-[60px]">Aksi</th>
+                <th className="bg-slate-100/90 dark:bg-slate-900/95 backdrop-blur-sm border-l border-b-2 border-border text-center text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase sticky right-0 z-20 w-[60px] transition-colors">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
