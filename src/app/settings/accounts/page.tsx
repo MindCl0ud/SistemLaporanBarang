@@ -850,7 +850,7 @@ export default function AccountMappingPage() {
                               <div className="flex flex-col gap-1.5 min-w-[140px]">
                                  <span className="text-[7px] font-black text-indigo-900/60 dark:text-indigo-300/80 uppercase tracking-[0.2em] leading-none">KODE PROGRAM</span>
                                  <input 
-                                   className="w-full bg-background/80 text-foreground border border-indigo-300/50 dark:border-indigo-900/50 p-2 rounded-sm outline-none font-mono font-black text-[14px] focus:ring-2 focus:ring-indigo-400/50 shadow-sm"
+                                   className="w-full bg-white dark:bg-zinc-950 text-slate-950 dark:text-zinc-100 border border-indigo-400/50 dark:border-indigo-800 p-2 rounded-sm outline-none font-mono font-black text-[14px] focus:ring-2 focus:ring-indigo-400/50 shadow-sm"
                                    value={prog.data.kodeProgram || ''}
                                    placeholder="KODE..."
                                    onChange={e => handleUpdateHierarchyField('kodeProgram', prog.data.kodeProgram, 'kodeProgram', e.target.value)}
@@ -859,7 +859,7 @@ export default function AccountMappingPage() {
                               <div className="flex flex-col gap-1.5 flex-1">
                                  <span className="text-[7px] font-black text-indigo-900/60 dark:text-indigo-300/80 uppercase tracking-[0.2em] leading-none">NAMA PROGRAM</span>
                                  <input 
-                                   className="w-full bg-background/80 text-foreground border border-indigo-300/50 dark:border-indigo-900/50 p-2 rounded-sm outline-none font-black text-[16px] focus:ring-2 focus:ring-indigo-400/50 shadow-sm uppercase tracking-tight"
+                                   className="w-full bg-white dark:bg-zinc-950 text-slate-950 dark:text-zinc-100 border border-indigo-400/50 dark:border-indigo-800 p-2 rounded-sm outline-none font-black text-[16px] focus:ring-2 focus:ring-indigo-400/50 shadow-sm uppercase tracking-tight"
                                    value={prog.data.namaProgram || ''}
                                    placeholder="NAMA PROGRAM . . ."
                                    onChange={e => handleUpdateHierarchyField('kodeProgram', prog.data.kodeProgram, 'namaProgram', e.target.value)}
@@ -884,18 +884,18 @@ export default function AccountMappingPage() {
                         <td className={`${cellBase} bg-inherit pl-12 py-5 border-r border-border/30 border-l-4 border-slate-400`}>
                           <div className="flex items-center gap-6">
                             <div className="flex flex-col gap-1 min-w-[160px]">
-                               <span className="text-[7px] font-black text-slate-900/50 dark:text-slate-300/60 uppercase tracking-widest font-mono leading-none">KODE KEGIATAN</span>
+                               <span className="text-[7px] font-black text-slate-800/80 dark:text-slate-300/60 uppercase tracking-widest font-mono leading-none">KODE KEGIATAN</span>
                                <input 
-                                 className="w-full bg-background/80 text-foreground border border-border p-2 rounded-sm outline-none font-mono font-bold text-[12px] focus:ring-2 focus:ring-emerald-500/30"
+                                 className="w-full bg-white dark:bg-zinc-950 text-slate-950 dark:text-zinc-100 border border-slate-300 dark:border-slate-800 p-2 rounded-sm outline-none font-mono font-bold text-[12px] focus:ring-2 focus:ring-emerald-500/30"
                                  value={keg.data.kodeKegiatan || ''}
                                  placeholder="KODE..."
                                  onChange={e => handleUpdateHierarchyField('kodeKegiatan', keg.data.kodeKegiatan, 'kodeKegiatan', e.target.value)}
                                />
                             </div>
                             <div className="flex flex-col gap-1 flex-1">
-                               <span className="text-[7px] font-black text-slate-900/50 dark:text-slate-300/60 uppercase tracking-widest font-mono leading-none">NAMA KEGIATAN</span>
+                               <span className="text-[7px] font-black text-slate-800/80 dark:text-slate-300/60 uppercase tracking-widest font-mono leading-none">NAMA KEGIATAN</span>
                                <input 
-                                 className="w-full bg-background/80 text-foreground border border-border p-2 rounded-sm outline-none font-bold text-[13px] focus:ring-2 focus:ring-emerald-500/30 uppercase"
+                                 className="w-full bg-white dark:bg-zinc-950 text-slate-950 dark:text-zinc-100 border border-slate-300 dark:border-slate-800 p-2 rounded-sm outline-none font-bold text-[13px] focus:ring-2 focus:ring-emerald-500/30 uppercase"
                                  value={keg.data.namaKegiatan || ''}
                                  placeholder="NAMA KEGIATAN . . ."
                                  onChange={e => handleUpdateHierarchyField('kodeKegiatan', keg.data.kodeKegiatan, 'namaKegiatan', e.target.value)}
@@ -919,18 +919,18 @@ export default function AccountMappingPage() {
                           <td className={`${cellBase} bg-inherit pl-20 py-4 border-r border-border/20 border-l-4 border-indigo-400/40`}>
                             <div className="flex items-center gap-6">
                               <div className="flex flex-col gap-1 min-w-[180px]">
-                                 <span className="text-[7px] font-black text-indigo-900/50 dark:text-indigo-300/60 uppercase font-mono tracking-widest leading-none">KODE SUB KEGIATAN</span>
+                                 <span className="text-[7px] font-black text-indigo-900/70 dark:text-indigo-400/60 uppercase font-mono tracking-widest leading-none">KODE SUB KEGIATAN</span>
                                  <input 
-                                   className="w-full bg-background/80 text-foreground border border-border p-2 rounded-sm outline-none font-mono font-bold text-[11px] focus:border-indigo-400"
+                                   className="w-full bg-white dark:bg-zinc-950 text-slate-950 dark:text-zinc-100 border border-slate-300 dark:border-indigo-800 p-2 rounded-sm outline-none font-mono font-bold text-[11px] focus:border-indigo-400"
                                    value={sub.data.kodeSubKeg || ''}
                                    placeholder="KODE..."
                                    onChange={e => handleUpdateHierarchyField('kodeSubKeg', sub.data.kodeSubKeg, 'kodeSubKeg', e.target.value)}
                                  />
                               </div>
                               <div className="flex flex-col gap-1 flex-1">
-                                 <span className="text-[7px] font-black text-indigo-900/50 dark:text-indigo-300/60 uppercase font-mono tracking-widest leading-none">NAMA SUB KEGIATAN</span>
+                                 <span className="text-[7px] font-black text-indigo-900/70 dark:text-indigo-400/60 uppercase font-mono tracking-widest leading-none">NAMA SUB KEGIATAN</span>
                                  <textarea 
-                                   className="w-full bg-background/80 text-foreground border border-border p-2 rounded-sm outline-none font-black text-[12px] focus:border-indigo-400 uppercase resize-none leading-normal min-h-[40px]"
+                                   className="w-full bg-white dark:bg-zinc-950 text-slate-950 dark:text-zinc-100 border border-slate-300 dark:border-indigo-800 p-2 rounded-sm outline-none font-black text-[12px] focus:border-indigo-400 uppercase resize-none leading-normal min-h-[40px]"
                                    value={sub.data.namaSubKeg || ''}
                                    placeholder="NAMA SUB KEGIATAN . . ."
                                    onChange={e => handleUpdateHierarchyField('kodeSubKeg', sub.data.kodeSubKeg, 'namaSubKeg', e.target.value)}
@@ -971,9 +971,9 @@ export default function AccountMappingPage() {
                                      }}
                                    />
                                    <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border/50">
-                                      <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest whitespace-nowrap">KODE BELANJA</span>
+                                      <span className="text-[10px] font-black text-slate-900/80 dark:text-slate-200/60 uppercase tracking-widest whitespace-nowrap">KODE BELANJA</span>
                                       <input 
-                                        className="w-full bg-muted/20 border border-border p-1.5 px-3 outline-none text-[11px] font-mono font-black text-foreground/80 group-hover:text-primary transition-colors focus:ring-1 focus:ring-primary rounded-sm placeholder:italic"
+                                        className="w-full bg-white dark:bg-zinc-950 text-slate-950 dark:text-zinc-100 border border-slate-300 dark:border-slate-800 p-1.5 px-3 outline-none text-[11px] font-mono font-black group-hover:text-primary transition-colors focus:ring-1 focus:ring-primary rounded-sm placeholder:italic"
                                         value={m.kodeBelanja || ''}
                                         placeholder="KONTEN..."
                                         onChange={e => handleUpdateField(m.id, 'kodeBelanja', e.target.value)}
