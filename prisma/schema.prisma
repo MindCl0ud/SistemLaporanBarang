@@ -142,3 +142,81 @@ model GlobalSetting {
   value     String
   updatedAt DateTime @updatedAt
 }
+
+// --- Booking System Models ---
+
+enum AssetType {
+  VEHICLE
+  PROJECTOR
+  LAPTOP
+  OTHER
+}
+
+enum AssetStatus {
+  AVAILABLE
+  BOOKED
+  MAINTENANCE
+  DAMAGED
+}
+
+enum BookingStatus {
+  PENDING
+  APPROVED
+  ONGOING
+  COMPLETED
+  CANCELLED
+  REJECTED
+}
+
+model Asset {
+  id           String      @id @default(cuid())
+  type         AssetType
+  name         String
+  brand        String?     // e.g., Toyota, Epson
+  model        String?     // e.g., Innova, EB-X400
+  licensePlate String?     @unique // For vehicles
+  serialNumber String?     @unique // For electronics
+  description  String?
+  imageUrl     String?
+  status       AssetStatus @default(AVAILABLE)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  bookings     Booking[]
+
+  @@index([type])
+  @@index([status])
+}
+
+model Booking {
+  id            String        @id @default(cuid())
+  assetId       String
+  userId        String?
+  userName      String        // For quick demo without full Auth
+  userDivision  String?       // Bidang
+  startDate     DateTime
+  endDate       DateTime
+  purpose       String
+  status        BookingStatus @default(PENDING)
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  asset         Asset         @relation(fields: [assetId], references: [id])
+  handovers     Handover[]
+
+  @@index([assetId])
+  @@index([status])
+  @@index([startDate, endDate])
+}
+
+model Handover {
+  id         String   @id @default(cuid())
+  bookingId  String
+  type       String   // "PICKUP" or "RETURN"
+  condition  String   // "GOOD", "MINOR_DAMAGE", "MAJOR_DAMAGE"
+  notes      String?
+  staffName  String?  // Staff who processed handover
+  timestamp  DateTime @default(now())
+  booking    Booking  @relation(fields: [bookingId], references: [id])
+
+  @@index([bookingId])
+}

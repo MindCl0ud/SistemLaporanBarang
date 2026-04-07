@@ -41,42 +41,69 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
         const dataRows = utils.sheet_to_json(ws, { header: 1 }) as any[][]
         let currentDate = ""
         
+        // --- DETEKSI KOLOM DINAMIS ---
+        let colIdx = {
+          no: 0,
+          tanggal: 1,
+          uraian: 2,
+          kode: 3,
+          terima: 4,
+          keluar: 5,
+          saldo: 6
+        }
+
+        // Scan 20 baris pertama untuk mencari header asli
+        for (let j = 0; j < Math.min(dataRows.length, 20); j++) {
+          const r = dataRows[j]
+          if (!r) continue
+          r.forEach((cell, idx) => {
+            const val = String(cell || "").toLowerCase()
+            if (val.includes("uraian") || val.includes("kegiatan")) colIdx.uraian = idx
+            if (val.includes("kode") || val.includes("rekening")) colIdx.kode = idx
+            if (val.includes("penerimaan")) colIdx.terima = idx
+            if (val.includes("pengeluaran")) colIdx.keluar = idx
+            if (val.includes("saldo")) colIdx.saldo = idx
+            if (val.includes("tanggal")) colIdx.tanggal = idx
+            if (val.includes("no")) colIdx.no = idx
+          })
+          // Jika sudah menemukan Uraian dan Penerimaan, kita anggap sudah ketemu baris headernya
+          if (r.some(c => String(c || "").toLowerCase().includes("uraian")) && 
+              r.some(c => String(c || "").toLowerCase().includes("penerimaan"))) {
+            // baris j adalah baris header, lewati baris ini di loop utama
+          }
+        }
+
         for (let i = 0; i < dataRows.length; i++) {
           const row = dataRows[i]
           if (!row || row.length === 0) continue
           
-          const noRaw = String(row[0] || "").trim()
-          const uraian = String(row[2] || "").trim()
-          const kode = String(row[3] || "").trim()
+          const uraian = String(row[colIdx.uraian] || "").trim()
+          const kode = String(row[colIdx.kode] || "").trim()
           
           // --- Robust Number Parsing ---
           const cleanNumber = (val: any): number => {
             if (val === undefined || val === null || val === "") return 0
             if (typeof val === 'number') return val
-            // Ganti koma Indonesia ke titik, lalu buang semua karakter kecuali angka, titik, dan minus
             const cleaned = String(val).replace(/,/g, ".").replace(/[^\d.-]/g, "")
             const num = parseFloat(cleaned)
             return isNaN(num) ? 0 : num
           }
 
-          const terima = cleanNumber(row[4])
-          const keluar = cleanNumber(row[5])
-          const saldo = cleanNumber(row[6])
+          const terima = cleanNumber(row[colIdx.terima])
+          const keluar = cleanNumber(row[colIdx.keluar])
+          const saldo = cleanNumber(row[colIdx.saldo])
           
           // --- Robust Date Parsing ---
           let rowDate = ""
-          const rawDate = row[1]
+          const rawDate = row[colIdx.tanggal]
           if (rawDate) {
             if (rawDate instanceof Date || (typeof rawDate === 'object' && rawDate.getTime)) {
-               // JS Date object
                const d = rawDate as Date
                rowDate = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`
             } else if (typeof rawDate === 'number' && rawDate > 40000) {
-               // Excel Serial Format (assuming 40000+ is year 2010+)
                const d = new Date((rawDate - 25569) * 86400 * 1000)
                rowDate = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`
             } else {
-               // String date - support multiple formats
                const s = String(rawDate).trim()
                if (/^\d{1,2}[-/]\d{1,2}[-/]\d{2,4}$/.test(s)) {
                   rowDate = s
@@ -89,10 +116,16 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
           }
           
           const isSaldoLalu = uraian.toLowerCase().includes("saldo bulan lalu") || uraian.toLowerCase().includes("saldo s.d bulan lalu")
-          const isHeaderRow = uraian.toLowerCase().includes("uraian") || uraian.toLowerCase().includes("kode rekening") || (uraian.toLowerCase() === "no" && !terima && !keluar)
           
+          // Filter Header: Jangan impor baris judul atau baris angka pembantu (1, 2, 3...)
+          const isHeaderRow = 
+            uraian.toLowerCase().includes("uraian") || 
+            uraian.toLowerCase().includes("kode rekening") || 
+            (uraian.toLowerCase() === "no" && !terima && !keluar) ||
+            (/^\d+$/.test(uraian) && uraian.length === 1) // Ini membuang baris header angka '3'
+
           // KRITERIA PENERIMAAN: Ada Uraian ATAU Ada Kode ATAU Ada Nilai Rupiah
-          const hasContent = (uraian && uraian.length >= 2) || (kode && kode.length >= 3) || (terima !== 0 || keluar !== 0)
+          const hasContent = (uraian && uraian.length >= 2 && !/^\d+$/.test(uraian)) || (kode && kode.length >= 3) || (terima !== 0 || keluar !== 0)
 
           if (hasContent && !isSaldoLalu && !isHeaderRow) {
             const sheetOffset = wb.SheetNames.indexOf(wsName) * 100000 
