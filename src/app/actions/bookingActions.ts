@@ -1,9 +1,6 @@
-'use server'
-
-import { PrismaClient, AssetStatus, BookingStatus, AssetType } from '@prisma/client'
+import prisma from '@/lib/prisma'
+import { AssetStatus, BookingStatus, AssetType } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
-
-const prisma = new PrismaClient()
 
 export async function getAssets() {
   return await prisma.asset.findMany({

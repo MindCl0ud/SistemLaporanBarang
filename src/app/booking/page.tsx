@@ -10,13 +10,13 @@ export default async function BookingDashboard() {
   await seedDemoAssets()
   
   const assets = await getAssets()
-  const availableCount = assets.filter(a => a.status === 'AVAILABLE').length
-  const bookedCount = assets.filter(a => a.status === 'BOOKED').length
+  const availableCount = assets.filter((a: any) => a.status === 'AVAILABLE').length
+  const bookedCount = assets.filter((a: any) => a.status === 'BOOKED').length
 
   const categories = [
-    { name: 'Kendaraan', icon: Car, color: 'bg-blue-500', count: assets.filter(a => a.type === 'VEHICLE').length },
-    { name: 'Proyektor', icon: Monitor, color: 'bg-emerald-500', count: assets.filter(a => a.type === 'PROJECTOR').length },
-    { name: 'Laptop', icon: Laptop, color: 'bg-indigo-500', count: assets.filter(a => a.type === 'LAPTOP').length },
+    { name: 'Kendaraan', icon: Car, color: 'bg-blue-500', count: assets.filter((a: any) => a.type === 'VEHICLE').length },
+    { name: 'Proyektor', icon: Monitor, color: 'bg-emerald-500', count: assets.filter((a: any) => a.type === 'PROJECTOR').length },
+    { name: 'Laptop', icon: Laptop, color: 'bg-indigo-500', count: assets.filter((a: any) => a.type === 'LAPTOP').length },
   ]
 
   return (
@@ -73,7 +73,7 @@ export default async function BookingDashboard() {
         </div>
 
         <div className="space-y-4">
-          {assets.slice(0, 2).map((asset) => (
+          {assets.slice(0, 2).map((asset: any) => (
             <Link key={asset.id} href={`/booking/catalog/${asset.id}`} className="group flex items-center gap-4 rounded-2xl bg-white p-4 shadow-sm hover:shadow-md transition-all active:scale-[0.98]">
               <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl bg-slate-100 border border-slate-100">
                 <img 
