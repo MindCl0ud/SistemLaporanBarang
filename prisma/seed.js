@@ -1,43 +1,66 @@
 const { PrismaClient } = require('@prisma/client')
+const bcrypt = require('bcryptjs')
 const prisma = new PrismaClient()
 
 async function main() {
+  const hashedPassword = await bcrypt.hash('password123', 10)
+
   // Clear existing data
-  await prisma.handoverLog.deleteMany()
+  await prisma.stockLog.deleteMany()
   await prisma.booking.deleteMany()
-  await prisma.asset.deleteMany()
+  await prisma.item.deleteMany()
   await prisma.user.deleteMany()
+  await prisma.bidang.deleteMany()
+
+  // Create Bidang
+  const bidangUmum = await prisma.bidang.create({
+    data: { nama: 'Bagian Umum', kode: 'UMU' },
+  })
+  
+  const bidangKepegawaian = await prisma.bidang.create({
+    data: { nama: 'Bidang Kepegawaian', kode: 'KEP' },
+  })
 
   // Create Users
-  const admin = await prisma.user.create({
+  await prisma.user.create({
     data: {
-      name: 'Admin Utama',
+      name: 'Admin Gudang',
       nip: '198701012010011001',
-      role: 'ADMIN',
+      password: hashedPassword,
+      role: 'ADMIN_GUDANG',
+      bidangId: bidangUmum.id,
     },
   })
 
-  const user1 = await prisma.user.create({
+  await prisma.user.create({
     data: {
       name: 'Budi Santoso',
       nip: '199002022015031002',
-      role: 'USER',
+      password: hashedPassword,
+      role: 'PEGAWAI',
+      bidangId: bidangKepegawaian.id,
     },
   })
 
-  // Create Assets
-  await prisma.asset.createMany({
+  await prisma.user.create({
+    data: {
+      name: 'Kepala Dinas',
+      nip: '197503031998031003',
+      password: hashedPassword,
+      role: 'KEPALA_DINAS',
+      bidangId: bidangUmum.id,
+    },
+  })
+
+  // Create Master Items (MDM)
+  await prisma.item.createMany({
     data: [
-      { name: 'Toyota Innova', brand: 'Toyota', model: 'Innova', licensePlate: 'B 1234 XY', type: 'KENDARAAN_DINAS', status: 'AVAILABLE' },
-      { name: 'Toyota Avanza', brand: 'Toyota', model: 'Avanza', licensePlate: 'B 5678 ZT', type: 'KENDARAAN_DINAS', status: 'AVAILABLE' },
-      { name: 'Proyektor Epson EB-X05', brand: 'Epson', model: 'EB-X05', serialNumber: 'SN12345', type: 'PERALATAN_KOMPUTER', status: 'AVAILABLE' },
-      { name: 'Proyektor Sony VPL-DX221', brand: 'Sony', model: 'VPL-DX221', serialNumber: 'SN67890', type: 'PERALATAN_KOMPUTER', status: 'AVAILABLE' },
-      { name: 'MacBook Pro M2', brand: 'Apple', model: 'M2', serialNumber: 'APL999', type: 'PERLENGKAPAN_KOMPUTER', status: 'AVAILABLE' },
-      { name: 'Dell Latitude 7420', brand: 'Dell', model: '7420', serialNumber: 'DEL888', type: 'PERLENGKAPAN_KOMPUTER', status: 'AVAILABLE' },
+      { nama: 'Kertas HVS A4 80gr', tipe: 'HABIS_PAKAI', satuan: 'Rim', stokMinimal: 10, currentStok: 50, kodeBarang: '1.2.3.01.01' },
+      { nama: 'Toyota Innova', tipe: 'ASET_TETAP', licensePlate: 'B 1234 XY', isAvailable: true, kodeBarang: '1.3.2.01.01' },
     ],
   })
 
-  console.log('Seed completed successfully')
+  console.log('Epic Seed completed successfully')
 }
 
 main()
