@@ -80,11 +80,17 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
           const uraian = String(row[colIdx.uraian] || "").trim()
           const kode = String(row[colIdx.kode] || "").trim()
           
-          // --- Robust Number Parsing ---
+          // --- Robust Number Parsing for Indonesian Locale (e.g. 87.749.600) ---
           const cleanNumber = (val: any): number => {
             if (val === undefined || val === null || val === "") return 0
             if (typeof val === 'number') return val
-            const cleaned = String(val).replace(/,/g, ".").replace(/[^\d.-]/g, "")
+            let s = String(val).trim()
+            // 1. Hapus titik pemisah ribuan (87.749.600 -> 87749600)
+            s = s.replace(/\./g, "")
+            // 2. Ganti koma desimal ke titik (87749600,50 -> 87749600.50)
+            s = s.replace(/,/g, ".")
+            // 3. Buang semua karakter kecuali angka, titik, dan minus
+            const cleaned = s.replace(/[^\d.-]/g, "")
             const num = parseFloat(cleaned)
             return isNaN(num) ? 0 : num
           }
