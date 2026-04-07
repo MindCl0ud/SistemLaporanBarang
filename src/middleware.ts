@@ -29,15 +29,17 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/login", nextUrl));
   }
 
-  // Role-based route protection
-  if (nextUrl.pathname.startsWith("/admin") && user.role !== "ADMIN_GUDANG") {
-    return NextResponse.redirect(new URL("/", nextUrl));
-  }
-  if (nextUrl.pathname.startsWith("/eksekutif") && user.role !== "KEPALA_DINAS") {
-    return NextResponse.redirect(new URL("/", nextUrl));
-  }
-  if (nextUrl.pathname.startsWith("/pegawai") && user.role !== "PEGAWAI") {
-    return NextResponse.redirect(new URL("/", nextUrl));
+  // Role-based route protection - only if logged in
+  if (isLoggedIn && user) {
+    if (nextUrl.pathname.startsWith("/admin") && user.role !== "ADMIN_GUDANG") {
+      return NextResponse.redirect(new URL("/", nextUrl));
+    }
+    if (nextUrl.pathname.startsWith("/eksekutif") && user.role !== "KEPALA_DINAS") {
+      return NextResponse.redirect(new URL("/", nextUrl));
+    }
+    if (nextUrl.pathname.startsWith("/pegawai") && user.role !== "PEGAWAI") {
+      return NextResponse.redirect(new URL("/", nextUrl));
+    }
   }
 
   return NextResponse.next();
