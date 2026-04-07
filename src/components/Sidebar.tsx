@@ -76,7 +76,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className={`h-screen sticky top-0 bg-card backdrop-blur-xl border-r border-border flex flex-col py-6 text-foreground transition-all duration-300 z-50 ${isCollapsed ? 'w-[var(--sidebar-collapsed)]' : 'w-[var(--sidebar-width)]'}`}>
+    <aside className={`h-screen sticky top-0 bg-card/80 backdrop-blur-md border-r border-border flex flex-col py-6 text-foreground transition-all duration-300 z-50 ${isCollapsed ? 'w-[var(--sidebar-collapsed)]' : 'w-[var(--sidebar-width)]'}`}>
       <div className="px-6 mb-8 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
@@ -114,15 +114,15 @@ export default function Sidebar() {
                 ? `/bku?month=${bkuParams.month}&year=${bkuParams.year}` 
                 : item.href
               }
-              className={`flex items-center gap-3 px-4 py-1.5 rounded-xl transition-all duration-300 relative group ${
-                isActive ? "text-indigo-700 dark:text-white font-black" : "text-muted hover:text-primary dark:hover:text-white"
+              className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-200 relative group ${
+                isActive ? "text-primary font-black" : "text-muted-foreground hover:text-primary"
               }`}
             >
               {isActive && (
                 <motion.div
                   layoutId="sidebar-active"
-                  className="absolute inset-0 bg-primary/10 dark:bg-indigo-500/20 border border-primary/20 dark:border-indigo-500/40 rounded-2xl -z-10"
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  className="absolute inset-0 bg-primary/10 border border-primary/20 rounded-xl -z-10"
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
                 />
               )}
               <item.icon
@@ -139,7 +139,7 @@ export default function Sidebar() {
       <div className="px-4 mt-auto mb-4">
         <button
           onClick={toggleTheme}
-          className={`flex items-center gap-3 w-full px-4 py-3 rounded-2xl transition-all duration-300 hover:bg-input border border-transparent hover:border-border group ${isCollapsed ? 'justify-center' : ''}`}
+          className={`flex items-center gap-3 w-full px-4 py-2.5 rounded-xl transition-all duration-200 hover:bg-accent border border-transparent hover:border-border group ${isCollapsed ? 'justify-center' : ''}`}
         >
           {theme === "dark" ? (
             <Sun className="w-5 h-5 text-amber-400 group-hover:rotate-45 transition-transform" />
@@ -156,8 +156,8 @@ export default function Sidebar() {
 
       {mounted && !isCollapsed && (
         <div className="px-6 space-y-3">
-          <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
-            <h4 className="text-[10px] font-black text-primary mb-1 uppercase tracking-widest">Status Sistem</h4>
+          <div className="p-4 rounded-xl bg-accent/50 border border-border">
+            <h4 className="text-[10px] font-black text-primary mb-1 uppercase tracking-widest leading-none">Status Sistem</h4>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.3)] shrink-0"></div>
               <p className="text-[11px] text-foreground font-bold tracking-tight">AI Engine Ready</p>
