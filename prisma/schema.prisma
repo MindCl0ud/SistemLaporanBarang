@@ -8,18 +8,15 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-enum AssetType {
-  KENDARAAN_DINAS
-  PERALATAN_KOMPUTER
-  PERLENGKAPAN_KOMPUTER
-  LAINNYA
+enum Role {
+  PEGAWAI
+  ADMIN_GUDANG
+  KEPALA_DINAS
 }
 
-enum AssetStatus {
-  AVAILABLE
-  BOOKED
-  MAINTENANCE
-  DAMAGED
+enum ItemType {
+  HABIS_PAKAI     // ATK (rim, pulpen)
+  ASET_TETAP      // Fasilitas (mobil, laptop)
 }
 
 enum BookingStatus {
@@ -30,58 +27,74 @@ enum BookingStatus {
   CANCELLED
 }
 
-enum LogType {
-  PICKUP
-  RETURN
-}
-
 model User {
-  id        String    @id @default(cuid())
-  name      String
-  nip       String?   @unique
-  role      String    @default("USER")
-  bookings  Booking[]
+  id            String    @id @default(cuid())
+  name          String
+  nip           String?   @unique
+  email         String?   @unique
+  password      String?   // Hashed password
+  role          Role      @default(PEGAWAI)
+  bidangId      String?
+  bidang        Bidang?   @relation(fields: [bidangId], references: [id])
+  bookings      Booking[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
-model Asset {
-  id           String      @id @default(cuid())
-  name         String
-  description  String?
-  type         AssetType
-  sipdId       String?     @unique
-  status       AssetStatus @default(AVAILABLE)
-  brand        String?
-  model        String?
-  licensePlate String?
-  serialNumber String?
-  imageUrl     String?
-  bookings     Booking[]
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+model Bidang {
+  id        String   @id @default(cuid())
+  nama      String
+  kode      String?  @unique
+  users     User[]
+  items     Item[]   @relation("Location") // Assets located here
+}
+
+model Item {
+  id            String      @id @default(cuid())
+  kodeBarang    String?     @unique // Standar SIPD
+  nama          String
+  deskripsi     String?
+  tipe          ItemType
+  satuan        String?     // e.g., "Rim", "Buah", "Unit"
+  stokMinimal   Int         @default(0)
+  
+  // Fields for Aset Tetap (Fasilitas)
+  serialNumber  String?     @unique
+  licensePlate  String?     @unique
+  isAvailable   Boolean     @default(true)
+  
+  // Fields for Habis Pakai (ATK)
+  currentStok   Int         @default(0)
+  
+  // Relations
+  bidangId      String?
+  bidang        Bidang?     @relation("Location", fields: [bidangId], references: [id])
+  bookings      Booking[]
+  stockLogs     StockLog[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 }
 
 model Booking {
-  id           String        @id @default(cuid())
-  userId       String
-  user         User          @relation(fields: [userId], references: [id])
-  assetId      String
-  asset        Asset         @relation(fields: [assetId], references: [id])
-  startDate    DateTime
-  endDate      DateTime
-  purpose      String
-  status       BookingStatus @default(PENDING)
-  notes        String?
-  logs         HandoverLog[]
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id          String        @id @default(cuid())
+  itemId      String
+  item        Item          @relation(fields: [itemId], references: [id])
+  userId      String
+  user        User          @relation(fields: [userId], references: [id])
+  startDate   DateTime
+  endDate     DateTime
+  purpose     String
+  status      BookingStatus @default(PENDING)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 }
 
-model HandoverLog {
-  id           String   @id @default(cuid())
-  bookingId    String
-  booking      Booking  @relation(fields: [bookingId], references: [id])
-  type         LogType
-  condition    String   // Description of condition (e.g., "Good", "Scratched")
-  timestamp    DateTime @default(now())
-  responsible  String   // Person handling the handover
+model StockLog {
+  id          String   @id @default(cuid())
+  itemId      String
+  item        Item     @relation(fields: [itemId], references: [id])
+  quantity    Int
+  type        String   // IN (Masuk), OUT (Keluar/Approval), ADJUST (Opname)
+  notes       String?
+  createdAt   DateTime @default(now())
 }
