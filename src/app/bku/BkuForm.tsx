@@ -62,9 +62,11 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
           const isHeaderRow = uraian.toLowerCase().includes("uraian") || uraian.toLowerCase().includes("kode rekening") || uraian.toLowerCase() === "no"
           
           if (uraian && uraian.length >= 2 && !isSaldoLalu && !isHeaderRow) {
-            // Sanitasi noRaw (hapus titik, spasi, dsb untuk ambil angka saja)
-            const cleanNo = parseInt(noRaw.replace(/[^\d]/g, ""), 10)
-            const finalRowOrder = !isNaN(cleanNo) ? cleanNo : (parsedData.length + 1)
+            // Gunakan INDEKS BARIS FISIK (i) sebagai urutan pengunci.
+            // i adalah posisi baris di Excel (misal baris 5, 6, 7...).
+            // Ini menjamin 100% data tampil sesuai urutan file meski kolom 'No' kosong/blok.
+            const sheetOffset = wb.SheetNames.indexOf(wsName) * 100000 
+            const finalRowOrder = sheetOffset + i
 
             // Extract month and year from currentDate
             let itemMonth = currentMonth
