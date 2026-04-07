@@ -34,14 +34,12 @@ import * as XLSX from 'xlsx'
 import LoadingState from '@/components/LoadingState'
 
 const DEFAULT_WIDTHS = {
-  info: 320,      // Consolidated Program, Kegiatan, Sub Keg
-  code: 110,      // Kode Belanja
-  name: 240,      // Uraian
-  awal: 100,
-  perubahan: 100,
-  realisasi: 100,
-  sisa: 100,
-  bidang: 90
+  fullDetail: 550, // Program, Kegiatan, Sub Keg, Uraian, Kode Belanja
+  awal: 110,
+  perubahan: 110,
+  realisasi: 110,
+  sisa: 110,
+  bidang: 120
 }
 
 function ResizableHeader({ colKey, width, label, onResize, align = 'text-left', isLast = false }: any) {
@@ -574,9 +572,7 @@ export default function AccountMappingPage() {
             <thead className="sticky top-0 z-30">
               <tr>
                 <th className="bg-slate-50 dark:bg-slate-900 border-r border-b border-border text-center text-[10px] font-black text-foreground/70 uppercase w-[50px] sticky left-0 z-20">No</th>
-                <ResizableHeader colKey="info" width={colWidths.info} label="Informasi Kegiatan" onResize={handleResize} />
-                <ResizableHeader colKey="code" width={colWidths.code} label="Kode Belanja" onResize={handleResize} />
-                <ResizableHeader colKey="name" width={colWidths.name} label="Uraian" onResize={handleResize} />
+                <ResizableHeader colKey="fullDetail" width={colWidths.fullDetail} label="Detail Rekening / Hirarki" onResize={handleResize} />
                 <ResizableHeader colKey="awal" width={colWidths.awal} label="Pagu Awal" align="text-right" onResize={handleResize} />
                 <ResizableHeader colKey="perubahan" width={colWidths.perubahan} label="Pagu Perubahan" align="text-right" onResize={handleResize} />
                 <ResizableHeader colKey="realisasi" width={colWidths.realisasi} label="Realisasi (BKU)" align="text-right" onResize={handleResize} />
@@ -596,58 +592,79 @@ export default function AccountMappingPage() {
                     className="bg-primary/5 border-b-2 border-primary"
                   >
                     <td className={`${cellBase} text-center font-mono font-black text-primary sticky left-0 z-10 bg-white dark:bg-slate-900`}>NEW</td>
-                    {/* INFORMASI KEGIATAN (COMBINED) */}
+                    {/* FULL HIERARCHY (COMBINED) */}
                     <td className={cellBase}>
-                      <div className="flex flex-col gap-2">
-                        {/* Sub Kegiatan Info */}
-                        <div className="flex flex-col -space-y-0.5">
+                      <div className="flex flex-col gap-2 p-1">
+                        {/* Section 1: Program */}
+                        <div className="flex flex-col gap-1">
+                           <span className="text-[7px] font-black uppercase text-primary tracking-widest opacity-50">1. PROGRAM</span>
                            <input 
-                             className="w-full bg-white dark:bg-input border border-border rounded-sm outline-none transition-all focus:border-primary px-1.5 py-0.5 font-bold text-[10px]"
+                             className="w-full bg-slate-50 dark:bg-black/10 border border-border rounded-sm px-1.5 py-0.5 text-[10px] font-bold"
+                             placeholder="Nama Program"
+                             value={newRow.namaProgram}
+                             onChange={e => setNewRow({...newRow, namaProgram: e.target.value})}
+                           />
+                           <input 
+                             className="w-full bg-slate-50 dark:bg-black/10 border border-border rounded-sm px-1.5 py-0.5 text-[8px] font-mono"
+                             placeholder="Kode Program"
+                             value={newRow.kodeProgram}
+                             onChange={e => setNewRow({...newRow, kodeProgram: e.target.value})}
+                           />
+                        </div>
+                        <div className="border-t border-border border-dashed my-1" />
+                        {/* Section 2: Kegiatan */}
+                        <div className="flex flex-col gap-1">
+                           <span className="text-[7px] font-black uppercase text-primary tracking-widest opacity-50">2. KEGIATAN</span>
+                           <input 
+                             className="w-full bg-slate-50 dark:bg-black/10 border border-border rounded-sm px-1.5 py-0.5 text-[10px] font-bold"
+                             placeholder="Nama Kegiatan"
+                             value={newRow.namaKegiatan}
+                             onChange={e => setNewRow({...newRow, namaKegiatan: e.target.value})}
+                           />
+                           <input 
+                             className="w-full bg-slate-50 dark:bg-black/10 border border-border rounded-sm px-1.5 py-0.5 text-[8px] font-mono"
+                             placeholder="Kode Kegiatan"
+                             value={newRow.kodeKegiatan}
+                             onChange={e => setNewRow({...newRow, kodeKegiatan: e.target.value})}
+                           />
+                        </div>
+                        <div className="border-t border-border border-dashed my-1" />
+                        {/* Section 3: Sub Kegiatan */}
+                        <div className="flex flex-col gap-1">
+                           <span className="text-[7px] font-black uppercase text-primary tracking-widest opacity-50">3. SUB KEGIATAN</span>
+                           <input 
+                             className="w-full bg-white dark:bg-input border border-border rounded-sm px-1.5 py-1 text-[11px] font-black"
                              placeholder="Nama Sub Kegiatan"
                              value={newRow.namaSubKeg}
                              onChange={e => setNewRow({...newRow, namaSubKeg: e.target.value})}
                            />
                            <input 
-                             className="w-full bg-white dark:bg-input border border-border rounded-sm outline-none transition-all focus:border-primary px-1.5 py-0.5 font-mono text-[8px] text-muted-foreground"
-                             placeholder="Kode Sub (Optional)"
+                             className="w-full bg-white dark:bg-input border border-border rounded-sm px-1.5 py-0.5 text-[9px] font-mono"
+                             placeholder="Kode Sub Kegiatan"
                              value={newRow.kodeSubKeg}
                              onChange={e => setNewRow({...newRow, kodeSubKeg: e.target.value})}
                            />
                         </div>
-                        {/* Program & Kegiatan Info (Small) */}
-                        <div className="grid grid-cols-2 gap-1 border-t border-border pt-1">
-                           <input 
-                             className="w-full bg-slate-50 dark:bg-black/10 border border-border rounded-sm px-1.5 py-0.5 text-[8px]"
-                             placeholder="Prog..."
-                             value={newRow.namaProgram}
-                             onChange={e => setNewRow({...newRow, namaProgram: e.target.value})}
+                        <div className="border-t-2 border-primary/20 my-1.5" />
+                        {/* Section 4: Uraian & Kode Belanja */}
+                        <div className="flex flex-col gap-1 bg-primary/5 p-2 rounded-sm border border-primary/10">
+                           <span className="text-[7px] font-black uppercase text-primary tracking-widest">4. BELANJA (URAIAN)</span>
+                           <textarea 
+                             className="w-full bg-white dark:bg-input border border-border rounded-sm px-1.5 py-1 text-[12px] font-medium min-h-[50px] resize-none"
+                             placeholder="Uraian belanja..."
+                             value={newRow.name}
+                             onChange={e => setNewRow({...newRow, name: e.target.value})}
+                             onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.kodeBelanja, newRow.name, newRow.division, Number(newRow.budget), undefined, newRow.kodeSubKeg, Number(newRow.revisedBudget), { kodeProgram: newRow.kodeProgram, namaProgram: newRow.namaProgram, kodeKegiatan: newRow.kodeKegiatan, namaKegiatan: newRow.namaKegiatan, namaSubKeg: newRow.namaSubKeg })}
                            />
                            <input 
-                             className="w-full bg-slate-50 dark:bg-black/10 border border-border rounded-sm px-1.5 py-0.5 text-[8px]"
-                             placeholder="Keg..."
-                             value={newRow.namaKegiatan}
-                             onChange={e => setNewRow({...newRow, namaKegiatan: e.target.value})}
+                             className="w-full bg-white dark:bg-input border border-border rounded-sm px-1.5 py-1 text-[11px] font-mono text-primary font-black"
+                             placeholder="Kode Belanja"
+                             value={newRow.kodeBelanja}
+                             onChange={e => setNewRow({...newRow, kodeBelanja: e.target.value})}
+                             onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.kodeBelanja, newRow.name, newRow.division, Number(newRow.budget), undefined, newRow.kodeSubKeg, Number(newRow.revisedBudget), { kodeProgram: newRow.kodeProgram, namaProgram: newRow.namaProgram, kodeKegiatan: newRow.kodeKegiatan, namaKegiatan: newRow.namaKegiatan, namaSubKeg: newRow.namaSubKeg })}
                            />
                         </div>
                       </div>
-                    </td>
-                    <td className={cellBase}>
-                      <input 
-                        className="w-full bg-white dark:bg-input border border-primary/30 rounded px-1 outline-none font-mono text-[11px]"
-                        placeholder="Kode Belanja"
-                        value={newRow.kodeBelanja}
-                        onChange={e => setNewRow({...newRow, kodeBelanja: e.target.value})}
-                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.kodeBelanja, newRow.name, newRow.division, Number(newRow.budget), undefined, newRow.kodeSubKeg, Number(newRow.revisedBudget), { kodeProgram: newRow.kodeProgram, namaProgram: newRow.namaProgram, kodeKegiatan: newRow.kodeKegiatan, namaKegiatan: newRow.namaKegiatan, namaSubKeg: newRow.namaSubKeg })}
-                      />
-                    </td>
-                    <td className={cellBase}>
-                      <input 
-                        className="w-full bg-white dark:bg-input border border-primary/30 rounded px-1 outline-none font-bold"
-                        placeholder="Uraian baru..."
-                        value={newRow.name}
-                        onChange={e => setNewRow({...newRow, name: e.target.value})}
-                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.kodeBelanja, newRow.name, newRow.division, Number(newRow.budget), undefined, newRow.kodeSubKeg, Number(newRow.revisedBudget), { kodeProgram: newRow.kodeProgram, namaProgram: newRow.namaProgram, kodeKegiatan: newRow.kodeKegiatan, namaKegiatan: newRow.namaKegiatan, namaSubKeg: newRow.namaSubKeg })}
-                      />
                     </td>
                     <td className={cellBase}>
                       <input 
@@ -720,68 +737,84 @@ export default function AccountMappingPage() {
                     <tr key={m.id} className="hover:bg-slate-50 dark:hover:bg-primary/5 transition-colors group">
                       <td className={`${cellBase} text-center font-mono font-black text-muted/30 sticky left-0 z-10 bg-white dark:bg-card`}>{idx + 1}</td>
                       
-                      {/* INFORMASI KEGIATAN (COMBINED) */}
-                      <td className={`${cellBase} relative group/cell p-0 ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
-                         <div className="flex flex-col p-2 gap-1.5">
-                            {/* Primary info: Sub Kegiatan */}
-                            <div className="flex flex-col leading-tight">
-                              <textarea 
-                                className="w-full bg-transparent border-none p-0 outline-none focus:bg-white dark:focus:bg-white/5 font-black text-[11px] leading-tight resize-none"
-                                value={m.namaSubKeg || ''}
-                                onChange={e => handleUpdateField(m.id, 'namaSubKeg', e.target.value)}
-                              />
-                              <input 
-                                className="w-full bg-transparent border-none p-0 outline-none focus:bg-white dark:focus:bg-white/5 text-[9px] font-mono text-muted-foreground"
-                                value={m.kodeSubKeg || ''}
-                                placeholder="Kode Sub..."
-                                onChange={e => handleUpdateField(m.id, 'kodeSubKeg', e.target.value)}
-                              />
+                      {/* FULL HIERARCHY (STACKED) */}
+                      <td className={`${cellBase} relative group/cell p-2 ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
+                         <div className="flex flex-col gap-1.5">
+                            {/* Program Info */}
+                            <div className="flex flex-col -space-y-0.5">
+                               <textarea 
+                                 className="w-full bg-transparent border-none p-0 outline-none focus:bg-white dark:focus:bg-white/5 font-black text-[9px] uppercase text-muted-foreground resize-none h-[12px] overflow-hidden"
+                                 value={m.namaProgram || ''}
+                                 placeholder="Nama Program"
+                                 onChange={e => handleUpdateField(m.id, 'namaProgram', e.target.value)}
+                               />
+                               <input 
+                                 className="w-full bg-transparent border-none p-0 outline-none focus:bg-white dark:focus:bg-white/5 text-[8px] font-mono text-muted/50"
+                                 value={m.kodeProgram || ''}
+                                 placeholder="Kode Program"
+                                 onChange={e => handleUpdateField(m.id, 'kodeProgram', e.target.value)}
+                               />
                             </div>
-                            {/* Hierarchy Info (Secondary) */}
-                            <div className="grid grid-cols-1 gap-0.5 border-t border-border/50 pt-1.5 mt-0.5">
-                               <div className="flex items-center gap-1">
-                                  <span className="text-[7px] font-black uppercase text-muted bg-slate-100 rounded-sm px-1 leading-none h-[12px] flex items-center">P</span>
-                                  <textarea 
-                                    className="flex-1 bg-transparent border-none p-0 outline-none text-[8px] font-medium leading-none text-muted-foreground resize-none h-[12px] overflow-hidden"
-                                    value={m.namaProgram || ''}
-                                    placeholder="Program..."
-                                    onChange={e => handleUpdateField(m.id, 'namaProgram', e.target.value)}
-                                  />
-                               </div>
-                               <div className="flex items-center gap-1">
-                                  <span className="text-[7px] font-black uppercase text-muted bg-slate-100 rounded-sm px-1 leading-none h-[12px] flex items-center">K</span>
-                                  <textarea 
-                                    className="flex-1 bg-transparent border-none p-0 outline-none text-[8px] font-medium leading-none text-muted-foreground resize-none h-[12px] overflow-hidden"
-                                    value={m.namaKegiatan || ''}
-                                    placeholder="Kegiatan..."
-                                    onChange={e => handleUpdateField(m.id, 'namaKegiatan', e.target.value)}
-                                  />
-                               </div>
+                            
+                            <div className="border-t border-border/40 border-dashed" />
+                            
+                            {/* Kegiatan Info */}
+                            <div className="flex flex-col -space-y-0.5">
+                               <textarea 
+                                 className="w-full bg-transparent border-none p-0 outline-none focus:bg-white dark:focus:bg-white/5 font-black text-[10px] uppercase text-foreground/80 resize-none h-[14px] overflow-hidden"
+                                 value={m.namaKegiatan || ''}
+                                 placeholder="Nama Kegiatan"
+                                 onChange={e => handleUpdateField(m.id, 'namaKegiatan', e.target.value)}
+                               />
+                               <input 
+                                 className="w-full bg-transparent border-none p-0 outline-none focus:bg-white dark:focus:bg-white/5 text-[8px] font-mono text-muted/50"
+                                 value={m.kodeKegiatan || ''}
+                                 placeholder="Kode Kegiatan"
+                                 onChange={e => handleUpdateField(m.id, 'kodeKegiatan', e.target.value)}
+                               />
+                            </div>
+                            
+                            <div className="border-t border-border/40 border-dashed" />
+                            
+                            {/* Sub Kegiatan Info */}
+                            <div className="flex flex-col -space-y-0.5">
+                               <textarea 
+                                 className="w-full bg-transparent border-none p-0 outline-none focus:bg-white dark:focus:bg-white/5 font-black text-[11px] text-foreground resize-none"
+                                 value={m.namaSubKeg || ''}
+                                 placeholder="Nama Sub Kegiatan"
+                                 onChange={e => handleUpdateField(m.id, 'namaSubKeg', e.target.value)}
+                               />
+                               <input 
+                                 className="w-full bg-transparent border-none p-0 outline-none focus:bg-white dark:focus:bg-white/5 text-[9px] font-mono text-muted-foreground"
+                                 value={m.kodeSubKeg || ''}
+                                 placeholder="Kode Sub Kegiatan"
+                                 onChange={e => handleUpdateField(m.id, 'kodeSubKeg', e.target.value)}
+                               />
+                            </div>
+                            
+                            <div className="border-t-2 border-primary/20 my-1" />
+                            
+                            {/* Uraian Belanja Info (Largest) */}
+                            <div className="flex flex-col p-1.5 bg-primary/5 rounded-sm border border-primary/10">
+                               <textarea 
+                                 className="w-full bg-transparent border-none p-0 outline-none focus:bg-white dark:focus:bg-white/5 font-black text-[12px] leading-relaxed text-indigo-600 dark:text-indigo-400"
+                                 value={m.name || ''}
+                                 placeholder="Uraian belanja..."
+                                 rows={Math.max(1, (m.name || '').split('\n').length)}
+                                 onChange={e => {
+                                   handleUpdateField(m.id, 'name', e.target.value)
+                                   e.target.style.height = 'auto'
+                                   e.target.style.height = e.target.scrollHeight + 'px'
+                                 }}
+                               />
+                               <input 
+                                 className="w-full bg-transparent border-none p-1 mt-1 outline-none focus:bg-white dark:focus:bg-white/5 text-[11px] font-mono font-black text-primary bg-white/50 dark:bg-card/50 rounded-sm"
+                                 value={m.kodeBelanja || ''}
+                                 placeholder="Kode Belanja"
+                                 onChange={e => handleUpdateField(m.id, 'kodeBelanja', e.target.value)}
+                               />
                             </div>
                          </div>
-                      </td>
-
-                      {/* KODE BELANJA */}
-                      <td className={`${cellBase} p-0 relative group/cell ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
-                        <input 
-                          className="w-full bg-transparent border-none p-2 outline-none focus:bg-white dark:focus:bg-white/5 font-mono text-[11px] text-primary font-black uppercase"
-                          value={m.kodeBelanja}
-                          onChange={e => handleUpdateField(m.id, 'kodeBelanja', e.target.value)}
-                        />
-                      </td>
-
-                      {/* NAME */}
-                      <td className={`${cellBase} p-0 relative group/cell ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
-                        <textarea 
-                          className="w-full bg-transparent border-none p-2 outline-none focus:bg-white dark:focus:bg-white/5 font-medium whitespace-pre-wrap leading-relaxed text-[12px] resize-none overflow-hidden min-h-[3rem]"
-                          value={m.name}
-                          rows={Math.max(1, (m.name || '').split('\n').length)}
-                          onChange={e => {
-                             handleUpdateField(m.id, 'name', e.target.value);
-                             e.target.style.height = 'auto';
-                             e.target.style.height = e.target.scrollHeight + 'px';
-                          }}
-                        />
                       </td>
 
                       {/* PAGU AWAL */}
