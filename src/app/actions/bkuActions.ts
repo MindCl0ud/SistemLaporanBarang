@@ -401,9 +401,9 @@ export async function syncAccountCodesFromBku(year: number = 2026) {
 
   const existing = await prisma.accountCodeMapping.findMany({
     where: { year },
-    select: { code: true }
+    select: { kodeBelanja: true }
   })
-  const existingCodes = new Set(existing.map((e: any) => e.code))
+  const existingCodes = new Set(existing.map((e: any) => e.kodeBelanja))
   let count = 0
   for (let [code, name] of uniqueMap.entries()) {
     let kodeSubKeg: string = ""
