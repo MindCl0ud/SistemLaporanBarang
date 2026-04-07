@@ -183,17 +183,24 @@ export async function getAccountMappings(year: number = 2026) {
 
   // Aggregate realization in memory for performance (assuming reasonable dataset sizes)
   return mappings.map(m => {
-    const combined = `${m.kodeSubKeg}.${m.kodeBelanja}`
+    const kSub = (m.kodeSubKeg || "").trim()
+    const kBel = (m.kodeBelanja || "").trim()
+    const combined = kSub && kBel ? `${kSub}.${kBel}` : kBel
     
     const realization = bkuTransactions.reduce((sum, t) => {
       if (!t.code) return sum
+      const tCode = t.code.trim()
       
-      // Match full combined code OR if BKU only has 6 segments, match kodeBelanja only
-      const isFullMatch = t.code === combined
-      const isSalaryMatch = t.code === m.kodeBelanja && t.code.split('.').length === 6
+      // Match 1: Full concatenation (Full 13 segments)
+      const isFullMatch = tCode === combined
       
-      if (isFullMatch || isSalaryMatch) {
-        return sum + (t.expenseTotal || 0)
+      // Match 2: BKU only has the account code (6 segments), or ends with it
+      // This catches cases where Sub-Keg is omitted in BKU record, or formatting differs.
+      const isSuffixMatch = tCode.endsWith(kBel) && kBel.split('.').length >= 6
+      const isBaseMatch = tCode === kBel
+
+      if (isFullMatch || isSuffixMatch || isBaseMatch) {
+         return sum + (t.expenseTotal || 0)
       }
       return sum
     }, 0)
