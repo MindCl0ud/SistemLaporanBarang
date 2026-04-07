@@ -49,6 +49,7 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
             currentDate = String(row[1]).trim()
           }
           
+          const noRaw = String(row[0] || "").trim()
           const uraian = String(row[2] || "").trim()
           const kode = String(row[3] || "").trim()
           const terima = Number(row[4] || 0)
@@ -58,10 +59,13 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
           const isSaldoLalu = uraian.toLowerCase().includes("saldo bulan lalu") || uraian.toLowerCase().includes("saldo s.d bulan lalu")
           
           // Terima semua baris yang punya uraian bermakna, meski tidak ada kode/nominal
-          // (contoh: "Tunjangan Keluarga", "Iuran Askes" dsb tetap harus masuk)
           const isHeaderRow = uraian.toLowerCase().includes("uraian") || uraian.toLowerCase().includes("kode rekening") || uraian.toLowerCase() === "no"
           
           if (uraian && uraian.length >= 2 && !isSaldoLalu && !isHeaderRow) {
+            // Sanitasi noRaw (hapus titik, spasi, dsb untuk ambil angka saja)
+            const cleanNo = parseInt(noRaw.replace(/[^\d]/g, ""), 10)
+            const finalRowOrder = !isNaN(cleanNo) ? cleanNo : (parsedData.length + 1)
+
             // Extract month and year from currentDate
             let itemMonth = currentMonth
             let itemYear = currentYear
@@ -85,7 +89,8 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
               description: uraian,
               receiptTotal: terima,
               expenseTotal: keluar,
-              balance: saldo
+              balance: saldo,
+              rowOrder: finalRowOrder
             })
           }
         }

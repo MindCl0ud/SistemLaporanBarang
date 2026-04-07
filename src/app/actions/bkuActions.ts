@@ -159,10 +159,9 @@ export async function addBkuBulk(data: any[], month: number, year: number) {
     year:         Number(item.year   || year),
     code:         item.code        ? String(item.code).trim()           : null,
     description:  item.description ? String(item.description).trim()   : "Tanpa Deskripsi",
-    receiptTotal: Number(item.receiptTotal || 0) || 0,
     expenseTotal: Number(item.expenseTotal || 0) || 0,
     balance:      Number(item.balance      || 0) || 0,
-    rowOrder:     idx,
+    rowOrder:     item.rowOrder !== undefined ? Number(item.rowOrder) : idx,
   }))
 
   const result = await prisma.bkuTransaction.createMany({ data: rows })
