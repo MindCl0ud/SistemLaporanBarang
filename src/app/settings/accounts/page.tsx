@@ -26,7 +26,8 @@ import {
   Circle as CircleIcon,
   AlignJustify,
   Pencil as PencilIcon,
-  Clock
+  Clock,
+  Calculator
 } from 'lucide-react'
 import { getAccountMappings, upsertAccountMapping, deleteAccountMapping, syncAccountCodesFromBku, upsertAccountMappingBulk } from '@/app/actions/bkuActions'
 import { getBudgetMode, updateBudgetMode } from '@/app/actions/settingsActions'
@@ -524,6 +525,15 @@ export default function AccountMappingPage() {
                 <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleImportExcel} disabled={loading} />
               </label>
           </div>
+
+          <button
+            onClick={fetchMappings}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 dark:bg-emerald-500 text-white rounded-sm text-xs font-black shadow-sm hover:bg-emerald-700 transition-all active:scale-95 disabled:opacity-50"
+          >
+            <Calculator className={`w-3.5 h-3.5 ${loading ? 'animate-bounce' : ''}`} />
+            Hitung Realisasi
+          </button>
 
           <button
             onClick={handleSync}
