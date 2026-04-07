@@ -848,16 +848,16 @@ export default function AccountMappingPage() {
                         <div className="flex flex-col gap-4">
                            <div className="flex items-center gap-6">
                               <div className="flex flex-col gap-1.5 min-w-[140px]">
-                                 <span className="text-[7px] font-black text-indigo-500 uppercase tracking-[0.2em] leading-none">KODE PROGRAM</span>
+                                 <span className="text-[7px] font-black text-indigo-700 dark:text-indigo-300 uppercase tracking-[0.2em] leading-none">KODE PROGRAM</span>
                                  <input 
-                                   className="w-full bg-background/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-900/50 p-2 rounded-sm outline-none font-mono font-black text-[14px] focus:ring-2 focus:ring-indigo-400/50 shadow-sm"
+                                   className="w-full bg-background/50 text-indigo-800 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-900/50 p-2 rounded-sm outline-none font-mono font-black text-[14px] focus:ring-2 focus:ring-indigo-400/50 shadow-sm"
                                    value={prog.data.kodeProgram || ''}
                                    placeholder="KODE..."
                                    onChange={e => handleUpdateHierarchyField('kodeProgram', prog.data.kodeProgram, 'kodeProgram', e.target.value)}
                                  />
                               </div>
                               <div className="flex flex-col gap-1.5 flex-1">
-                                 <span className="text-[7px] font-black text-indigo-500 uppercase tracking-[0.2em] leading-none">NAMA PROGRAM</span>
+                                 <span className="text-[7px] font-black text-indigo-700 dark:text-indigo-300 uppercase tracking-[0.2em] leading-none">NAMA PROGRAM</span>
                                  <input 
                                    className="w-full bg-background/50 text-foreground border border-indigo-200 dark:border-indigo-900/50 p-2 rounded-sm outline-none font-black text-[16px] focus:ring-2 focus:ring-indigo-400/50 shadow-sm uppercase tracking-tight"
                                    value={prog.data.namaProgram || ''}
@@ -868,10 +868,10 @@ export default function AccountMappingPage() {
                            </div>
                         </div>
                       </td>
-                      <td className={`${cellBase} bg-inherit text-right font-black tabular-nums text-foreground/80 text-[15px] leading-[70px]`}>Rp{formatCurrency(prog.totalBudget)}</td>
-                      <td className={`${cellBase} bg-inherit text-right font-black tabular-nums text-indigo-600 dark:text-indigo-400 text-[15px] leading-[70px]`}>Rp{formatCurrency(prog.totalRevised)}</td>
-                      <td className={`${cellBase} bg-inherit text-right font-black tabular-nums text-indigo-500 animate-pulse text-[15px] leading-[70px]`}>Rp{formatCurrency(prog.totalReal)}</td>
-                      <td className={`${cellBase} bg-emerald-500/5 text-right font-black tabular-nums text-emerald-600 dark:text-emerald-400 border-l border-border/80 text-[16px] leading-[70px]`}>
+                      <td className={`${cellBase} bg-inherit text-right font-black tabular-nums text-foreground/90 text-[15px] leading-[70px]`}>Rp{formatCurrency(prog.totalBudget)}</td>
+                      <td className={`${cellBase} bg-inherit text-right font-black tabular-nums text-indigo-700 dark:text-indigo-300 text-[15px] leading-[70px]`}>Rp{formatCurrency(prog.totalRevised)}</td>
+                      <td className={`${cellBase} bg-inherit text-right font-black tabular-nums text-indigo-600 dark:text-indigo-400 animate-pulse text-[15px] leading-[70px]`}>Rp{formatCurrency(prog.totalReal)}</td>
+                      <td className={`${cellBase} bg-emerald-500/5 text-right font-black tabular-nums text-emerald-700 dark:text-emerald-300 border-l border-border/80 text-[16px] leading-[70px]`}>
                         Rp{formatCurrency(((useRevisedBudgetMode && prog.totalRevised > 0) ? prog.totalRevised : prog.totalBudget) - prog.totalReal)}
                       </td>
                       <td className={`${cellBase} bg-inherit`}></td>
@@ -903,14 +903,14 @@ export default function AccountMappingPage() {
                             </div>
                           </div>
                         </td>
-                        <td className={`${cellBase} bg-inherit text-right text-[13px] font-bold tabular-nums text-muted-foreground/80 leading-[55px]`}>Rp{formatCurrency(keg.totalBudget)}</td>
-                        <td className={`${cellBase} bg-inherit text-right text-[13px] font-bold tabular-nums text-muted-foreground/80 leading-[55px]`}>Rp{formatCurrency(keg.totalRevised)}</td>
-                        <td className={`${cellBase} bg-inherit text-right text-[13px] font-bold tabular-nums text-muted-foreground/80 leading-[55px]`}>Rp{formatCurrency(keg.totalReal)}</td>
-                        <td className={`${cellBase} bg-inherit text-right text-[13px] font-bold tabular-nums text-muted-foreground/80 leading-[55px]`}>
+                        <td className={`${cellBase} bg-inherit text-right text-[13px] font-bold tabular-nums text-muted-foreground leading-[55px]`}>Rp{formatCurrency(keg.totalBudget)}</td>
+                        <td className={`${cellBase} bg-inherit text-right text-[13px] font-bold tabular-nums text-indigo-700 dark:text-indigo-300 leading-[55px]`}>Rp{formatCurrency(keg.totalRevised)}</td>
+                        <td className={`${cellBase} bg-inherit text-right text-[13px] font-bold tabular-nums text-indigo-600 dark:text-indigo-400 leading-[55px]`}>Rp{formatCurrency(keg.totalReal)}</td>
+                        <td className={`${cellBase} bg-inherit text-right text-[13px] font-bold tabular-nums text-emerald-700 dark:text-emerald-300 leading-[55px]`}>
                            Rp{formatCurrency(((useRevisedBudgetMode && keg.totalRevised > 0) ? keg.totalRevised : keg.totalBudget) - keg.totalReal)}
                         </td>
                         <td className={`${cellBase} bg-inherit`}></td>
-                        <td className={`${cellBase} bg-background sticky right-0 z-20 border-l border-border`}></td>
+                        <td className={`${cellBase} bg-background sticky right-0 z-20 border-l border-border shadow-none`}></td>
                       </tr>,
                       ...keg.items.flatMap((sub: any) => [
                         // Sub Kegiatan Header
@@ -938,14 +938,14 @@ export default function AccountMappingPage() {
                               </div>
                             </div>
                           </td>
-                          <td className={`${cellBase} text-right text-[10px] font-bold tabular-nums opacity-30`}>Rp{formatCurrency(sub.totalBudget)}</td>
-                          <td className={`${cellBase} text-right text-[10px] font-bold tabular-nums opacity-30`}>Rp{formatCurrency(sub.totalRevised)}</td>
-                          <td className={`${cellBase} text-right text-[10px] font-bold tabular-nums opacity-30`}>Rp{formatCurrency(sub.totalReal)}</td>
-                          <td className={`${cellBase} text-right text-[10px] font-bold tabular-nums opacity-30`}>
+                          <td className={`${cellBase} text-right text-[10px] font-bold tabular-nums text-muted-foreground/60`}>Rp{formatCurrency(sub.totalBudget)}</td>
+                          <td className={`${cellBase} text-right text-[10px] font-bold tabular-nums text-muted-foreground/60`}>Rp{formatCurrency(sub.totalRevised)}</td>
+                          <td className={`${cellBase} text-right text-[10px] font-bold tabular-nums text-muted-foreground/60`}>Rp{formatCurrency(sub.totalReal)}</td>
+                          <td className={`${cellBase} text-right text-[10px] font-bold tabular-nums text-muted-foreground/60`}>
                              Rp{formatCurrency(((useRevisedBudgetMode && sub.totalRevised > 0) ? sub.totalRevised : sub.totalBudget) - sub.totalReal)}
                           </td>
                           <td className={cellBase}></td>
-                          <td className={`${cellBase} sticky right-0 z-10 bg-white shadow-[-4px_0_12px_rgba(0,0,0,0.02)]`}></td>
+                          <td className={`${cellBase} sticky right-0 z-10 bg-background shadow-[-4px_0_12px_rgba(0,0,0,0.02)]`}></td>
                         </tr>,
                         ...sub.items.map((item: any) => {
                           const m = item.data
@@ -960,7 +960,7 @@ export default function AccountMappingPage() {
                                  
                                  <div className="flex flex-col my-2 mx-4 p-4 bg-background border border-border shadow-sm rounded-none group-hover:border-primary/50 transition-all">
                                    <textarea 
-                                     className="w-full bg-transparent border-none p-0 outline-none font-bold text-[13px] leading-relaxed text-foreground uppercase placeholder:text-muted-foreground opacity-90"
+                                     className="w-full bg-transparent border-none p-0 outline-none font-bold text-[13px] leading-relaxed text-foreground uppercase placeholder:text-muted-foreground"
                                      value={m.name || ''}
                                      placeholder="KLIK UNTUK ISI URAIAN BELANJA. . ."
                                      rows={Math.max(1, (m.name || '').split('\n').length)}
@@ -971,9 +971,9 @@ export default function AccountMappingPage() {
                                      }}
                                    />
                                    <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border/50">
-                                      <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest whitespace-nowrap opacity-60">KODE BELANJA</span>
+                                      <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest whitespace-nowrap">KODE BELANJA</span>
                                       <input 
-                                        className="w-full bg-muted/20 border border-border p-1.5 px-3 outline-none text-[11px] font-mono font-black text-muted-foreground group-hover:text-primary transition-colors focus:ring-1 focus:ring-primary rounded-sm placeholder:italic"
+                                        className="w-full bg-muted/20 border border-border p-1.5 px-3 outline-none text-[11px] font-mono font-black text-foreground/80 group-hover:text-primary transition-colors focus:ring-1 focus:ring-primary rounded-sm placeholder:italic"
                                         value={m.kodeBelanja || ''}
                                         placeholder="KONTEN..."
                                         onChange={e => handleUpdateField(m.id, 'kodeBelanja', e.target.value)}
@@ -1023,7 +1023,7 @@ export default function AccountMappingPage() {
                               </td>
 
                               {/* AKSI */}
-                              <td className={`${cellBase} text-center sticky right-0 z-10 bg-white dark:bg-card border-l border-border shadow-[-4px_0_12px_rgba(0,0,0,0.05)]`}>
+                              <td className={`${cellBase} text-center sticky right-0 z-10 bg-background border-l border-border shadow-[-8px_0_15px_-5px_rgba(0,0,0,0.05)] dark:shadow-[-8px_0_15px_-5px_rgba(0,0,0,0.3)]`}>
                                  <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                    {modifiedIds.has(m.id) ? (
                                      <>
