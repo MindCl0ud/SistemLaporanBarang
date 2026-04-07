@@ -34,16 +34,14 @@ import * as XLSX from 'xlsx'
 import LoadingState from '@/components/LoadingState'
 
 const DEFAULT_WIDTHS = {
-  program: 220,
-  kegiatan: 220,
-  sub: 220,
-  code: 160,
-  name: 350,
-  awal: 150,
-  perubahan: 150,
-  realisasi: 150,
-  sisa: 150,
-  bidang: 120
+  info: 320,      // Consolidated Program, Kegiatan, Sub Keg
+  code: 110,      // Kode Belanja
+  name: 240,      // Uraian
+  awal: 100,
+  perubahan: 100,
+  realisasi: 100,
+  sisa: 100,
+  bidang: 90
 }
 
 function ResizableHeader({ colKey, width, label, onResize, align = 'text-left', isLast = false }: any) {
@@ -575,18 +573,16 @@ export default function AccountMappingPage() {
             </colgroup>
             <thead className="sticky top-0 z-30">
               <tr>
-                <th className="bg-input border-r border-b border-border text-center text-[11px] font-semibold text-foreground/70 uppercase w-[50px]">No</th>
-                <ResizableHeader colKey="program" width={colWidths.program} label="Program" onResize={handleResize} />
-                <ResizableHeader colKey="kegiatan" width={colWidths.kegiatan} label="Kegiatan" onResize={handleResize} />
-                <ResizableHeader colKey="sub" width={colWidths.sub} label="Sub Kegiatan" onResize={handleResize} />
+                <th className="bg-slate-50 dark:bg-slate-900 border-r border-b border-border text-center text-[10px] font-black text-foreground/70 uppercase w-[50px] sticky left-0 z-20">No</th>
+                <ResizableHeader colKey="info" width={colWidths.info} label="Informasi Kegiatan" onResize={handleResize} />
                 <ResizableHeader colKey="code" width={colWidths.code} label="Kode Belanja" onResize={handleResize} />
-                <ResizableHeader colKey="name" width={colWidths.name} label="Nama Kustom / Uraian" onResize={handleResize} />
+                <ResizableHeader colKey="name" width={colWidths.name} label="Uraian" onResize={handleResize} />
                 <ResizableHeader colKey="awal" width={colWidths.awal} label="Pagu Awal" align="text-right" onResize={handleResize} />
                 <ResizableHeader colKey="perubahan" width={colWidths.perubahan} label="Pagu Perubahan" align="text-right" onResize={handleResize} />
                 <ResizableHeader colKey="realisasi" width={colWidths.realisasi} label="Realisasi (BKU)" align="text-right" onResize={handleResize} />
                 <ResizableHeader colKey="sisa" width={colWidths.sisa} label="Sisa Anggaran" align="text-right" onResize={handleResize} />
                 <ResizableHeader colKey="bidang" width={colWidths.bidang} label="Bidang" onResize={handleResize} />
-                <th className="bg-input border-b border-border text-center text-[11px] font-semibold text-foreground/70 uppercase">Aksi</th>
+                <th className="bg-slate-50 dark:bg-slate-900 border-l border-b border-border text-center text-[10px] font-black text-foreground/70 uppercase sticky right-0 z-20 w-[60px]">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -599,56 +595,40 @@ export default function AccountMappingPage() {
                     exit={{ opacity: 0, height: 0 }}
                     className="bg-primary/5 border-b-2 border-primary"
                   >
-                    <td className={`${cellBase} text-center font-mono font-black text-primary`}>NEW</td>
-                    {/* Program */}
+                    <td className={`${cellBase} text-center font-mono font-black text-primary sticky left-0 z-10 bg-white dark:bg-slate-900`}>NEW</td>
+                    {/* INFORMASI KEGIATAN (COMBINED) */}
                     <td className={cellBase}>
-                      <div className="flex flex-col gap-1">
-                        <input 
-                          className="w-full bg-white dark:bg-input border border-border rounded-sm px-1 outline-none font-mono text-[9px]"
-                          placeholder="Kode Program"
-                          value={newRow.kodeProgram}
-                          onChange={e => setNewRow({...newRow, kodeProgram: e.target.value})}
-                        />
-                        <input 
-                          className="w-full bg-white dark:bg-input border border-border rounded-sm px-1 outline-none text-[10px] font-bold"
-                          placeholder="Nama Program"
-                          value={newRow.namaProgram}
-                          onChange={e => setNewRow({...newRow, namaProgram: e.target.value})}
-                        />
-                      </div>
-                    </td>
-                    {/* Kegiatan */}
-                    <td className={cellBase}>
-                      <div className="flex flex-col gap-1">
-                        <input 
-                          className="w-full bg-white dark:bg-input border border-primary/30 rounded-sm border border-border outline-none transition-all focus:border-primary px-1.5 py-1"
-                          placeholder="Kode Kegiatan"
-                          value={newRow.kodeKegiatan}
-                          onChange={e => setNewRow({...newRow, kodeKegiatan: e.target.value})}
-                        />
-                        <input 
-                          className="w-full bg-white dark:bg-input border border-primary/30 rounded px-1 outline-none text-[10px] font-bold"
-                          placeholder="Nama Kegiatan"
-                          value={newRow.namaKegiatan}
-                          onChange={e => setNewRow({...newRow, namaKegiatan: e.target.value})}
-                        />
-                      </div>
-                    </td>
-                    {/* Sub Kegiatan */}
-                    <td className={cellBase}>
-                      <div className="flex flex-col gap-1">
-                        <input 
-                          className="w-full bg-white dark:bg-input border border-primary/30 rounded-sm border border-border outline-none transition-all focus:border-primary px-1.5 py-1"
-                          placeholder="Kode Sub Kegiatan"
-                          value={newRow.kodeSubKeg}
-                          onChange={e => setNewRow({...newRow, kodeSubKeg: e.target.value})}
-                        />
-                        <input 
-                          className="w-full bg-white dark:bg-input border border-primary/30 rounded px-1 outline-none text-[10px] font-bold"
-                          placeholder="Nama Sub Kegiatan"
-                          value={newRow.namaSubKeg}
-                          onChange={e => setNewRow({...newRow, namaSubKeg: e.target.value})}
-                        />
+                      <div className="flex flex-col gap-2">
+                        {/* Sub Kegiatan Info */}
+                        <div className="flex flex-col -space-y-0.5">
+                           <input 
+                             className="w-full bg-white dark:bg-input border border-border rounded-sm outline-none transition-all focus:border-primary px-1.5 py-0.5 font-bold text-[10px]"
+                             placeholder="Nama Sub Kegiatan"
+                             value={newRow.namaSubKeg}
+                             onChange={e => setNewRow({...newRow, namaSubKeg: e.target.value})}
+                           />
+                           <input 
+                             className="w-full bg-white dark:bg-input border border-border rounded-sm outline-none transition-all focus:border-primary px-1.5 py-0.5 font-mono text-[8px] text-muted-foreground"
+                             placeholder="Kode Sub (Optional)"
+                             value={newRow.kodeSubKeg}
+                             onChange={e => setNewRow({...newRow, kodeSubKeg: e.target.value})}
+                           />
+                        </div>
+                        {/* Program & Kegiatan Info (Small) */}
+                        <div className="grid grid-cols-2 gap-1 border-t border-border pt-1">
+                           <input 
+                             className="w-full bg-slate-50 dark:bg-black/10 border border-border rounded-sm px-1.5 py-0.5 text-[8px]"
+                             placeholder="Prog..."
+                             value={newRow.namaProgram}
+                             onChange={e => setNewRow({...newRow, namaProgram: e.target.value})}
+                           />
+                           <input 
+                             className="w-full bg-slate-50 dark:bg-black/10 border border-border rounded-sm px-1.5 py-0.5 text-[8px]"
+                             placeholder="Keg..."
+                             value={newRow.namaKegiatan}
+                             onChange={e => setNewRow({...newRow, namaKegiatan: e.target.value})}
+                           />
+                        </div>
                       </div>
                     </td>
                     <td className={cellBase}>
@@ -689,27 +669,27 @@ export default function AccountMappingPage() {
                         onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.kodeBelanja, newRow.name, newRow.division, Number(newRow.budget), undefined, newRow.kodeSubKeg, Number(newRow.revisedBudget), { kodeProgram: newRow.kodeProgram, namaProgram: newRow.namaProgram, kodeKegiatan: newRow.kodeKegiatan, namaKegiatan: newRow.namaKegiatan, namaSubKeg: newRow.namaSubKeg })}
                       />
                     </td>
-                    <td className={`${cellBase} text-right font-mono text-muted/30`}>自动0</td>
-                    <td className={`${cellBase} text-right font-mono text-muted/30`}>自动0</td>
+                    <td className={`${cellBase} text-right font-mono text-muted/30`}>0</td>
+                    <td className={`${cellBase} text-right font-mono text-muted/30`}>0</td>
                     <td className={cellBase}>
                       <input 
-                        className="w-full bg-white dark:bg-input border border-primary/30 rounded px-1 outline-none"
+                        className="w-full bg-white dark:bg-input border border-border rounded-sm px-1.5 py-1 outline-none"
                         placeholder="Bidang..."
                         value={newRow.division}
                         onChange={e => setNewRow({...newRow, division: e.target.value})}
                         onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.kodeBelanja, newRow.name, newRow.division, Number(newRow.budget), undefined, newRow.kodeSubKeg, Number(newRow.revisedBudget), { kodeProgram: newRow.kodeProgram, namaProgram: newRow.namaProgram, kodeKegiatan: newRow.kodeKegiatan, namaKegiatan: newRow.namaKegiatan, namaSubKeg: newRow.namaSubKeg })}
                       />
                     </td>
-                    <td className={cellBase}>
+                    <td className={`${cellBase} text-center sticky right-0 z-10 bg-white dark:bg-slate-900 border-l border-border shadow-[-4px_0_12px_rgba(0,0,0,0.05)]`}>
                       <div className="flex items-center justify-center gap-1">
                         <button 
                           onClick={() => handleSaveInline(newRow.kodeBelanja, newRow.name, newRow.division, Number(newRow.budget), undefined, newRow.kodeSubKeg, Number(newRow.revisedBudget), { kodeProgram: newRow.kodeProgram, namaProgram: newRow.namaProgram, kodeKegiatan: newRow.kodeKegiatan, namaKegiatan: newRow.namaKegiatan, namaSubKeg: newRow.namaSubKeg })}
-                          className="p-1.5 bg-primary text-white rounded-lg shadow-sm hover:scale-110 transition-all font-black"
+                          className="p-1 text-emerald-600 border border-emerald-200 rounded-sm hover:bg-emerald-50 transition-all"
                         >
-                          <Check className="w-3.5 h-3.5" />
+                          <Check className="w-3 h-3" />
                         </button>
-                        <button onClick={() => setShowAddRow(false)} className="p-1.5 bg-input text-muted hover:text-rose-500 rounded-lg shadow-sm">
-                          <X className="w-3.5 h-3.5" />
+                        <button onClick={() => setShowAddRow(false)} className="p-1 text-muted border border-border rounded-sm hover:bg-slate-100 transition-all">
+                          <X className="w-3 h-3" />
                         </button>
                       </div>
                     </td>
@@ -738,53 +718,46 @@ export default function AccountMappingPage() {
                   const sisaAnggaran = ((useRevisedBudgetMode && m.revisedBudget > 0) ? m.revisedBudget : m.budget) - (m.realization || 0)
                   return (
                     <tr key={m.id} className="hover:bg-slate-50 dark:hover:bg-primary/5 transition-colors group">
-                      <td className={`${cellBase} text-center font-mono font-black text-muted/30`}>{idx + 1}</td>
+                      <td className={`${cellBase} text-center font-mono font-black text-muted/30 sticky left-0 z-10 bg-white dark:bg-card`}>{idx + 1}</td>
                       
-                      {/* PROGRAM */}
-                      <td className={`${cellBase} p-0 relative group/cell ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
-                         <div className="flex flex-col p-2 gap-1">
-                            <input 
-                              className="w-full bg-transparent border-none p-0 outline-none focus:bg-white dark:focus:bg-white/5 text-muted-foreground font-mono text-[9px]"
-                              value={m.kodeProgram || ''}
-                              onChange={e => handleUpdateField(m.id, 'kodeProgram', e.target.value)}
-                            />
-                            <textarea 
-                              className="w-full bg-transparent border-none p-0 outline-none focus:bg-white dark:focus:bg-white/5 font-bold text-[10px] leading-tight resize-none overflow-hidden"
-                              value={m.namaProgram || ''}
-                              onChange={e => handleUpdateField(m.id, 'namaProgram', e.target.value)}
-                            />
-                         </div>
-                      </td>
-
-                      {/* KEGIATAN */}
-                      <td className={`${cellBase} p-0 relative group/cell ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
-                         <div className="flex flex-col p-2 gap-1">
-                            <input 
-                              className="w-full bg-transparent border-none p-0 outline-none focus:bg-white dark:focus:bg-white/5 text-muted-foreground font-mono text-[9px]"
-                              value={m.kodeKegiatan || ''}
-                              onChange={e => handleUpdateField(m.id, 'kodeKegiatan', e.target.value)}
-                            />
-                            <textarea 
-                              className="w-full bg-transparent border-none p-0 outline-none focus:bg-white dark:focus:bg-white/5 font-bold text-[10px] leading-tight resize-none overflow-hidden"
-                              value={m.namaKegiatan || ''}
-                              onChange={e => handleUpdateField(m.id, 'namaKegiatan', e.target.value)}
-                            />
-                         </div>
-                      </td>
-
-                      {/* SUB KEGIATAN */}
-                      <td className={`${cellBase} p-0 relative group/cell ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
-                         <div className="flex flex-col p-2 gap-1">
-                            <input 
-                              className="w-full bg-transparent border-none p-0 outline-none focus:bg-white dark:focus:bg-white/5 text-muted-foreground font-mono text-[9px]"
-                              value={m.kodeSubKeg || ''}
-                              onChange={e => handleUpdateField(m.id, 'kodeSubKeg', e.target.value)}
-                            />
-                            <textarea 
-                              className="w-full bg-transparent border-none p-0 outline-none focus:bg-white dark:focus:bg-white/5 font-bold text-[10px] leading-tight resize-none overflow-hidden"
-                              value={m.namaSubKeg || ''}
-                              onChange={e => handleUpdateField(m.id, 'namaSubKeg', e.target.value)}
-                            />
+                      {/* INFORMASI KEGIATAN (COMBINED) */}
+                      <td className={`${cellBase} relative group/cell p-0 ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
+                         <div className="flex flex-col p-2 gap-1.5">
+                            {/* Primary info: Sub Kegiatan */}
+                            <div className="flex flex-col leading-tight">
+                              <textarea 
+                                className="w-full bg-transparent border-none p-0 outline-none focus:bg-white dark:focus:bg-white/5 font-black text-[11px] leading-tight resize-none"
+                                value={m.namaSubKeg || ''}
+                                onChange={e => handleUpdateField(m.id, 'namaSubKeg', e.target.value)}
+                              />
+                              <input 
+                                className="w-full bg-transparent border-none p-0 outline-none focus:bg-white dark:focus:bg-white/5 text-[9px] font-mono text-muted-foreground"
+                                value={m.kodeSubKeg || ''}
+                                placeholder="Kode Sub..."
+                                onChange={e => handleUpdateField(m.id, 'kodeSubKeg', e.target.value)}
+                              />
+                            </div>
+                            {/* Hierarchy Info (Secondary) */}
+                            <div className="grid grid-cols-1 gap-0.5 border-t border-border/50 pt-1.5 mt-0.5">
+                               <div className="flex items-center gap-1">
+                                  <span className="text-[7px] font-black uppercase text-muted bg-slate-100 rounded-sm px-1 leading-none h-[12px] flex items-center">P</span>
+                                  <textarea 
+                                    className="flex-1 bg-transparent border-none p-0 outline-none text-[8px] font-medium leading-none text-muted-foreground resize-none h-[12px] overflow-hidden"
+                                    value={m.namaProgram || ''}
+                                    placeholder="Program..."
+                                    onChange={e => handleUpdateField(m.id, 'namaProgram', e.target.value)}
+                                  />
+                               </div>
+                               <div className="flex items-center gap-1">
+                                  <span className="text-[7px] font-black uppercase text-muted bg-slate-100 rounded-sm px-1 leading-none h-[12px] flex items-center">K</span>
+                                  <textarea 
+                                    className="flex-1 bg-transparent border-none p-0 outline-none text-[8px] font-medium leading-none text-muted-foreground resize-none h-[12px] overflow-hidden"
+                                    value={m.namaKegiatan || ''}
+                                    placeholder="Kegiatan..."
+                                    onChange={e => handleUpdateField(m.id, 'namaKegiatan', e.target.value)}
+                                  />
+                               </div>
+                            </div>
                          </div>
                       </td>
 
@@ -859,7 +832,7 @@ export default function AccountMappingPage() {
                       </td>
 
                       {/* AKSI */}
-                      <td className={`${cellBase} text-center`}>
+                      <td className={`${cellBase} text-center sticky right-0 z-10 bg-white dark:bg-card border-l border-border shadow-[-4px_0_12px_rgba(0,0,0,0.05)]`}>
                          <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                            {modifiedIds.has(m.id) ? (
                              <>
