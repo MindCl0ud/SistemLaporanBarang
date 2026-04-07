@@ -67,8 +67,8 @@ function ResizableHeader({ colKey, width, label, onResize, align = 'text-left', 
   }
 
   return (
-    <th className={`bg-input border-r border-b border-border p-0 relative transition-colors hover:bg-slate-100 dark:hover:bg-primary/5 group/h min-w-[${width}px]`} style={{ width }}>
-      <div className={`px-4 py-3 text-[11px] font-black text-foreground/70 uppercase tracking-wider ${align}`}>
+    <th className={`bg-slate-50 dark:bg-slate-900 border-r border-b border-border p-0 relative transition-colors hover:bg-slate-100 dark:hover:bg-primary/5 group/h min-w-[${width}px]`} style={{ width }}>
+      <div className={`px-3 py-2 text-[10px] font-black text-foreground/70 uppercase tracking-tight ${align}`}>
         {label}
       </div>
       {!isLast && (
@@ -399,19 +399,19 @@ export default function AccountMappingPage() {
   }
 
   const totalWidth = useMemo(() => 50 + Object.values(colWidths).reduce((a, b) => a + b, 0), [colWidths])
-  const cellBase = `border-r border-b border-border px-3 py-2 text-[12px] align-top`
+  const cellBase = `border-r border-b border-border px-2 py-1.5 text-[12px] align-top`
 
   return (
-    <div className="max-w-[1550px] mx-auto px-4 py-8 space-y-8 min-h-screen">
+    <div className="w-full mx-auto px-4 py-6 space-y-6 min-h-screen bg-slate-50/30 dark:bg-transparent">
       {/* HEADER */}
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="space-y-1">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-black uppercase tracking-widest mb-2">
+          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm bg-slate-200 dark:bg-slate-800 border border-border text-muted-foreground text-[9px] font-bold uppercase tracking-wider mb-1">
             <Hash className="w-3 h-3" /> Master Data Management
           </div>
-          <h1 className="text-3xl font-black text-foreground flex items-center gap-4 tracking-tighter">
-            <div className="p-3 rounded-2xl bg-primary text-white shadow-xl shadow-primary/20">
-              <ListTree className="w-6 h-6" />
+          <h1 className="text-2xl font-black text-foreground flex items-center gap-3 tracking-tighter">
+            <div className="p-2 rounded-sm border border-border shadow-md">
+              <ListTree className="w-5 h-5" />
             </div>
             Master Rekening
           </h1>
@@ -433,7 +433,7 @@ export default function AccountMappingPage() {
               <div className="flex items-center gap-2">
                 <span className="text-xl font-black text-primary tracking-tighter">Rp{formatCurrency(totalPaguEffective)}</span>
                 {useRevisedBudgetMode && (
-                  <span className="px-1.5 py-0.5 rounded bg-indigo-500 text-white text-[8px] font-black uppercase tracking-widest">Revised</span>
+                  <span className="px-1.5 py-0.5 rounded-sm bg-indigo-500 text-white text-[8px] font-black uppercase tracking-widest">Revised</span>
                 )}
               </div>
             </div>
@@ -445,7 +445,7 @@ export default function AccountMappingPage() {
             <button
               onClick={handleSaveAllBatch}
               disabled={isSavingAll}
-              className="flex items-center gap-2 px-6 py-4 bg-indigo-600 text-white rounded-2xl text-sm font-black shadow-xl shadow-indigo-600/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-sm text-xs font-bold shadow-sm hover:bg-indigo-700 transition-all disabled:opacity-50"
             >
               {isSavingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               Simpan Semua ({modifiedIds.size})
@@ -454,23 +454,23 @@ export default function AccountMappingPage() {
 
           <button
             onClick={() => setShowAddRow(true)}
-            className="flex items-center gap-2 px-6 py-4 bg-primary text-white rounded-2xl text-sm font-black shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-sm text-xs font-bold shadow-sm hover:bg-primary/90 transition-all"
           >
             <Plus className="w-4 h-4" /> Tambah Manual
           </button>
           
-          <div className="flex items-center bg-white dark:bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+          <div className="flex items-center bg-white dark:bg-card border border-border rounded-sm overflow-hidden shadow-sm">
              <button
                 onClick={handleExportTemplate}
-                className="flex items-center gap-2 px-4 py-4 hover:bg-slate-50 transition-all text-xs font-black text-foreground border-r border-border"
+                className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 transition-all text-[11px] font-bold text-foreground border-r border-border"
                 title="Unduh Template Excel"
               >
-                <Download className="w-4 h-4 text-primary" />
+                <Download className="w-3.5 h-3.5 text-primary" />
                 Template
               </button>
-              <label className="flex items-center gap-2 px-4 py-4 hover:bg-slate-50 transition-all text-xs font-black text-foreground cursor-pointer">
-                <UploadCloud className="w-4 h-4 text-emerald-500" />
-                {isImporting ? "Mengimpor..." : "Impor Excel"}
+              <label className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 transition-all text-[11px] font-bold text-foreground cursor-pointer">
+                <UploadCloud className="w-3.5 h-3.5 text-emerald-500" />
+                {isImporting ? "..." : "Impor Excel"}
                 <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleImportExcel} disabled={loading} />
               </label>
           </div>
@@ -478,27 +478,27 @@ export default function AccountMappingPage() {
           <button
             onClick={handleSync}
             disabled={loading}
-            className="group flex items-center gap-2 px-6 py-4 bg-white dark:bg-card hover:bg-slate-50 text-foreground rounded-2xl text-sm font-black border border-border transition-all shadow-sm active:scale-95"
+            className="group flex items-center gap-2 px-4 py-2 bg-white dark:bg-card hover:bg-slate-50 text-foreground rounded-sm text-xs font-bold border border-border transition-all shadow-sm active:scale-95"
           >
-            <RefreshCw className={`w-4 h-4 transition-transform group-hover:rotate-180 duration-500 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 transition-transform group-hover:rotate-180 duration-500 ${loading ? 'animate-spin' : ''}`} />
             Sync BKU
           </button>
 
           <div className="relative">
             <button
               onClick={() => setShowConfig(!showConfig)}
-              className={`p-4 rounded-2xl border transition-all active:scale-95 shadow-sm ${showConfig ? 'bg-primary text-white border-primary shadow-primary/20' : 'bg-white dark:bg-card text-foreground border-border hover:bg-slate-50'}`}
+              className={`p-2 rounded-sm border border-border shadow-sm ${showConfig ? 'bg-primary text-white border-primary' : 'bg-white dark:bg-card text-foreground border-border hover:bg-slate-50'}`}
             >
-              <SettingsIcon className={`w-5 h-5 ${showConfig ? 'animate-spin' : ''}`} />
+              <SettingsIcon className={`w-4 h-4 ${showConfig ? 'animate-spin' : ''}`} />
             </button>
             
             <AnimatePresence>
               {showConfig && (
                 <motion.div 
-                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  initial={{ opacity: 0, y: 5, scale: 0.98 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                  className="absolute right-0 top-full mt-3 w-72 bg-white dark:bg-slate-900 border border-border rounded-2xl shadow-2xl p-5 z-[50] backdrop-blur-xl"
+                  exit={{ opacity: 0, y: 5, scale: 0.98 }}
+                  className="absolute right-0 top-full mt-2 w-72 bg-white dark:bg-slate-900 border border-border rounded-md shadow-xl p-4 z-[50]"
                 >
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-xs font-black uppercase tracking-widest text-primary">Konfigurasi Budget</h3>
@@ -538,13 +538,13 @@ export default function AccountMappingPage() {
       </header>
 
       {/* SEARCH BAR */}
-      <div className="flex items-center gap-4 bg-white dark:bg-card p-2 pr-4 rounded-[2rem] border border-border shadow-sm">
+      <div className="flex items-center gap-3 bg-white dark:bg-card p-1 pr-3 rounded-md border border-border shadow-sm">
         <div className="relative flex-1">
-          <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
           <input
             type="text"
             placeholder="Cari berdasarkan kode, nama, sub kegiatan atau bidang..."
-            className="w-full bg-transparent border-none rounded-2xl pl-16 pr-6 py-4 text-base font-bold text-foreground outline-none placeholder:text-muted/40"
+            className="w-full bg-transparent border-none rounded-md pl-12 pr-4 py-2.5 text-sm font-semibold text-foreground outline-none placeholder:text-muted/40"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -567,7 +567,7 @@ export default function AccountMappingPage() {
            </span>
         </div>
 
-        <div className="overflow-auto rounded-[2rem] border border-border bg-card custom-scrollbar shadow-sm w-full max-h-[65vh]">
+        <div className="overflow-auto border border-border bg-card custom-scrollbar shadow-md w-full max-h-[68vh] rounded-sm">
           <table className="border-collapse w-full" style={{ minWidth: totalWidth, tableLayout: 'fixed' }}>
             <colgroup>
                <col style={{ width: 50 }} />
@@ -604,13 +604,13 @@ export default function AccountMappingPage() {
                     <td className={cellBase}>
                       <div className="flex flex-col gap-1">
                         <input 
-                          className="w-full bg-white dark:bg-input border border-primary/30 rounded px-1 outline-none font-mono text-[9px]"
+                          className="w-full bg-white dark:bg-input border border-border rounded-sm px-1 outline-none font-mono text-[9px]"
                           placeholder="Kode Program"
                           value={newRow.kodeProgram}
                           onChange={e => setNewRow({...newRow, kodeProgram: e.target.value})}
                         />
                         <input 
-                          className="w-full bg-white dark:bg-input border border-primary/30 rounded px-1 outline-none text-[10px] font-bold"
+                          className="w-full bg-white dark:bg-input border border-border rounded-sm px-1 outline-none text-[10px] font-bold"
                           placeholder="Nama Program"
                           value={newRow.namaProgram}
                           onChange={e => setNewRow({...newRow, namaProgram: e.target.value})}
@@ -621,7 +621,7 @@ export default function AccountMappingPage() {
                     <td className={cellBase}>
                       <div className="flex flex-col gap-1">
                         <input 
-                          className="w-full bg-white dark:bg-input border border-primary/30 rounded px-1 outline-none font-mono text-[9px]"
+                          className="w-full bg-white dark:bg-input border border-primary/30 rounded-sm border border-border outline-none transition-all focus:border-primary px-1.5 py-1"
                           placeholder="Kode Kegiatan"
                           value={newRow.kodeKegiatan}
                           onChange={e => setNewRow({...newRow, kodeKegiatan: e.target.value})}
@@ -638,7 +638,7 @@ export default function AccountMappingPage() {
                     <td className={cellBase}>
                       <div className="flex flex-col gap-1">
                         <input 
-                          className="w-full bg-white dark:bg-input border border-primary/30 rounded px-1 outline-none font-mono text-[9px]"
+                          className="w-full bg-white dark:bg-input border border-primary/30 rounded-sm border border-border outline-none transition-all focus:border-primary px-1.5 py-1"
                           placeholder="Kode Sub Kegiatan"
                           value={newRow.kodeSubKeg}
                           onChange={e => setNewRow({...newRow, kodeSubKeg: e.target.value})}
@@ -866,21 +866,21 @@ export default function AccountMappingPage() {
                                <button
                                  disabled={savingIds.has(m.id)}
                                  onClick={() => handleSaveInline(m.kodeBelanja, m.name, m.division, m.budget, m.id, m.kodeSubKeg, m.revisedBudget, { kodeProgram: m.kodeProgram, namaProgram: m.namaProgram, kodeKegiatan: m.kodeKegiatan, namaKegiatan: m.namaKegiatan, namaSubKeg: m.namaSubKeg })}
-                                 className="p-1.5 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-all"
+                                 className="p-1 text-emerald-600 hover:bg-emerald-50 border border-emerald-200 rounded-sm transition-all"
                                >
-                                 {savingIds.has(m.id) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                                 {savingIds.has(m.id) ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
                                </button>
                                <button
                                  onClick={() => handleCancelRow(m.id)}
-                                 className="p-1.5 text-muted hover:text-slate-500 rounded-lg transition-all"
+                                 className="p-1 text-muted hover:bg-slate-100 border border-border rounded-sm transition-all"
                                >
-                                 <X className="w-3.5 h-3.5" />
+                                 <X className="w-3 h-3" />
                                </button>
                              </>
                            ) : (
                              <>
-                               <button onClick={() => handleDelete(m.id)} className="p-1.5 text-muted hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all">
-                                 <Trash2 className="w-3.5 h-3.5" />
+                               <button onClick={() => handleDelete(m.id)} className="p-1 text-muted hover:text-rose-600 hover:bg-rose-50 border border-border hover:border-rose-200 rounded-sm transition-all">
+                                 <Trash2 className="w-3 h-3" />
                                </button>
                              </>
                            )}
@@ -916,26 +916,26 @@ export default function AccountMappingPage() {
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             />
             <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              initial={{ opacity: 0, scale: 0.98, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-primary/20 overflow-hidden"
+              exit={{ opacity: 0, scale: 0.98, y: 10 }}
+              className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-md shadow-2xl border border-border overflow-hidden"
             >
-              <div className="p-8 border-b border-border flex items-center justify-between bg-primary/5">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20">
-                    <Clock className="w-6 h-6 text-primary" />
+              <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-slate-50 dark:bg-slate-900">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-md bg-primary/10 flex items-center justify-center border border-primary/20">
+                    <Clock className="w-5 h-5 text-primary" />
                   </div>
                   <div className="flex flex-col">
-                    <h3 className="text-lg font-black text-foreground uppercase tracking-tight">Riwayat Anggaran</h3>
-                    <p className="text-xs text-muted font-bold tracking-widest uppercase opacity-50">{historyData.code}</p>
+                    <h3 className="text-sm font-black text-foreground uppercase tracking-tight">Riwayat Anggaran</h3>
+                    <p className="text-[10px] text-muted font-bold tracking-widest uppercase opacity-50">{historyData.code}</p>
                   </div>
                 </div>
                 <button 
                   onClick={() => setHistoryData(null)}
-                  className="p-3 bg-muted/10 hover:bg-muted/20 rounded-2xl transition-all active:scale-95"
+                  className="p-2 bg-muted/10 hover:bg-muted/20 rounded-md transition-all active:scale-95"
                 >
-                  <X className="w-5 h-5 text-muted-foreground" />
+                  <X className="w-4 h-4 text-muted-foreground" />
                 </button>
               </div>
 
@@ -1001,12 +1001,12 @@ export default function AccountMappingPage() {
                 )}
               </div>
 
-              <div className="p-8 bg-slate-50 dark:bg-black/20 border-t border-border mt-auto">
+              <div className="px-6 py-4 bg-slate-50 dark:bg-black/20 border-t border-border mt-auto">
                  <button 
                   onClick={() => setHistoryData(null)}
-                  className="w-full py-4 bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all active:scale-95"
+                  className="w-full py-3 bg-primary text-white rounded-md font-black text-xs uppercase tracking-[0.2em] shadow-md hover:bg-primary/90 transition-all active:scale-95"
                  >
-                   Selesai Membaca
+                   Selesai
                  </button>
               </div>
             </motion.div>
