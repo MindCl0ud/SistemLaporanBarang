@@ -114,9 +114,9 @@ export default function BkuList({ initialRecords, openingBalance = 0 }: {
     )
   }
 
-  // Calculate running balance (always in input order)
+  // Calculate running balance (always in stable rowOrder)
   const sortedByInput = [...initialRecords].sort((a, b) =>
-    new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    (a.rowOrder ?? 0) - (b.rowOrder ?? 0)
   )
   let running = openingBalance
   const withBalance = sortedByInput.map(r => {

@@ -6,7 +6,9 @@ import { revalidatePath } from "next/cache"
 export async function getBkuRecords(month: number, year: number) {
   return await prisma.bkuTransaction.findMany({
     where: { month, year },
-    orderBy: { createdAt: 'desc' },
+    orderBy: [
+      { rowOrder: 'asc' }
+    ],
     include: { matchRecord: true }
   })
 }
@@ -14,7 +16,7 @@ export async function getBkuRecords(month: number, year: number) {
 export async function getYearlyBkuRecords(year: number) {
   return await prisma.bkuTransaction.findMany({
     where: { year },
-    orderBy: { createdAt: 'desc' }
+    orderBy: { rowOrder: 'asc' }
   })
 }
 
@@ -114,6 +116,14 @@ export async function addBkuRecord(data: FormData) {
   const expenseTotal = Number(data.get('expenseTotal')) || 0
   const balance = Number(data.get('balance')) || 0
 
+  // Get current max rowOrder for this month/year to append at the end
+  const lastRecord = await prisma.bkuTransaction.findFirst({
+    where: { month, year },
+    orderBy: { rowOrder: 'desc' },
+    select: { rowOrder: true }
+  })
+  const nextOrder = (lastRecord?.rowOrder ?? -1) + 1
+
   await prisma.bkuTransaction.create({
     data: {
       date: dateStr,
@@ -124,6 +134,7 @@ export async function addBkuRecord(data: FormData) {
       receiptTotal,
       expenseTotal,
       balance,
+      rowOrder: nextOrder,
     }
   })
   
@@ -142,7 +153,7 @@ export async function addBkuBulk(data: any[], month: number, year: number) {
   // Komponen gaji (Gaji Pokok, Tunjangan Keluarga, Iuran Askes, JKK, dst)
   // menggunakan kode rekening yang SAMA di Gaji Reguler, Gaji 13, dan THR,
   // sehingga semua baris harus masuk apa adanya tanpa diblokir.
-  const rows = data.map((item: any) => ({
+  const rows = data.map((item: any, idx: number) => ({
     date:         item.date        ? String(item.date)                  : null,
     month:        Number(item.month  || month),
     year:         Number(item.year   || year),
@@ -151,6 +162,7 @@ export async function addBkuBulk(data: any[], month: number, year: number) {
     receiptTotal: Number(item.receiptTotal || 0) || 0,
     expenseTotal: Number(item.expenseTotal || 0) || 0,
     balance:      Number(item.balance      || 0) || 0,
+    rowOrder:     idx,
   }))
 
   const result = await prisma.bkuTransaction.createMany({ data: rows })
