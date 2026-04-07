@@ -45,21 +45,17 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
           const row = dataRows[i]
           if (!row || row.length === 0) continue
           
-          if (row[1] && String(row[1]).trim() !== "" && /^\d{2}[-/]\d{2}[-/]\d{4}/.test(String(row[1]))) {
-            currentDate = String(row[1]).trim()
-          }
-          
           const noRaw = String(row[0] || "").trim()
           const uraian = String(row[2] || "").trim()
           const kode = String(row[3] || "").trim()
           
-          // Robust number parsing for Indonesian format (e.g., 87.749.600)
+          // --- Robust Number Parsing ---
           const cleanNumber = (val: any): number => {
             if (val === undefined || val === null || val === "") return 0
             if (typeof val === 'number') return val
-            // Hapus titik ribuan, ganti koma desimal dengan titik
-            const cleaned = String(val).replace(/\./g, "").replace(/,/g, ".")
-            const num = Number(cleaned)
+            // Ganti koma Indonesia ke titik, lalu buang semua karakter kecuali angka, titik, dan minus
+            const cleaned = String(val).replace(/,/g, ".").replace(/[^\d.-]/g, "")
+            const num = parseFloat(cleaned)
             return isNaN(num) ? 0 : num
           }
 
@@ -67,19 +63,41 @@ export default function BkuForm({ currentMonth, currentYear }: { currentMonth: n
           const keluar = cleanNumber(row[5])
           const saldo = cleanNumber(row[6])
           
+          // --- Robust Date Parsing ---
+          let rowDate = ""
+          const rawDate = row[1]
+          if (rawDate) {
+            if (rawDate instanceof Date || (typeof rawDate === 'object' && rawDate.getTime)) {
+               // JS Date object
+               const d = rawDate as Date
+               rowDate = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`
+            } else if (typeof rawDate === 'number' && rawDate > 40000) {
+               // Excel Serial Format (assuming 40000+ is year 2010+)
+               const d = new Date((rawDate - 25569) * 86400 * 1000)
+               rowDate = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`
+            } else {
+               // String date - support multiple formats
+               const s = String(rawDate).trim()
+               if (/^\d{1,2}[-/]\d{1,2}[-/]\d{2,4}$/.test(s)) {
+                  rowDate = s
+               }
+            }
+          }
+
+          if (rowDate !== "") {
+            currentDate = rowDate
+          }
+          
           const isSaldoLalu = uraian.toLowerCase().includes("saldo bulan lalu") || uraian.toLowerCase().includes("saldo s.d bulan lalu")
+          const isHeaderRow = uraian.toLowerCase().includes("uraian") || uraian.toLowerCase().includes("kode rekening") || (uraian.toLowerCase() === "no" && !terima && !keluar)
           
-          // Terima semua baris yang punya uraian bermakna, meski tidak ada kode/nominal
-          const isHeaderRow = uraian.toLowerCase().includes("uraian") || uraian.toLowerCase().includes("kode rekening") || uraian.toLowerCase() === "no"
-          
-          if (uraian && uraian.length >= 2 && !isSaldoLalu && !isHeaderRow) {
-            // Gunakan INDEKS BARIS FISIK (i) sebagai urutan pengunci.
-            // i adalah posisi baris di Excel (misal baris 5, 6, 7...).
-            // Ini menjamin 100% data tampil sesuai urutan file meski kolom 'No' kosong/blok.
+          // KRITERIA PENERIMAAN: Ada Uraian ATAU Ada Kode ATAU Ada Nilai Rupiah
+          const hasContent = (uraian && uraian.length >= 2) || (kode && kode.length >= 3) || (terima !== 0 || keluar !== 0)
+
+          if (hasContent && !isSaldoLalu && !isHeaderRow) {
             const sheetOffset = wb.SheetNames.indexOf(wsName) * 100000 
             const finalRowOrder = sheetOffset + i
 
-            // Extract month and year from currentDate
             let itemMonth = currentMonth
             let itemYear = currentYear
             
