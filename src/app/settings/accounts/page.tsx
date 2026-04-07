@@ -42,6 +42,23 @@ const DEFAULT_WIDTHS = {
   bidang: 120
 }
 
+const autoInferCodes = (code: string) => {
+  const parts = code.split('.')
+  let program = ''
+  let kegiatan = ''
+  if (parts.length >= 3) {
+    program = parts.slice(0, 3).join('.')
+  }
+  if (parts.length >= 5) {
+    kegiatan = parts.slice(0, 5).join('.')
+  }
+  return { program, kegiatan }
+}
+
+const formatCurrency = (val: number) => {
+  return new Intl.NumberFormat('id-ID').format(val)
+}
+
 function ResizableHeader({ colKey, width, label, onResize, align = 'text-left', isLast = false }: any) {
   const onMouseDown = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -274,8 +291,22 @@ export default function AccountMappingPage() {
   }
 
   const handleUpdateField = (id: string, field: string, value: any) => {
-    setMappings(prev => prev.map(m => m.id === id ? { ...m, [field]: value } : m))
     setModifiedIds(prev => new Set(prev).add(id))
+    setMappings(prev => prev.map(m => {
+      if (m.id === id) {
+        const updated = { ...m, [field]: value }
+        
+        // Auto Inference for codes
+        if (field === 'kodeSubKeg' && typeof value === 'string') {
+          const { program, kegiatan } = autoInferCodes(value)
+          if (program) updated.kodeProgram = program
+          if (kegiatan) updated.kodeKegiatan = kegiatan
+        }
+        
+        return updated
+      }
+      return m
+    }))
   }
 
   const handleDelete = async (id: string) => {
@@ -642,7 +673,11 @@ export default function AccountMappingPage() {
                              className="w-full bg-white dark:bg-input border border-border rounded-sm px-1.5 py-0.5 text-[9px] font-mono"
                              placeholder="Kode Sub Kegiatan"
                              value={newRow.kodeSubKeg}
-                             onChange={e => setNewRow({...newRow, kodeSubKeg: e.target.value})}
+                             onChange={e => {
+                               const val = e.target.value
+                               const { program, kegiatan } = autoInferCodes(val)
+                               setNewRow({ ...newRow, kodeSubKeg: val, kodeProgram: program || newRow.kodeProgram, kodeKegiatan: kegiatan || newRow.kodeKegiatan })
+                             }}
                            />
                         </div>
                         <div className="border-t-2 border-primary/20 my-1.5" />
@@ -716,7 +751,7 @@ export default function AccountMappingPage() {
 
               {loading ? (
                 <tr>
-                  <td colSpan={12} className="p-0 border-none">
+                  <td colSpan={8} className="p-0 border-none">
                     <LoadingState 
                       message="Menyiapkan Spreadsheet" 
                       subtitle="MASTER DATA REKENING"
@@ -726,175 +761,214 @@ export default function AccountMappingPage() {
                 </tr>
               ) : sortedAndFiltered.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="px-8 py-24 text-center">
+                  <td colSpan={8} className="px-8 py-24 text-center">
                     <p className="text-muted text-sm font-medium">Belum ada data master untuk tahun ini.</p>
                   </td>
                 </tr>
               ) : (
-                sortedAndFiltered.map((m, idx) => {
-                  const sisaAnggaran = ((useRevisedBudgetMode && m.revisedBudget > 0) ? m.revisedBudget : m.budget) - (m.realization || 0)
-                  return (
-                    <tr key={m.id} className="hover:bg-slate-50 dark:hover:bg-primary/5 transition-colors group">
-                      <td className={`${cellBase} text-center font-mono font-black text-muted/30 sticky left-0 z-10 bg-white dark:bg-card`}>{idx + 1}</td>
-                      
-                      {/* FULL HIERARCHY (STACKED) */}
-                      <td className={`${cellBase} relative group/cell p-2 ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
-                         <div className="flex flex-col gap-1.5">
-                            {/* Program Info */}
+                (() => {
+                  const groups: any[] = []
+                  const currentGroupsMap = new Map()
+
+                  sortedAndFiltered.forEach(m => {
+                    const progKey = m.kodeProgram || 'NO-PROG'
+                    const kegKey = `${progKey}-${m.kodeKegiatan || 'NO-KEG'}`
+                    const subKey = `${kegKey}-${m.kodeSubKeg || 'NO-SUB'}`
+
+                    if (!currentGroupsMap.has(progKey)) {
+                      currentGroupsMap.set(progKey, { type: 'program', data: m, items: [], totalBudget: 0, totalRevised: 0, totalReal: 0 })
+                      groups.push(currentGroupsMap.get(progKey))
+                    }
+                    const prog = currentGroupsMap.get(progKey)
+
+                    if (!currentGroupsMap.has(kegKey)) {
+                      currentGroupsMap.set(kegKey, { type: 'kegiatan', data: m, items: [], totalBudget: 0, totalRevised: 0, totalReal: 0 })
+                      prog.items.push(currentGroupsMap.get(kegKey))
+                    }
+                    const keg = currentGroupsMap.get(kegKey)
+
+                    if (!currentGroupsMap.has(subKey)) {
+                      currentGroupsMap.set(subKey, { type: 'subkeg', data: m, items: [], totalBudget: 0, totalRevised: 0, totalReal: 0 })
+                      keg.items.push(currentGroupsMap.get(subKey))
+                    }
+                    const sub = currentGroupsMap.get(subKey)
+                    
+                    sub.items.push({ type: 'item', data: m })
+
+                    // Aggregate Totals
+                    prog.totalBudget += (m.budget || 0)
+                    prog.totalRevised += (m.revisedBudget || 0)
+                    prog.totalReal += (m.realization || 0)
+                    
+                    keg.totalBudget += (m.budget || 0)
+                    keg.totalRevised += (m.revisedBudget || 0)
+                    keg.totalReal += (m.realization || 0)
+
+                    sub.totalBudget += (m.budget || 0)
+                    sub.totalRevised += (m.revisedBudget || 0)
+                    sub.totalReal += (m.realization || 0)
+                  })
+
+                  return groups.flatMap(prog => [
+                    // Program Header
+                    <tr key={`prog-${prog.data.kodeProgram}`} className="bg-primary/[0.03] border-b border-primary/20">
+                      <td className={`${cellBase} text-center sticky left-0 z-10 bg-slate-50 dark:bg-slate-900 border-r-2 border-primary/20 text-primary font-black`}>P</td>
+                      <td className={`${cellBase} font-black text-[10px] text-primary uppercase tracking-widest py-3 bg-white/40 dark:bg-card/40`}>
+                        <div className="flex items-center gap-2">
+                           <span className="bg-primary text-white px-1.5 py-0.5 rounded-sm text-[8px] font-mono">{prog.data.kodeProgram}</span>
+                           {prog.data.namaProgram}
+                        </div>
+                      </td>
+                      <td className={`${cellBase} text-right font-black tabular-nums text-primary/60`}>Rp{formatCurrency(prog.totalBudget)}</td>
+                      <td className={`${cellBase} text-right font-black tabular-nums text-indigo-500/60`}>Rp{formatCurrency(prog.totalRevised)}</td>
+                      <td className={`${cellBase} text-right font-black tabular-nums text-indigo-600/60 animate-pulse`}>Rp{formatCurrency(prog.totalReal)}</td>
+                      <td className={`${cellBase} text-right font-black tabular-nums text-emerald-600/60`}>
+                        Rp{formatCurrency(((useRevisedBudgetMode && prog.totalRevised > 0) ? prog.totalRevised : prog.totalBudget) - prog.totalReal)}
+                      </td>
+                      <td className={cellBase}></td>
+                      <td className={`${cellBase} sticky right-0 z-10 bg-slate-50 dark:bg-slate-900 border-l border-border`}></td>
+                    </tr>,
+                    ...prog.items.flatMap((keg: any) => [
+                      // Kegiatan Header
+                      <tr key={`keg-${keg.data.kodeKegiatan}`} className="bg-slate-50/50">
+                        <td className={`${cellBase} text-center sticky left-0 z-10 bg-slate-50 dark:bg-slate-900 text-slate-400 font-bold`}>K</td>
+                        <td className={`${cellBase} pl-8 py-2 border-l-4 border-l-primary/30`}>
+                          <div className="flex items-center gap-2 text-[9px] font-bold text-foreground/70 uppercase">
+                            <span className="bg-slate-200 dark:bg-slate-700 px-1 rounded-sm font-mono text-[8px]">{keg.data.kodeKegiatan}</span>
+                            {keg.data.namaKegiatan}
+                          </div>
+                        </td>
+                        <td className={`${cellBase} text-right text-[10px] font-bold tabular-nums text-muted-foreground`}>Rp{formatCurrency(keg.totalBudget)}</td>
+                        <td className={`${cellBase} text-right text-[10px] font-bold tabular-nums text-muted-foreground`}>Rp{formatCurrency(keg.totalRevised)}</td>
+                        <td className={`${cellBase} text-right text-[10px] font-bold tabular-nums text-muted-foreground`}>Rp{formatCurrency(keg.totalReal)}</td>
+                        <td className={`${cellBase} text-right text-[10px] font-bold tabular-nums text-muted-foreground`}>
+                           Rp{formatCurrency(((useRevisedBudgetMode && keg.totalRevised > 0) ? keg.totalRevised : keg.totalBudget) - keg.totalReal)}
+                        </td>
+                        <td className={cellBase}></td>
+                        <td className={`${cellBase} sticky right-0 z-10 bg-slate-50 dark:bg-slate-900 border-l border-border`}></td>
+                      </tr>,
+                      ...keg.items.flatMap((sub: any) => [
+                        // Sub Kegiatan Header
+                        <tr key={`sub-${sub.data.kodeSubKeg}`} className="bg-white/50">
+                          <td className={`${cellBase} text-center sticky left-0 z-10 bg-slate-50 dark:bg-slate-900 text-indigo-300 font-bold`}>S</td>
+                          <td className={`${cellBase} pl-12 py-2 border-l-4 border-l-indigo-500/20`}>
                             <div className="flex flex-col -space-y-0.5">
-                               <textarea 
-                                 className="w-full bg-transparent border-none p-0 outline-none focus:bg-white dark:focus:bg-white/5 font-black text-[9px] uppercase text-muted-foreground resize-none h-[12px] overflow-hidden"
-                                 value={m.namaProgram || ''}
-                                 placeholder="Nama Program"
-                                 onChange={e => handleUpdateField(m.id, 'namaProgram', e.target.value)}
-                               />
-                               <input 
-                                 className="w-full bg-transparent border-none p-0 outline-none focus:bg-white dark:focus:bg-white/5 text-[8px] font-mono text-muted/50"
-                                 value={m.kodeProgram || ''}
-                                 placeholder="Kode Program"
-                                 onChange={e => handleUpdateField(m.id, 'kodeProgram', e.target.value)}
-                               />
+                              <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400">{sub.data.namaSubKeg}</span>
+                              <span className="text-[8px] font-mono text-muted-foreground">{sub.data.kodeSubKeg}</span>
                             </div>
-                            
-                            <div className="border-t border-border/40 border-dashed" />
-                            
-                            {/* Kegiatan Info */}
-                            <div className="flex flex-col -space-y-0.5">
-                               <textarea 
-                                 className="w-full bg-transparent border-none p-0 outline-none focus:bg-white dark:focus:bg-white/5 font-black text-[10px] uppercase text-foreground/80 resize-none h-[14px] overflow-hidden"
-                                 value={m.namaKegiatan || ''}
-                                 placeholder="Nama Kegiatan"
-                                 onChange={e => handleUpdateField(m.id, 'namaKegiatan', e.target.value)}
-                               />
-                               <input 
-                                 className="w-full bg-transparent border-none p-0 outline-none focus:bg-white dark:focus:bg-white/5 text-[8px] font-mono text-muted/50"
-                                 value={m.kodeKegiatan || ''}
-                                 placeholder="Kode Kegiatan"
-                                 onChange={e => handleUpdateField(m.id, 'kodeKegiatan', e.target.value)}
-                               />
-                            </div>
-                            
-                            <div className="border-t border-border/40 border-dashed" />
-                            
-                            {/* Sub Kegiatan Info */}
-                            <div className="flex flex-col -space-y-0.5">
-                               <textarea 
-                                 className="w-full bg-transparent border-none p-0 outline-none focus:bg-white dark:focus:bg-white/5 font-black text-[11px] text-foreground resize-none"
-                                 value={m.namaSubKeg || ''}
-                                 placeholder="Nama Sub Kegiatan"
-                                 onChange={e => handleUpdateField(m.id, 'namaSubKeg', e.target.value)}
-                               />
-                               <input 
-                                 className="w-full bg-transparent border-none p-0 outline-none focus:bg-white dark:focus:bg-white/5 text-[9px] font-mono text-muted-foreground"
-                                 value={m.kodeSubKeg || ''}
-                                 placeholder="Kode Sub Kegiatan"
-                                 onChange={e => handleUpdateField(m.id, 'kodeSubKeg', e.target.value)}
-                               />
-                            </div>
-                            
-                            <div className="border-t-2 border-primary/20 my-1" />
-                            
-                            {/* Uraian Belanja Info (Largest) */}
-                            <div className="flex flex-col p-1.5 bg-primary/5 rounded-sm border border-primary/10">
-                               <textarea 
-                                 className="w-full bg-transparent border-none p-0 outline-none focus:bg-white dark:focus:bg-white/5 font-black text-[12px] leading-relaxed text-indigo-600 dark:text-indigo-400"
-                                 value={m.name || ''}
-                                 placeholder="Uraian belanja..."
-                                 rows={Math.max(1, (m.name || '').split('\n').length)}
-                                 onChange={e => {
-                                   handleUpdateField(m.id, 'name', e.target.value)
-                                   e.target.style.height = 'auto'
-                                   e.target.style.height = e.target.scrollHeight + 'px'
-                                 }}
-                               />
-                               <input 
-                                 className="w-full bg-transparent border-none p-1 mt-1 outline-none focus:bg-white dark:focus:bg-white/5 text-[11px] font-mono font-black text-primary bg-white/50 dark:bg-card/50 rounded-sm"
-                                 value={m.kodeBelanja || ''}
-                                 placeholder="Kode Belanja"
-                                 onChange={e => handleUpdateField(m.id, 'kodeBelanja', e.target.value)}
-                               />
-                            </div>
-                         </div>
-                      </td>
+                          </td>
+                          <td className={`${cellBase} text-right text-[10px] font-bold tabular-nums opacity-40`}>Rp{formatCurrency(sub.totalBudget)}</td>
+                          <td className={`${cellBase} text-right text-[10px] font-bold tabular-nums opacity-40`}>Rp{formatCurrency(sub.totalRevised)}</td>
+                          <td className={`${cellBase} text-right text-[10px] font-bold tabular-nums opacity-40`}>Rp{formatCurrency(sub.totalReal)}</td>
+                          <td className={`${cellBase} text-right text-[10px] font-bold tabular-nums opacity-40`}>
+                             Rp{formatCurrency(((useRevisedBudgetMode && sub.totalRevised > 0) ? sub.totalRevised : sub.totalBudget) - sub.totalReal)}
+                          </td>
+                          <td className={cellBase}></td>
+                          <td className={`${cellBase} sticky right-0 z-10 bg-slate-50 dark:bg-slate-900 border-l border-border`}></td>
+                        </tr>,
+                        ...sub.items.map((item: any) => {
+                          const m = item.data
+                          const sisaAnggaran = ((useRevisedBudgetMode && m.revisedBudget > 0) ? m.revisedBudget : m.budget) - (m.realization || 0)
+                          return (
+                            <tr key={m.id} className="hover:bg-slate-50 dark:hover:bg-primary/5 transition-colors group">
+                              <td className={`${cellBase} text-center font-mono font-black text-muted/30 sticky left-0 z-10 bg-white dark:bg-card`}>B</td>
+                              <td className={`${cellBase} relative group/cell p-2 ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''} pl-16 border-l-4 border-l-slate-200`}>
+                                 <div className="flex flex-col p-1.5 bg-primary/5 rounded-sm border border-primary/10 group-hover:bg-primary/10 transition-colors">
+                                   <textarea 
+                                     className="w-full bg-transparent border-none p-0 outline-none focus:bg-white dark:focus:bg-white/5 font-black text-[12px] leading-relaxed text-indigo-600 dark:text-indigo-400"
+                                     value={m.name || ''}
+                                     placeholder="Uraian belanja..."
+                                     rows={Math.max(1, (m.name || '').split('\n').length)}
+                                     onChange={e => {
+                                       handleUpdateField(m.id, 'name', e.target.value)
+                                       e.target.style.height = 'auto'
+                                       e.target.style.height = e.target.scrollHeight + 'px'
+                                     }}
+                                   />
+                                   <input 
+                                     className="w-full bg-transparent border-none p-1 mt-1 outline-none focus:bg-white dark:focus:bg-white/5 text-[11px] font-mono font-black text-primary bg-white/50 dark:bg-card/50 rounded-sm"
+                                     value={m.kodeBelanja || ''}
+                                     placeholder="Kode Belanja"
+                                     onChange={e => handleUpdateField(m.id, 'kodeBelanja', e.target.value)}
+                                   />
+                                 </div>
+                              </td>
 
-                      {/* PAGU AWAL */}
-                      <td className={`${cellBase} p-0 relative group/cell text-right ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
-                         <div className="flex items-center gap-2 justify-end w-full h-full pr-2">
-                            <input 
-                              type="number"
-                              className="w-full bg-transparent border-none p-2 outline-none focus:bg-white dark:focus:bg-white/5 text-right font-mono font-bold text-foreground/80 tabular-nums"
-                              value={m.budget || 0}
-                              onChange={(e) => handleUpdateField(m.id, 'budget', Number(e.target.value))}
-                            />
-                              <button 
-                                onClick={() => setHistoryData(m)}
-                                className={`p-1 rounded bg-primary/5 hover:bg-primary/10 transition-colors ${savedId === m.id ? 'text-primary bg-primary/20' : 'text-slate-400 opacity-0 group-hover/cell:opacity-100'}`}
-                              >
-                                <RefreshCw className="w-3 h-3" />
-                              </button>
-                         </div>
-                      </td>
+                              {/* Financial Columns */}
+                              <td className={`${cellBase} p-0 relative group/cell text-right ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
+                                 <div className="flex items-center gap-2 justify-end w-full h-full pr-2 text-[11px]">
+                                    <input 
+                                      type="number"
+                                      className="w-full bg-transparent border-none p-2 outline-none focus:bg-white dark:focus:bg-white/5 text-right font-mono font-bold text-foreground/80 tabular-nums"
+                                      value={m.budget || 0}
+                                      onChange={(e) => handleUpdateField(m.id, 'budget', Number(e.target.value))}
+                                    />
+                                      <button 
+                                        onClick={() => setHistoryData(m)}
+                                        className={`p-1 rounded bg-primary/5 hover:bg-primary/10 transition-colors ${savedId === m.id ? 'text-primary bg-primary/20' : 'text-slate-400 opacity-0 group-hover/cell:opacity-100'}`}
+                                      >
+                                        <RefreshCw className="w-3 h-3" />
+                                      </button>
+                                 </div>
+                              </td>
+                              <td className={`${cellBase} p-0 relative group/cell text-right ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
+                                 <input 
+                                   type="number"
+                                   className={`w-full bg-transparent border-none p-2 outline-none focus:bg-white dark:focus:bg-white/5 text-right font-mono font-black tabular-nums transition-colors text-[11px] ${m.revisedBudget > 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-foreground/10'}`}
+                                   value={m.revisedBudget || 0}
+                                   onChange={(e) => handleUpdateField(m.id, 'revisedBudget', Number(e.target.value))}
+                                 />
+                              </td>
+                              <td className={`${cellBase} p-2 text-right font-mono font-black text-indigo-600 dark:text-indigo-400 tabular-nums bg-indigo-50/30 dark:bg-indigo-500/5 whitespace-nowrap text-[11px]`}>
+                                 Rp{formatCurrency(m.realization || 0)}
+                              </td>
+                              <td className={`${cellBase} p-2 text-right font-mono font-black tabular-nums whitespace-nowrap text-[11px] ${sisaAnggaran < 0 ? 'text-rose-500 bg-rose-50' : 'text-emerald-600 bg-emerald-50/30 dark:bg-emerald-500/5'}`}>
+                                 Rp{formatCurrency(sisaAnggaran)}
+                              </td>
+                              <td className={`${cellBase} p-0 relative group/cell ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
+                                  <input 
+                                    className="w-full bg-transparent border-none p-2 outline-none focus:bg-white dark:focus:bg-white/5 text-muted-foreground font-medium text-[11px]"
+                                    value={m.division || ''}
+                                    placeholder="Bidang..."
+                                    onChange={(e) => handleUpdateField(m.id, 'division', e.target.value)}
+                                  />
+                              </td>
 
-                      {/* PAGU PERUBAHAN */}
-                      <td className={`${cellBase} p-0 relative group/cell text-right ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
-                         <input 
-                           type="number"
-                           className={`w-full bg-transparent border-none p-2 outline-none focus:bg-white dark:focus:bg-white/5 text-right font-mono font-black tabular-nums transition-colors ${m.revisedBudget > 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-foreground/10'}`}
-                           value={m.revisedBudget || 0}
-                           onChange={(e) => handleUpdateField(m.id, 'revisedBudget', Number(e.target.value))}
-                         />
-                      </td>
-
-                      {/* REALISASI */}
-                      <td className={`${cellBase} p-2 text-right font-mono font-black text-indigo-600 dark:text-indigo-400 tabular-nums bg-indigo-50/30 dark:bg-indigo-500/5`}>
-                         Rp{formatCurrency(m.realization || 0)}
-                      </td>
-
-                      {/* SISA */}
-                      <td className={`${cellBase} p-2 text-right font-mono font-black tabular-nums ${sisaAnggaran < 0 ? 'text-rose-500 bg-rose-50' : 'text-emerald-600 bg-emerald-50/30 dark:bg-emerald-500/5'}`}>
-                         Rp{formatCurrency(sisaAnggaran)}
-                      </td>
-
-                      {/* BIDANG */}
-                      <td className={`${cellBase} p-0 relative group/cell ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
-                          <input 
-                            className="w-full bg-transparent border-none p-2 outline-none focus:bg-white dark:focus:bg-white/5 text-muted-foreground font-medium"
-                            value={m.division || ''}
-                            onChange={(e) => handleUpdateField(m.id, 'division', e.target.value)}
-                          />
-                      </td>
-
-                      {/* AKSI */}
-                      <td className={`${cellBase} text-center sticky right-0 z-10 bg-white dark:bg-card border-l border-border shadow-[-4px_0_12px_rgba(0,0,0,0.05)]`}>
-                         <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                           {modifiedIds.has(m.id) ? (
-                             <>
-                               <button
-                                 disabled={savingIds.has(m.id)}
-                                 onClick={() => handleSaveInline(m.kodeBelanja, m.name, m.division, m.budget, m.id, m.kodeSubKeg, m.revisedBudget, { kodeProgram: m.kodeProgram, namaProgram: m.namaProgram, kodeKegiatan: m.kodeKegiatan, namaKegiatan: m.namaKegiatan, namaSubKeg: m.namaSubKeg })}
-                                 className="p-1 text-emerald-600 hover:bg-emerald-50 border border-emerald-200 rounded-sm transition-all"
-                               >
-                                 {savingIds.has(m.id) ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-                               </button>
-                               <button
-                                 onClick={() => handleCancelRow(m.id)}
-                                 className="p-1 text-muted hover:bg-slate-100 border border-border rounded-sm transition-all"
-                               >
-                                 <X className="w-3 h-3" />
-                               </button>
-                             </>
-                           ) : (
-                             <>
-                               <button onClick={() => handleDelete(m.id)} className="p-1 text-muted hover:text-rose-600 hover:bg-rose-50 border border-border hover:border-rose-200 rounded-sm transition-all">
-                                 <Trash2 className="w-3 h-3" />
-                               </button>
-                             </>
-                           )}
-                         </div>
-                      </td>
-                    </tr>
-                  )
-                })
+                              {/* AKSI */}
+                              <td className={`${cellBase} text-center sticky right-0 z-10 bg-white dark:bg-card border-l border-border shadow-[-4px_0_12px_rgba(0,0,0,0.05)]`}>
+                                 <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                   {modifiedIds.has(m.id) ? (
+                                     <>
+                                       <button
+                                         disabled={savingIds.has(m.id)}
+                                         onClick={() => handleSaveInline(m.kodeBelanja, m.name, m.division, m.budget, m.id, m.kodeSubKeg, m.revisedBudget, { kodeProgram: m.kodeProgram, namaProgram: m.namaProgram, kodeKegiatan: m.kodeKegiatan, namaKegiatan: m.namaKegiatan, namaSubKeg: m.namaSubKeg })}
+                                         className="p-1 text-emerald-600 hover:bg-emerald-50 border border-emerald-200 rounded-sm transition-all"
+                                       >
+                                         {savingIds.has(m.id) ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                                       </button>
+                                       <button
+                                         onClick={() => handleCancelRow(m.id)}
+                                         className="p-1 text-muted hover:bg-slate-100 border border-border rounded-sm transition-all"
+                                       >
+                                         <X className="w-3 h-3" />
+                                       </button>
+                                     </>
+                                   ) : (
+                                     <>
+                                       <button onClick={() => handleDelete(m.id)} className="p-1 text-muted hover:text-rose-600 hover:bg-rose-50 border border-border hover:border-rose-200 rounded-sm transition-all">
+                                         <Trash2 className="w-3 h-3" />
+                                       </button>
+                                     </>
+                                   )}
+                                 </div>
+                              </td>
+                            </tr>
+                          )
+                        })
+                      ])
+                    ])
+                  ])
+                })()
               )}
             </tbody>
           </table>
