@@ -617,7 +617,7 @@ export default function AccountMappingPage() {
            </span>
         </div>
 
-        <div className="overflow-auto border border-border bg-card custom-scrollbar shadow-md w-full max-h-[68vh] rounded-sm">
+        <div className="overflow-auto border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0f172a] custom-scrollbar shadow-lg w-full max-h-[72vh] rounded-none">
           <table className="border-collapse w-full" style={{ minWidth: totalWidth, tableLayout: 'fixed' }}>
             <colgroup>
                <col style={{ width: 50 }} />
@@ -625,14 +625,14 @@ export default function AccountMappingPage() {
             </colgroup>
             <thead className="sticky top-0 z-30">
               <tr>
-                <th className="bg-slate-50 dark:bg-slate-900 border-r border-b border-border text-center text-[10px] font-black text-foreground/70 uppercase w-[50px] sticky left-0 z-20">No</th>
+                <th className="bg-slate-50 dark:bg-slate-900 border-r border-b border-slate-200 dark:border-slate-800 text-center text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase w-[50px] sticky left-0 z-20">No</th>
                 <ResizableHeader colKey="fullDetail" width={colWidths.fullDetail} label="Detail Rekening / Hirarki" onResize={handleResize} />
                 <ResizableHeader colKey="awal" width={colWidths.awal} label="Pagu Awal" align="text-right" onResize={handleResize} />
                 <ResizableHeader colKey="perubahan" width={colWidths.perubahan} label="Pagu Perubahan" align="text-right" onResize={handleResize} />
                 <ResizableHeader colKey="realisasi" width={colWidths.realisasi} label="Realisasi (BKU)" align="text-right" onResize={handleResize} />
                 <ResizableHeader colKey="sisa" width={colWidths.sisa} label="Sisa Anggaran" align="text-right" onResize={handleResize} />
                 <ResizableHeader colKey="bidang" width={colWidths.bidang} label="Bidang" onResize={handleResize} />
-                <th className="bg-slate-50 dark:bg-slate-900 border-l border-b border-border text-center text-[10px] font-black text-foreground/70 uppercase sticky right-0 z-20 w-[60px]">Aksi</th>
+                <th className="bg-slate-50 dark:bg-slate-900 border-l border-b border-slate-200 dark:border-slate-800 text-center text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase sticky right-0 z-20 w-[60px]">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -842,24 +842,24 @@ export default function AccountMappingPage() {
 
                   return groups.flatMap(prog => [
                     // Program Header
-                    <tr key={`prog-${prog.data.kodeProgram}`} className="bg-indigo-50/50 dark:bg-indigo-950/40 hover:bg-indigo-100/50 dark:hover:bg-indigo-900/40 transition-colors border-b-2 border-indigo-400 dark:border-indigo-500/20 shadow-md relative z-10 group/prog">
-                      <td className={`${cellBase} bg-indigo-600 dark:bg-indigo-700 text-center sticky left-1 z-20 text-white font-extrabold text-[14px] border-r-2 border-indigo-400`}>P</td>
-                      <td className={`${cellBase} bg-inherit py-6 px-4 border-r border-indigo-500/10`}>
+                    <tr key={`prog-${prog.data.kodeProgram}`} className="bg-slate-50 dark:bg-indigo-950/40 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 transition-colors border-b-2 border-slate-200 dark:border-indigo-500/20 shadow-sm relative z-10 group/prog">
+                      <td className={`${cellBase} bg-indigo-500 dark:bg-indigo-700 text-center sticky left-1 z-20 text-white font-extrabold text-[14px] border-r-2 border-indigo-400 dark:border-indigo-600`}>P</td>
+                      <td className={`${cellBase} bg-inherit py-6 px-4 border-r border-slate-100 dark:border-indigo-500/10`}>
                         <div className="flex flex-col gap-4">
                            <div className="flex items-center gap-4">
                               <div className="flex flex-col gap-1 min-w-[120px]">
-                                 <span className="text-[9px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-widest leading-none">KODE PROGRAM</span>
+                                 <span className="text-[9px] font-black text-slate-400 dark:text-indigo-400 uppercase tracking-widest leading-none">KODE PROGRAM</span>
                                  <input 
-                                   className="w-full bg-white dark:bg-slate-900 text-indigo-700 dark:text-indigo-100 border border-indigo-200 dark:border-indigo-500/30 p-2 outline-none font-mono font-black text-[14px] focus:border-indigo-400 shadow-sm"
+                                   className="w-full bg-white dark:bg-slate-900 text-indigo-700 dark:text-indigo-100 border border-slate-200 dark:border-indigo-500/30 p-2 outline-none font-mono font-black text-[14px] focus:border-indigo-400 shadow-sm"
                                    value={prog.data.kodeProgram || ''}
                                    placeholder="KODE..."
                                    onChange={e => handleUpdateHierarchyField('kodeProgram', prog.data.kodeProgram, 'kodeProgram', e.target.value)}
                                  />
                               </div>
                               <div className="flex flex-col gap-1 flex-1">
-                                 <span className="text-[9px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-widest leading-none">NAMA PROGRAM</span>
+                                 <span className="text-[9px] font-black text-slate-400 dark:text-indigo-400 uppercase tracking-widest leading-none">NAMA PROGRAM</span>
                                  <input 
-                                   className="w-full bg-white dark:bg-slate-900 text-indigo-950 dark:text-white border border-indigo-200 dark:border-indigo-500/30 p-2 outline-none font-black text-[15px] focus:border-indigo-400 shadow-sm uppercase tracking-tight"
+                                   className="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-indigo-500/30 p-2 outline-none font-black text-[15px] focus:border-indigo-400 shadow-sm uppercase tracking-tight"
                                    value={prog.data.namaProgram || ''}
                                    placeholder="NAMA PROGRAM . . ."
                                    onChange={e => handleUpdateHierarchyField('kodeProgram', prog.data.kodeProgram, 'namaProgram', e.target.value)}
@@ -868,25 +868,25 @@ export default function AccountMappingPage() {
                            </div>
                         </div>
                       </td>
-                      <td className={`${cellBase} bg-inherit text-right font-black tabular-nums text-indigo-800 dark:text-indigo-100 text-[15px] leading-[60px]`}>Rp{formatCurrency(prog.totalBudget)}</td>
-                      <td className={`${cellBase} bg-inherit text-right font-black tabular-nums text-indigo-500 dark:text-indigo-400 text-[15px] leading-[60px]`}>Rp{formatCurrency(prog.totalRevised)}</td>
-                      <td className={`${cellBase} bg-inherit text-right font-black tabular-nums text-indigo-600 dark:text-indigo-300 animate-pulse text-[15px] leading-[60px]`}>Rp{formatCurrency(prog.totalReal)}</td>
-                      <td className={`${cellBase} bg-emerald-50/30 dark:bg-emerald-500/5 text-right font-black tabular-nums text-emerald-600 dark:text-emerald-400 border-l border-emerald-500/20 text-[15px] leading-[60px]`}>
+                      <td className={`${cellBase} bg-inherit text-right font-black tabular-nums text-slate-900 dark:text-indigo-100 text-[15px] leading-[60px]`}>Rp{formatCurrency(prog.totalBudget)}</td>
+                      <td className={`${cellBase} bg-inherit text-right font-black tabular-nums text-indigo-600 dark:text-indigo-400 text-[15px] leading-[60px]`}>Rp{formatCurrency(prog.totalRevised)}</td>
+                      <td className={`${cellBase} bg-inherit text-right font-black tabular-nums text-indigo-700 dark:text-indigo-300 animate-pulse text-[15px] leading-[60px]`}>Rp{formatCurrency(prog.totalReal)}</td>
+                      <td className={`${cellBase} bg-emerald-50/50 dark:bg-emerald-500/5 text-right font-black tabular-nums text-emerald-600 dark:text-emerald-400 border-l border-slate-100 dark:border-emerald-500/20 text-[15px] leading-[60px]`}>
                         Rp{formatCurrency(((useRevisedBudgetMode && prog.totalRevised > 0) ? prog.totalRevised : prog.totalBudget) - prog.totalReal)}
                       </td>
                       <td className={`${cellBase} bg-inherit`}></td>
-                      <td className={`${cellBase} bg-slate-50 dark:bg-slate-900 sticky right-0 z-20 border-l border-slate-200 dark:border-slate-800`}></td>
+                      <td className={`${cellBase} bg-slate-100 dark:bg-slate-900 sticky right-0 z-20 border-l border-slate-200 dark:border-slate-800`}></td>
                     </tr>,
                     ...prog.items.flatMap((keg: any) => [
                       // Kegiatan Header
                       <tr key={`keg-${keg.data.kodeKegiatan}`} className="bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors border-b border-slate-200 dark:border-slate-700 group/keg">
-                        <td className={`${cellBase} bg-slate-100 dark:bg-slate-800 text-center sticky left-1 z-20 text-slate-500 dark:text-slate-400 font-extrabold text-[12px] border-r-2 border-slate-300 dark:border-slate-700`}>K</td>
+                        <td className={`${cellBase} bg-slate-200 dark:bg-slate-800 text-center sticky left-1 z-20 text-slate-600 dark:text-slate-400 font-extrabold text-[12px] border-r-2 border-slate-300 dark:border-slate-700`}>K</td>
                         <td className={`${cellBase} bg-inherit pl-10 py-5 border-r border-slate-100 dark:border-slate-800/40`}>
                           <div className="flex items-center gap-4">
                             <div className="flex flex-col gap-1 min-w-[140px]">
                                <span className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest font-mono leading-none">KODE KEGIATAN</span>
                                <input 
-                                 className="w-full bg-white dark:bg-slate-950 text-emerald-700 dark:text-emerald-400 border border-slate-200 dark:border-slate-700 p-2 outline-none font-mono font-bold text-[12px] focus:border-emerald-500 shadow-sm"
+                                 className="w-full bg-white dark:bg-slate-950 text-emerald-600 dark:text-emerald-400 border border-slate-200 dark:border-slate-700 p-2 outline-none font-mono font-bold text-[12px] focus:border-emerald-500 shadow-sm"
                                  value={keg.data.kodeKegiatan || ''}
                                  placeholder="KODE..."
                                  onChange={e => handleUpdateHierarchyField('kodeKegiatan', keg.data.kodeKegiatan, 'kodeKegiatan', e.target.value)}
@@ -910,27 +910,27 @@ export default function AccountMappingPage() {
                            Rp{formatCurrency(((useRevisedBudgetMode && keg.totalRevised > 0) ? keg.totalRevised : keg.totalBudget) - keg.totalReal)}
                         </td>
                         <td className={`${cellBase} bg-inherit`}></td>
-                        <td className={`${cellBase} bg-slate-50 dark:bg-slate-900 sticky right-0 z-20 border-l border-slate-100 dark:border-slate-800`}></td>
+                        <td className={`${cellBase} bg-slate-100 dark:bg-slate-900 sticky right-0 z-20 border-l border-slate-200 dark:border-slate-800 shadow-none`}></td>
                       </tr>,
                       ...keg.items.flatMap((sub: any) => [
                         // Sub Kegiatan Header
-                        <tr key={`sub-${sub.data.kodeSubKeg}`} className="bg-indigo-50/20 dark:bg-indigo-950/20 hover:bg-white dark:hover:bg-slate-900/40 transition-colors border-b border-indigo-100 dark:border-indigo-900/20 group/sub">
-                          <td className={`${cellBase} bg-indigo-50/50 dark:bg-indigo-900/20 text-center sticky left-1 z-20 text-indigo-400 dark:text-indigo-500 font-bold text-[12px] border-r-2 border-indigo-100 dark:border-indigo-900/30`}>S</td>
-                          <td className={`${cellBase} bg-inherit pl-16 py-5 border-r border-indigo-50 dark:border-indigo-900/10`}>
+                        <tr key={`sub-${sub.data.kodeSubKeg}`} className="bg-white dark:bg-indigo-950/20 hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors border-b border-indigo-100 dark:border-indigo-900/20 group/sub">
+                          <td className={`${cellBase} bg-slate-50 dark:bg-indigo-900/20 text-center sticky left-1 z-20 text-slate-400 dark:text-indigo-500 font-bold text-[12px] border-r-2 border-slate-100 dark:border-indigo-900/30`}>S</td>
+                          <td className={`${cellBase} bg-inherit pl-16 py-5 border-r border-slate-50 dark:border-indigo-900/10`}>
                             <div className="flex items-center gap-4">
                               <div className="flex flex-col gap-1 min-w-[160px]">
-                                 <span className="text-[8px] font-black text-indigo-300 dark:text-indigo-600 uppercase font-mono tracking-widest leading-none">KODE SUB KEGIATAN</span>
+                                 <span className="text-[8px] font-black text-slate-300 dark:text-indigo-600 uppercase font-mono tracking-widest leading-none">KODE SUB KEGIATAN</span>
                                  <input 
-                                   className="w-full bg-white dark:bg-slate-950 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/30 p-2 outline-none font-mono font-bold text-[11px] focus:border-indigo-500 shadow-sm"
+                                   className="w-full bg-white dark:bg-slate-950 text-slate-600 dark:text-indigo-400 border border-slate-100 dark:border-indigo-900/30 p-2 outline-none font-mono font-bold text-[11px] focus:border-indigo-500 shadow-sm"
                                    value={sub.data.kodeSubKeg || ''}
                                    placeholder="KODE..."
                                    onChange={e => handleUpdateHierarchyField('kodeSubKeg', sub.data.kodeSubKeg, 'kodeSubKeg', e.target.value)}
                                  />
                               </div>
                               <div className="flex flex-col gap-1 flex-1">
-                                 <span className="text-[8px] font-black text-indigo-300 dark:text-indigo-600 uppercase font-mono tracking-widest leading-none">NAMA SUB KEGIATAN</span>
+                                 <span className="text-[8px] font-black text-slate-300 dark:text-indigo-600 uppercase font-mono tracking-widest leading-none">NAMA SUB KEGIATAN</span>
                                  <textarea 
-                                   className="w-full bg-white dark:bg-slate-950 text-indigo-900 dark:text-slate-300 border border-indigo-100 dark:border-indigo-900/30 p-2 outline-none font-black text-[12px] focus:border-indigo-500 shadow-sm uppercase resize-none leading-normal min-h-[44px]"
+                                   className="w-full bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-300 border border-slate-100 dark:border-indigo-900/30 p-2 outline-none font-black text-[12px] focus:border-indigo-500 shadow-sm uppercase resize-none leading-normal min-h-[44px]"
                                    value={sub.data.namaSubKeg || ''}
                                    placeholder="NAMA SUB KEGIATAN . . ."
                                    onChange={e => handleUpdateHierarchyField('kodeSubKeg', sub.data.kodeSubKeg, 'namaSubKeg', e.target.value)}
