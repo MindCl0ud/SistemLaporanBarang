@@ -100,8 +100,13 @@ model MasterItem {
 model AccountCodeMapping {
   id        String   @id @default(cuid())
   year      Int      @default(2026) // Multi-year support
-  subKegiatan String?
-  code      String   
+  kodeProgram String?
+  namaProgram String?
+  kodeKegiatan String?
+  namaKegiatan String?
+  kodeSubKeg String?
+  namaSubKeg String?
+  kodeBelanja      String   
   name      String
   division  String?        // New field for Bidang
   budget    Float?         @default(0) // Pagu Murni / Awal
@@ -110,8 +115,9 @@ model AccountCodeMapping {
   updatedAt DateTime @updatedAt
   budgetLogs BudgetLog[]
 
-  @@unique([code, year])
-  @@index([code])
+  @@unique([kodeSubKeg, kodeBelanja, year])
+  @@index([kodeBelanja])
+  @@index([kodeSubKeg])
   @@index([year])
 }
 

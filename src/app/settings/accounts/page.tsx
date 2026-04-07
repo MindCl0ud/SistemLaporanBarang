@@ -34,12 +34,16 @@ import * as XLSX from 'xlsx'
 import LoadingState from '@/components/LoadingState'
 
 const DEFAULT_WIDTHS = {
-  sub: 160,
-  code: 150,
-  name: 510,
-  awal: 170,
-  perubahan: 170,
-  bidang: 140
+  program: 220,
+  kegiatan: 220,
+  sub: 220,
+  code: 160,
+  name: 350,
+  awal: 150,
+  perubahan: 150,
+  realisasi: 150,
+  sisa: 150,
+  bidang: 120
 }
 
 function ResizableHeader({ colKey, width, label, onResize, align = 'text-left', isLast = false }: any) {
@@ -99,12 +103,17 @@ export default function AccountMappingPage() {
   // New row states
   const [showAddRow, setShowAddRow] = useState(false)
   const [newRow, setNewRow] = useState({ 
-    code: '', 
+    kodeProgram: '',
+    namaProgram: '',
+    kodeKegiatan: '',
+    namaKegiatan: '',
+    kodeSubKeg: '', 
+    namaSubKeg: '',
+    kodeBelanja: '', 
     name: '', 
     division: '', 
     budget: '', 
-    revisedBudget: '', 
-    subKegiatan: '' 
+    revisedBudget: ''
   })
 
   // Popover/Modal states
@@ -155,8 +164,17 @@ export default function AccountMappingPage() {
     }
   }
 
-  const handleSaveInline = async (code: string, name: string, division?: string | null, budget?: number | null, id?: string, subKegiatan?: string | null, revisedBudget?: number | null) => {
-    if (!code || !name) return
+  const handleSaveInline = async (
+    kodeBelanja: string, 
+    name: string, 
+    division?: string | null, 
+    budget?: number | null, 
+    id?: string, 
+    kodeSubKeg?: string | null, 
+    revisedBudget?: number | null,
+    hierarchy?: any
+  ) => {
+    if (!kodeBelanja || !name) return
     const mappingId = id || 'new'
     
     // Add to saving state
@@ -164,7 +182,16 @@ export default function AccountMappingPage() {
     else setSavingId('new')
 
     try {
-      const updated = await upsertAccountMapping(code, name, division || undefined, budget || 0, subKegiatan || undefined, selectedYear, revisedBudget || 0)
+      const updated = await upsertAccountMapping(
+        kodeBelanja, 
+        name, 
+        division || undefined, 
+        budget || 0, 
+        kodeSubKeg || undefined, 
+        selectedYear, 
+        revisedBudget || 0,
+        hierarchy
+      )
       
       if (updated) {
         setMappings(prev => {
@@ -191,7 +218,19 @@ export default function AccountMappingPage() {
         }
       }
 
-      setNewRow({ code: '', name: '', division: '', budget: '', revisedBudget: '', subKegiatan: '' })
+      setNewRow({ 
+        kodeProgram: '',
+        namaProgram: '',
+        kodeKegiatan: '',
+        namaKegiatan: '',
+        kodeSubKeg: '', 
+        namaSubKeg: '',
+        kodeBelanja: '', 
+        name: '', 
+        division: '', 
+        budget: '', 
+        revisedBudget: ''
+      })
       
       const currentId = id || updated?.id || 'new'
       setSavedId(currentId)
@@ -262,7 +301,19 @@ export default function AccountMappingPage() {
 
   const handleExportTemplate = () => {
     const ws = XLSX.utils.json_to_sheet([
-      { "Sub Kegiatan": "5.01.01.2.02.5", "Kode Rekening": "1.1.03.07.5.1.02.02.01.0090", "Uraian": "Bayar biaya...", "Pagu Awal": 1000000, "Pagu Perubahan": 0, "Bidang": "Sekretariat" }
+      { 
+        "Kode Program": "5.01.01",
+        "Nama Program": "Program Penunjang...",
+        "Kode Kegiatan": "5.01.01.2.02",
+        "Nama Kegiatan": "Penyediaan Jasa...",
+        "Kode Sub Kegiatan": "5.01.01.2.02.5", 
+        "Nama Sub Kegiatan": "Penyediaan Jasa...",
+        "Kode Belanja": "1.1.03.07.5.1.02.02.01.0090", 
+        "Uraian": "Bayar biaya...", 
+        "Pagu Awal": 1000000, 
+        "Pagu Perubahan": 0, 
+        "Bidang": "Sekretariat" 
+      }
     ])
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, "Template")
@@ -284,8 +335,13 @@ export default function AccountMappingPage() {
         const data = XLSX.utils.sheet_to_json(ws)
         
         const prepared = data.map((row: any) => ({
-          subKegiatan: row["Sub Kegiatan"]?.toString(),
-          code: row["Kode Rekening"]?.toString(),
+          kodeProgram: row["Kode Program"]?.toString(),
+          namaProgram: row["Nama Program"]?.toString(),
+          kodeKegiatan: row["Kode Kegiatan"]?.toString(),
+          namaKegiatan: row["Nama Kegiatan"]?.toString(),
+          kodeSubKeg: row["Kode Sub Kegiatan"]?.toString(),
+          namaSubKeg: row["Nama Sub Kegiatan"]?.toString(),
+          kodeBelanja: row["Kode Belanja"]?.toString() || row["Kode Rekening"]?.toString(),
           name: row["Uraian"]?.toString(),
           budget: Number(row["Pagu Awal"] || 0),
           revisedBudget: Number(row["Pagu Perubahan"] || 0),
@@ -309,9 +365,10 @@ export default function AccountMappingPage() {
     if (search) {
       const s = search.toLowerCase()
       result = result.filter(m => 
-        m.code.toLowerCase().includes(s) || 
+        m.kodeBelanja.toLowerCase().includes(s) || 
         m.name.toLowerCase().includes(s) ||
-        m.subKegiatan?.toLowerCase().includes(s) ||
+        m.kodeSubKeg?.toLowerCase().includes(s) ||
+        m.namaSubKeg?.toLowerCase().includes(s) ||
         m.division?.toLowerCase().includes(s)
       )
     }
@@ -519,11 +576,15 @@ export default function AccountMappingPage() {
             <thead className="sticky top-0 z-30">
               <tr>
                 <th className="bg-input border-r border-b border-border text-center text-[11px] font-semibold text-foreground/70 uppercase w-[50px]">No</th>
+                <ResizableHeader colKey="program" width={colWidths.program} label="Program" onResize={handleResize} />
+                <ResizableHeader colKey="kegiatan" width={colWidths.kegiatan} label="Kegiatan" onResize={handleResize} />
                 <ResizableHeader colKey="sub" width={colWidths.sub} label="Sub Kegiatan" onResize={handleResize} />
-                <ResizableHeader colKey="code" width={colWidths.code} label="Kode Rekening" onResize={handleResize} />
+                <ResizableHeader colKey="code" width={colWidths.code} label="Kode Belanja" onResize={handleResize} />
                 <ResizableHeader colKey="name" width={colWidths.name} label="Nama Kustom / Uraian" onResize={handleResize} />
                 <ResizableHeader colKey="awal" width={colWidths.awal} label="Pagu Awal" align="text-right" onResize={handleResize} />
                 <ResizableHeader colKey="perubahan" width={colWidths.perubahan} label="Pagu Perubahan" align="text-right" onResize={handleResize} />
+                <ResizableHeader colKey="realisasi" width={colWidths.realisasi} label="Realisasi (BKU)" align="text-right" onResize={handleResize} />
+                <ResizableHeader colKey="sisa" width={colWidths.sisa} label="Sisa Anggaran" align="text-right" onResize={handleResize} />
                 <ResizableHeader colKey="bidang" width={colWidths.bidang} label="Bidang" onResize={handleResize} />
                 <th className="bg-input border-b border-border text-center text-[11px] font-semibold text-foreground/70 uppercase">Aksi</th>
               </tr>
@@ -539,22 +600,64 @@ export default function AccountMappingPage() {
                     className="bg-primary/5 border-b-2 border-primary"
                   >
                     <td className={`${cellBase} text-center font-mono font-black text-primary`}>NEW</td>
+                    {/* Program */}
                     <td className={cellBase}>
-                      <input 
-                        className="w-full bg-white dark:bg-input border border-primary/30 rounded px-1 outline-none font-mono text-[10px]"
-                        placeholder="5.01..."
-                        value={newRow.subKegiatan}
-                        onChange={e => setNewRow({...newRow, subKegiatan: e.target.value})}
-                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.code, newRow.name, newRow.division, Number(newRow.budget), undefined, newRow.subKegiatan, Number(newRow.revisedBudget))}
-                      />
+                      <div className="flex flex-col gap-1">
+                        <input 
+                          className="w-full bg-white dark:bg-input border border-primary/30 rounded px-1 outline-none font-mono text-[9px]"
+                          placeholder="Kode Program"
+                          value={newRow.kodeProgram}
+                          onChange={e => setNewRow({...newRow, kodeProgram: e.target.value})}
+                        />
+                        <input 
+                          className="w-full bg-white dark:bg-input border border-primary/30 rounded px-1 outline-none text-[10px] font-bold"
+                          placeholder="Nama Program"
+                          value={newRow.namaProgram}
+                          onChange={e => setNewRow({...newRow, namaProgram: e.target.value})}
+                        />
+                      </div>
+                    </td>
+                    {/* Kegiatan */}
+                    <td className={cellBase}>
+                      <div className="flex flex-col gap-1">
+                        <input 
+                          className="w-full bg-white dark:bg-input border border-primary/30 rounded px-1 outline-none font-mono text-[9px]"
+                          placeholder="Kode Kegiatan"
+                          value={newRow.kodeKegiatan}
+                          onChange={e => setNewRow({...newRow, kodeKegiatan: e.target.value})}
+                        />
+                        <input 
+                          className="w-full bg-white dark:bg-input border border-primary/30 rounded px-1 outline-none text-[10px] font-bold"
+                          placeholder="Nama Kegiatan"
+                          value={newRow.namaKegiatan}
+                          onChange={e => setNewRow({...newRow, namaKegiatan: e.target.value})}
+                        />
+                      </div>
+                    </td>
+                    {/* Sub Kegiatan */}
+                    <td className={cellBase}>
+                      <div className="flex flex-col gap-1">
+                        <input 
+                          className="w-full bg-white dark:bg-input border border-primary/30 rounded px-1 outline-none font-mono text-[9px]"
+                          placeholder="Kode Sub Kegiatan"
+                          value={newRow.kodeSubKeg}
+                          onChange={e => setNewRow({...newRow, kodeSubKeg: e.target.value})}
+                        />
+                        <input 
+                          className="w-full bg-white dark:bg-input border border-primary/30 rounded px-1 outline-none text-[10px] font-bold"
+                          placeholder="Nama Sub Kegiatan"
+                          value={newRow.namaSubKeg}
+                          onChange={e => setNewRow({...newRow, namaSubKeg: e.target.value})}
+                        />
+                      </div>
                     </td>
                     <td className={cellBase}>
                       <input 
                         className="w-full bg-white dark:bg-input border border-primary/30 rounded px-1 outline-none font-mono text-[11px]"
-                        placeholder="1.1.0..."
-                        value={newRow.code}
-                        onChange={e => setNewRow({...newRow, code: e.target.value})}
-                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.code, newRow.name, newRow.division, Number(newRow.budget), undefined, newRow.subKegiatan, Number(newRow.revisedBudget))}
+                        placeholder="Kode Belanja"
+                        value={newRow.kodeBelanja}
+                        onChange={e => setNewRow({...newRow, kodeBelanja: e.target.value})}
+                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.kodeBelanja, newRow.name, newRow.division, Number(newRow.budget), undefined, newRow.kodeSubKeg, Number(newRow.revisedBudget), { kodeProgram: newRow.kodeProgram, namaProgram: newRow.namaProgram, kodeKegiatan: newRow.kodeKegiatan, namaKegiatan: newRow.namaKegiatan, namaSubKeg: newRow.namaSubKeg })}
                       />
                     </td>
                     <td className={cellBase}>
@@ -563,7 +666,7 @@ export default function AccountMappingPage() {
                         placeholder="Uraian baru..."
                         value={newRow.name}
                         onChange={e => setNewRow({...newRow, name: e.target.value})}
-                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.code, newRow.name, newRow.division, Number(newRow.budget), undefined, newRow.subKegiatan, Number(newRow.revisedBudget))}
+                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.kodeBelanja, newRow.name, newRow.division, Number(newRow.budget), undefined, newRow.kodeSubKeg, Number(newRow.revisedBudget), { kodeProgram: newRow.kodeProgram, namaProgram: newRow.namaProgram, kodeKegiatan: newRow.kodeKegiatan, namaKegiatan: newRow.namaKegiatan, namaSubKeg: newRow.namaSubKeg })}
                       />
                     </td>
                     <td className={cellBase}>
@@ -573,7 +676,7 @@ export default function AccountMappingPage() {
                         placeholder="0"
                         value={newRow.budget}
                         onChange={e => setNewRow({...newRow, budget: e.target.value})}
-                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.code, newRow.name, newRow.division, Number(newRow.budget), undefined, newRow.subKegiatan, Number(newRow.revisedBudget))}
+                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.kodeBelanja, newRow.name, newRow.division, Number(newRow.budget), undefined, newRow.kodeSubKeg, Number(newRow.revisedBudget), { kodeProgram: newRow.kodeProgram, namaProgram: newRow.namaProgram, kodeKegiatan: newRow.kodeKegiatan, namaKegiatan: newRow.namaKegiatan, namaSubKeg: newRow.namaSubKeg })}
                       />
                     </td>
                     <td className={cellBase}>
@@ -583,22 +686,24 @@ export default function AccountMappingPage() {
                         placeholder="0"
                         value={newRow.revisedBudget}
                         onChange={e => setNewRow({...newRow, revisedBudget: e.target.value})}
-                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.code, newRow.name, newRow.division, Number(newRow.budget), undefined, newRow.subKegiatan, Number(newRow.revisedBudget))}
+                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.kodeBelanja, newRow.name, newRow.division, Number(newRow.budget), undefined, newRow.kodeSubKeg, Number(newRow.revisedBudget), { kodeProgram: newRow.kodeProgram, namaProgram: newRow.namaProgram, kodeKegiatan: newRow.kodeKegiatan, namaKegiatan: newRow.namaKegiatan, namaSubKeg: newRow.namaSubKeg })}
                       />
                     </td>
+                    <td className={`${cellBase} text-right font-mono text-muted/30`}>自动0</td>
+                    <td className={`${cellBase} text-right font-mono text-muted/30`}>自动0</td>
                     <td className={cellBase}>
                       <input 
                         className="w-full bg-white dark:bg-input border border-primary/30 rounded px-1 outline-none"
-                        placeholder="Sekretariat..."
+                        placeholder="Bidang..."
                         value={newRow.division}
                         onChange={e => setNewRow({...newRow, division: e.target.value})}
-                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.code, newRow.name, newRow.division, Number(newRow.budget), undefined, newRow.subKegiatan, Number(newRow.revisedBudget))}
+                        onKeyDown={e => e.key === 'Enter' && handleSaveInline(newRow.kodeBelanja, newRow.name, newRow.division, Number(newRow.budget), undefined, newRow.kodeSubKeg, Number(newRow.revisedBudget), { kodeProgram: newRow.kodeProgram, namaProgram: newRow.namaProgram, kodeKegiatan: newRow.kodeKegiatan, namaKegiatan: newRow.namaKegiatan, namaSubKeg: newRow.namaSubKeg })}
                       />
                     </td>
                     <td className={cellBase}>
                       <div className="flex items-center justify-center gap-1">
                         <button 
-                          onClick={() => handleSaveInline(newRow.code, newRow.name, newRow.division, Number(newRow.budget), undefined, newRow.subKegiatan, Number(newRow.revisedBudget))}
+                          onClick={() => handleSaveInline(newRow.kodeBelanja, newRow.name, newRow.division, Number(newRow.budget), undefined, newRow.kodeSubKeg, Number(newRow.revisedBudget), { kodeProgram: newRow.kodeProgram, namaProgram: newRow.namaProgram, kodeKegiatan: newRow.kodeKegiatan, namaKegiatan: newRow.namaKegiatan, namaSubKeg: newRow.namaSubKeg })}
                           className="p-1.5 bg-primary text-white rounded-lg shadow-sm hover:scale-110 transition-all font-black"
                         >
                           <Check className="w-3.5 h-3.5" />
@@ -614,7 +719,7 @@ export default function AccountMappingPage() {
 
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="p-0 border-none">
+                  <td colSpan={12} className="p-0 border-none">
                     <LoadingState 
                       message="Menyiapkan Spreadsheet" 
                       subtitle="MASTER DATA REKENING"
@@ -624,160 +729,166 @@ export default function AccountMappingPage() {
                 </tr>
               ) : sortedAndFiltered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-8 py-24 text-center">
+                  <td colSpan={12} className="px-8 py-24 text-center">
                     <p className="text-muted text-sm font-medium">Belum ada data master untuk tahun ini.</p>
                   </td>
                 </tr>
               ) : (
-                sortedAndFiltered.map((m, idx) => (
-                  <tr key={m.id} className="hover:bg-slate-50 dark:hover:bg-primary/5 transition-colors group">
-                    <td className={`${cellBase} text-center font-mono font-black text-muted/30`}>{idx + 1}</td>
-                    
-                    {/* SUB */}
-                    <td className={`${cellBase} p-0 relative group/cell ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
-                      <input 
-                        className="w-full bg-transparent border-none p-2 outline-none focus:bg-white dark:focus:bg-white/5 text-muted-foreground font-mono text-[10px]"
-                        value={m.subKegiatan || ''}
-                        onChange={e => handleUpdateField(m.id, 'subKegiatan', e.target.value)}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)
-                          if (e.key === 'Escape') handleCancelRow(m.id)
-                        }}
-                      />
-                      {modifiedIds.has(m.id) && <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-amber-500/50" />}
-                    </td>
+                sortedAndFiltered.map((m, idx) => {
+                  const sisaAnggaran = ((useRevisedBudgetMode && m.revisedBudget > 0) ? m.revisedBudget : m.budget) - (m.realization || 0)
+                  return (
+                    <tr key={m.id} className="hover:bg-slate-50 dark:hover:bg-primary/5 transition-colors group">
+                      <td className={`${cellBase} text-center font-mono font-black text-muted/30`}>{idx + 1}</td>
+                      
+                      {/* PROGRAM */}
+                      <td className={`${cellBase} p-0 relative group/cell ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
+                         <div className="flex flex-col p-2 gap-1">
+                            <input 
+                              className="w-full bg-transparent border-none p-0 outline-none focus:bg-white dark:focus:bg-white/5 text-muted-foreground font-mono text-[9px]"
+                              value={m.kodeProgram || ''}
+                              onChange={e => handleUpdateField(m.id, 'kodeProgram', e.target.value)}
+                            />
+                            <textarea 
+                              className="w-full bg-transparent border-none p-0 outline-none focus:bg-white dark:focus:bg-white/5 font-bold text-[10px] leading-tight resize-none overflow-hidden"
+                              value={m.namaProgram || ''}
+                              onChange={e => handleUpdateField(m.id, 'namaProgram', e.target.value)}
+                            />
+                         </div>
+                      </td>
 
-                    {/* CODE */}
-                    <td className={`${cellBase} p-0 relative group/cell ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
-                      <input 
-                        className="w-full bg-transparent border-none p-2 outline-none focus:bg-white dark:focus:bg-white/5 font-mono text-[11px] text-primary font-black uppercase"
-                        value={m.code}
-                        onChange={e => handleUpdateField(m.id, 'code', e.target.value)}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)
-                          if (e.key === 'Escape') handleCancelRow(m.id)
-                        }}
-                      />
-                      {modifiedIds.has(m.id) && <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-amber-500/50" />}
-                    </td>
+                      {/* KEGIATAN */}
+                      <td className={`${cellBase} p-0 relative group/cell ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
+                         <div className="flex flex-col p-2 gap-1">
+                            <input 
+                              className="w-full bg-transparent border-none p-0 outline-none focus:bg-white dark:focus:bg-white/5 text-muted-foreground font-mono text-[9px]"
+                              value={m.kodeKegiatan || ''}
+                              onChange={e => handleUpdateField(m.id, 'kodeKegiatan', e.target.value)}
+                            />
+                            <textarea 
+                              className="w-full bg-transparent border-none p-0 outline-none focus:bg-white dark:focus:bg-white/5 font-bold text-[10px] leading-tight resize-none overflow-hidden"
+                              value={m.namaKegiatan || ''}
+                              onChange={e => handleUpdateField(m.id, 'namaKegiatan', e.target.value)}
+                            />
+                         </div>
+                      </td>
 
-                    {/* NAME */}
-                    <td className={`${cellBase} p-0 relative group/cell ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
-                      <textarea 
-                        className="w-full bg-transparent border-none p-2 outline-none focus:bg-white dark:focus:bg-white/5 font-medium whitespace-pre-wrap leading-relaxed text-[12px] resize-none overflow-hidden min-h-[3rem]"
-                        value={m.name}
-                        rows={Math.max(1, (m.name || '').split('\n').length)}
-                        onChange={e => {
-                           handleUpdateField(m.id, 'name', e.target.value);
-                           e.target.style.height = 'auto';
-                           e.target.style.height = e.target.scrollHeight + 'px';
-                        }}
-                        onKeyDown={e => {
-                           if (e.key === 'Enter' && !e.shiftKey) {
-                             e.preventDefault();
-                             handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget);
-                           }
-                           if (e.key === 'Escape') handleCancelRow(m.id);
-                        }}
-                        onFocus={e => {
-                           e.target.style.height = 'auto';
-                           e.target.style.height = e.target.scrollHeight + 'px';
-                        }}
-                      />
-                      {modifiedIds.has(m.id) && <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-amber-500/50" />}
-                      <div className="absolute right-2 bottom-1 shrink-0 flex items-center gap-1 pointer-events-none">
-                        {savingIds.has(m.id) ? (
-                          <Loader2 className="w-3 h-3 text-primary animate-spin" />
-                        ) : savedId === m.id ? (
-                          <CheckCircle2 className="w-3 h-3 text-emerald-500 animate-in fade-in zoom-in duration-300" />
-                        ) : null}
-                      </div>
-                    </td>
+                      {/* SUB KEGIATAN */}
+                      <td className={`${cellBase} p-0 relative group/cell ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
+                         <div className="flex flex-col p-2 gap-1">
+                            <input 
+                              className="w-full bg-transparent border-none p-0 outline-none focus:bg-white dark:focus:bg-white/5 text-muted-foreground font-mono text-[9px]"
+                              value={m.kodeSubKeg || ''}
+                              onChange={e => handleUpdateField(m.id, 'kodeSubKeg', e.target.value)}
+                            />
+                            <textarea 
+                              className="w-full bg-transparent border-none p-0 outline-none focus:bg-white dark:focus:bg-white/5 font-bold text-[10px] leading-tight resize-none overflow-hidden"
+                              value={m.namaSubKeg || ''}
+                              onChange={e => handleUpdateField(m.id, 'namaSubKeg', e.target.value)}
+                            />
+                         </div>
+                      </td>
 
-                    {/* PAGU AWAL */}
-                    <td className={`${cellBase} p-0 relative group/cell text-right ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
-                       <div className="flex items-center gap-2 justify-end w-full h-full pr-2">
-                          <input 
-                            type="number"
-                            className="w-full bg-transparent border-none p-2 outline-none focus:bg-white dark:focus:bg-white/5 text-right font-mono font-bold text-foreground/80 tabular-nums"
-                            value={m.budget || 0}
-                            onChange={(e) => handleUpdateField(m.id, 'budget', Number(e.target.value))}
-                            onKeyDown={e => {
-                              if (e.key === 'Enter') handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)
-                              if (e.key === 'Escape') handleCancelRow(m.id)
-                            }}
-                          />
-                            <button 
-                              onClick={() => setHistoryData(m)}
-                              className={`p-1 rounded bg-primary/5 hover:bg-primary/10 transition-colors ${savedId === m.id ? 'text-primary bg-primary/20' : 'text-slate-400 opacity-0 group-hover/cell:opacity-100'}`}
-                            >
-                              <RefreshCw className="w-3 h-3" />
-                            </button>
-                       </div>
-                       {modifiedIds.has(m.id) && <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-amber-500/50" />}
-                    </td>
-
-                    {/* PAGU PERUBAHAN */}
-                    <td className={`${cellBase} p-0 relative group/cell text-right ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
-                       <input 
-                         type="number"
-                         className={`w-full bg-transparent border-none p-2 outline-none focus:bg-white dark:focus:bg-white/5 text-right font-mono font-black tabular-nums transition-colors ${m.revisedBudget > 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-foreground/10'}`}
-                         value={m.revisedBudget || 0}
-                         onChange={(e) => handleUpdateField(m.id, 'revisedBudget', Number(e.target.value))}
-                         onKeyDown={e => {
-                            if (e.key === 'Enter') handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)
-                            if (e.key === 'Escape') handleCancelRow(m.id)
-                         }}
-                       />
-                       {modifiedIds.has(m.id) && <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-amber-500/50" />}
-                    </td>
-
-                    {/* BIDANG */}
-                    <td className={`${cellBase} p-0 relative group/cell ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
+                      {/* KODE BELANJA */}
+                      <td className={`${cellBase} p-0 relative group/cell ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
                         <input 
-                          className="w-full bg-transparent border-none p-2 outline-none focus:bg-white dark:focus:bg-white/5 text-muted-foreground font-medium"
-                          value={m.division || ''}
-                          onChange={(e) => handleUpdateField(m.id, 'division', e.target.value)}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter') handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)
-                            if (e.key === 'Escape') handleCancelRow(m.id)
+                          className="w-full bg-transparent border-none p-2 outline-none focus:bg-white dark:focus:bg-white/5 font-mono text-[11px] text-primary font-black uppercase"
+                          value={m.kodeBelanja}
+                          onChange={e => handleUpdateField(m.id, 'kodeBelanja', e.target.value)}
+                        />
+                      </td>
+
+                      {/* NAME */}
+                      <td className={`${cellBase} p-0 relative group/cell ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
+                        <textarea 
+                          className="w-full bg-transparent border-none p-2 outline-none focus:bg-white dark:focus:bg-white/5 font-medium whitespace-pre-wrap leading-relaxed text-[12px] resize-none overflow-hidden min-h-[3rem]"
+                          value={m.name}
+                          rows={Math.max(1, (m.name || '').split('\n').length)}
+                          onChange={e => {
+                             handleUpdateField(m.id, 'name', e.target.value);
+                             e.target.style.height = 'auto';
+                             e.target.style.height = e.target.scrollHeight + 'px';
                           }}
                         />
-                        {modifiedIds.has(m.id) && <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-amber-500/50" />}
-                    </td>
+                      </td>
 
-                    {/* AKSI */}
-                    <td className={`${cellBase} text-center`}>
-                       <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                         {modifiedIds.has(m.id) ? (
-                           <>
-                             <button
-                               disabled={savingIds.has(m.id)}
-                               onClick={() => handleSaveInline(m.code, m.name, m.division, m.budget, m.id, m.subKegiatan, m.revisedBudget)}
-                               className="p-1.5 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-all"
-                               title="Simpan Baris"
-                             >
-                               {savingIds.has(m.id) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                             </button>
-                             <button
-                               onClick={() => handleCancelRow(m.id)}
-                               className="p-1.5 text-muted hover:text-slate-500 rounded-lg transition-all"
-                               title="Batal Edit"
-                             >
-                               <X className="w-3.5 h-3.5" />
-                             </button>
-                           </>
-                         ) : (
-                           <>
-                             <button onClick={() => handleDelete(m.id)} className="p-1.5 text-muted hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all">
-                               <Trash2 className="w-3.5 h-3.5" />
-                             </button>
-                           </>
-                         )}
-                       </div>
-                    </td>
-                  </tr>
-                ))
+                      {/* PAGU AWAL */}
+                      <td className={`${cellBase} p-0 relative group/cell text-right ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
+                         <div className="flex items-center gap-2 justify-end w-full h-full pr-2">
+                            <input 
+                              type="number"
+                              className="w-full bg-transparent border-none p-2 outline-none focus:bg-white dark:focus:bg-white/5 text-right font-mono font-bold text-foreground/80 tabular-nums"
+                              value={m.budget || 0}
+                              onChange={(e) => handleUpdateField(m.id, 'budget', Number(e.target.value))}
+                            />
+                              <button 
+                                onClick={() => setHistoryData(m)}
+                                className={`p-1 rounded bg-primary/5 hover:bg-primary/10 transition-colors ${savedId === m.id ? 'text-primary bg-primary/20' : 'text-slate-400 opacity-0 group-hover/cell:opacity-100'}`}
+                              >
+                                <RefreshCw className="w-3 h-3" />
+                              </button>
+                         </div>
+                      </td>
+
+                      {/* PAGU PERUBAHAN */}
+                      <td className={`${cellBase} p-0 relative group/cell text-right ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
+                         <input 
+                           type="number"
+                           className={`w-full bg-transparent border-none p-2 outline-none focus:bg-white dark:focus:bg-white/5 text-right font-mono font-black tabular-nums transition-colors ${m.revisedBudget > 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-foreground/10'}`}
+                           value={m.revisedBudget || 0}
+                           onChange={(e) => handleUpdateField(m.id, 'revisedBudget', Number(e.target.value))}
+                         />
+                      </td>
+
+                      {/* REALISASI */}
+                      <td className={`${cellBase} p-2 text-right font-mono font-black text-indigo-600 dark:text-indigo-400 tabular-nums bg-indigo-50/30 dark:bg-indigo-500/5`}>
+                         Rp{formatCurrency(m.realization || 0)}
+                      </td>
+
+                      {/* SISA */}
+                      <td className={`${cellBase} p-2 text-right font-mono font-black tabular-nums ${sisaAnggaran < 0 ? 'text-rose-500 bg-rose-50' : 'text-emerald-600 bg-emerald-50/30 dark:bg-emerald-500/5'}`}>
+                         Rp{formatCurrency(sisaAnggaran)}
+                      </td>
+
+                      {/* BIDANG */}
+                      <td className={`${cellBase} p-0 relative group/cell ${modifiedIds.has(m.id) ? 'bg-amber-500/5' : ''}`}>
+                          <input 
+                            className="w-full bg-transparent border-none p-2 outline-none focus:bg-white dark:focus:bg-white/5 text-muted-foreground font-medium"
+                            value={m.division || ''}
+                            onChange={(e) => handleUpdateField(m.id, 'division', e.target.value)}
+                          />
+                      </td>
+
+                      {/* AKSI */}
+                      <td className={`${cellBase} text-center`}>
+                         <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                           {modifiedIds.has(m.id) ? (
+                             <>
+                               <button
+                                 disabled={savingIds.has(m.id)}
+                                 onClick={() => handleSaveInline(m.kodeBelanja, m.name, m.division, m.budget, m.id, m.kodeSubKeg, m.revisedBudget, { kodeProgram: m.kodeProgram, namaProgram: m.namaProgram, kodeKegiatan: m.kodeKegiatan, namaKegiatan: m.namaKegiatan, namaSubKeg: m.namaSubKeg })}
+                                 className="p-1.5 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-all"
+                               >
+                                 {savingIds.has(m.id) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                               </button>
+                               <button
+                                 onClick={() => handleCancelRow(m.id)}
+                                 className="p-1.5 text-muted hover:text-slate-500 rounded-lg transition-all"
+                               >
+                                 <X className="w-3.5 h-3.5" />
+                               </button>
+                             </>
+                           ) : (
+                             <>
+                               <button onClick={() => handleDelete(m.id)} className="p-1.5 text-muted hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all">
+                                 <Trash2 className="w-3.5 h-3.5" />
+                               </button>
+                             </>
+                           )}
+                         </div>
+                      </td>
+                    </tr>
+                  )
+                })
               )}
             </tbody>
           </table>

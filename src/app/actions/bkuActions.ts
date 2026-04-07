@@ -163,45 +163,108 @@ export async function addBkuBulk(data: any[], month: number, year: number) {
 // --- ACCOUNT MAPPING ACTIONS ---
 
 export async function getAccountMappings(year: number = 2026) {
-  return await prisma.accountCodeMapping.findMany({
+  const mappings = await prisma.accountCodeMapping.findMany({
     where: { year },
-    orderBy: { code: 'asc' },
+    orderBy: [
+      { kodeSubKeg: 'asc' },
+      { kodeBelanja: 'asc' }
+    ],
     include: { budgetLogs: { orderBy: { createdAt: 'desc' } } }
+  })
+
+  // Get all BKU transactions for this year to calculate realization
+  const bkuTransactions = await prisma.bkuTransaction.findMany({
+    where: { year },
+    select: {
+      code: true,
+      expenseTotal: true
+    }
+  })
+
+  // Aggregate realization in memory for performance (assuming reasonable dataset sizes)
+  return mappings.map(m => {
+    const combined = `${m.kodeSubKeg}.${m.kodeBelanja}`
+    
+    const realization = bkuTransactions.reduce((sum, t) => {
+      if (!t.code) return sum
+      
+      // Match full combined code OR if BKU only has 6 segments, match kodeBelanja only
+      const isFullMatch = t.code === combined
+      const isSalaryMatch = t.code === m.kodeBelanja && t.code.split('.').length === 6
+      
+      if (isFullMatch || isSalaryMatch) {
+        return sum + (t.expenseTotal || 0)
+      }
+      return sum
+    }, 0)
+
+    return {
+      ...m,
+      realization
+    }
   })
 }
 
-export async function upsertAccountMapping(code: string, name: string, division?: string, budget?: number, subKegiatan?: string, year: number = 2026, revisedBudget?: number) {
+export async function upsertAccountMapping(
+  kodeBelanja: string, 
+  name: string, 
+  division?: string, 
+  budget?: number, 
+  kodeSubKeg?: string, 
+  year: number = 2026, 
+  revisedBudget?: number,
+  hierarchy?: {
+    kodeProgram?: string;
+    namaProgram?: string;
+    kodeKegiatan?: string;
+    namaKegiatan?: string;
+    namaSubKeg?: string;
+  }
+) {
   // Find existing to check budget change
   const existing = await prisma.accountCodeMapping.findUnique({
-    where: { code_year: { code, year } }
+    where: { 
+      kodeSubKeg_kodeBelanja_year: { 
+        kodeSubKeg: kodeSubKeg || "", 
+        kodeBelanja, 
+        year 
+      } 
+    }
   })
 
-  const newBudget = budget || (existing?.budget || 0)
+  const newBudget = budget !== undefined ? budget : (existing?.budget || 0)
   const newRevisedBudget = revisedBudget !== undefined ? revisedBudget : (existing?.revisedBudget || 0)
   
   const result = await prisma.accountCodeMapping.upsert({
-    where: { code_year: { code, year } },
+    where: { 
+      kodeSubKeg_kodeBelanja_year: { 
+        kodeSubKeg: kodeSubKeg || "", 
+        kodeBelanja, 
+        year 
+      } 
+    },
     update: { 
       name, 
       division, 
       budget: newBudget, 
       revisedBudget: newRevisedBudget,
-      subKegiatan 
+      kodeSubKeg: kodeSubKeg || "",
+      ...hierarchy
     },
     create: { 
-      code, 
+      kodeBelanja, 
       name, 
       division, 
       budget: newBudget, 
       revisedBudget: newRevisedBudget,
-      subKegiatan,
-      year
+      kodeSubKeg: kodeSubKeg || "",
+      year,
+      ...hierarchy
     }
   })
 
   // Log budget changes if applicable
   if (existing) {
-    // Check Original Budget
     if (existing.budget !== newBudget) {
       await prisma.budgetLog.create({
         data: {
@@ -213,7 +276,6 @@ export async function upsertAccountMapping(code: string, name: string, division?
         }
       })
     }
-    // Check Revised Budget
     if (existing.revisedBudget !== newRevisedBudget) {
       await prisma.budgetLog.create({
         data: {
@@ -226,7 +288,6 @@ export async function upsertAccountMapping(code: string, name: string, division?
       })
     }
   } else {
-    // Initial budget logs
     if (newBudget !== 0) {
       await prisma.budgetLog.create({
         data: {
@@ -254,7 +315,6 @@ export async function upsertAccountMapping(code: string, name: string, division?
   revalidatePath('/bku')
   revalidatePath('/settings/accounts')
   
-  // Return the full updated object with logs
   return await prisma.accountCodeMapping.findUnique({
     where: { id: result.id },
     include: { budgetLogs: { orderBy: { createdAt: 'desc' } } }
@@ -264,11 +324,43 @@ export async function upsertAccountMapping(code: string, name: string, division?
 export async function upsertAccountMappingBulk(data: any[], year: number = 2026) {
   let count = 0
   for (const item of data) {
-    const { code, name, division, budget, subKegiatan, revisedBudget } = item
-    if (!code || !name) continue
+    const { 
+      kodeBelanja, 
+      code, // fallback
+      name, 
+      division, 
+      budget, 
+      kodeSubKeg, 
+      subKegiatan, // fallback
+      revisedBudget,
+      kodeProgram,
+      namaProgram,
+      kodeKegiatan,
+      namaKegiatan,
+      namaSubKeg
+    } = item
+    
+    const finalKodeBelanja = kodeBelanja || code
+    const finalKodeSubKeg = kodeSubKeg || subKegiatan
+    
+    if (!finalKodeBelanja || !name) continue
 
-    // Reuse existing individual upsert logic to ensure logging
-    await upsertAccountMapping(code, name, division, budget, subKegiatan, year, revisedBudget)
+    await upsertAccountMapping(
+      finalKodeBelanja, 
+      name, 
+      division, 
+      budget, 
+      finalKodeSubKeg, 
+      year, 
+      revisedBudget,
+      {
+        kodeProgram,
+        namaProgram,
+        kodeKegiatan,
+        namaKegiatan,
+        namaSubKeg
+      }
+    )
     count++
   }
   revalidatePath('/bku')
@@ -314,18 +406,31 @@ export async function syncAccountCodesFromBku(year: number = 2026) {
   const existingCodes = new Set(existing.map((e: any) => e.code))
   let count = 0
   for (let [code, name] of uniqueMap.entries()) {
-    let subKegiatan: string | undefined = undefined
+    let kodeSubKeg: string = ""
     
     // Auto-split if it looks like a combined code
     const parts = code.split('.')
     if (parts.length >= 7 && (code.startsWith('5.') || code.startsWith('5.01'))) {
-      subKegiatan = parts.slice(0, 6).join('.')
+      kodeSubKeg = parts.slice(0, 6).join('.')
       code = parts.slice(6).join('.')
+    } else if (parts.length === 6) {
+      // It's already just a kodeBelanja
+      kodeSubKeg = ""
     }
 
-    if (!existingCodes.has(code)) {
+    const exists = await prisma.accountCodeMapping.findUnique({
+      where: { 
+        kodeSubKeg_kodeBelanja_year: { 
+          kodeSubKeg, 
+          kodeBelanja: code, 
+          year 
+        } 
+      }
+    })
+
+    if (!exists) {
       await prisma.accountCodeMapping.create({
-        data: { code, name, budget: 0, subKegiatan, year }
+        data: { kodeBelanja: code, name, budget: 0, kodeSubKeg, year }
       })
       count++
     }
